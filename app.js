@@ -661,6 +661,9 @@ async function displayCustomers() {
             </div>
             <div class="deal-card-footer">
                 <div class="deal-card-actions" style="margin-right: auto;">
+                    <button class="btn btn-primary btn-icon" onclick="viewCustomerDetails('${customer.customer_id}')" title="צפה בפרטים והערות">
+                        👁️
+                    </button>
                     <button class="btn btn-secondary btn-icon" onclick='editCustomer(${JSON.stringify(customer).replace(/'/g, "&apos;")})' title="ערוך">
                         ✏️
                     </button>
@@ -723,6 +726,272 @@ async function deleteCustomer(customerId) {
     } catch (error) {
         console.error('❌ Error deleting customer:', error);
         showAlert('שגיאה במחיקת הלקוח: ' + error.message, 'error');
+    }
+}
+
+// ============================================
+// Customer Details & Notes
+// ============================================
+
+async function viewCustomerDetails(customerId) {
+    // Create or get modal
+    let modal = document.getElementById('customer-details-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'customer-details-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h2>👤 פרטי לקוח</h2>
+                    <button class="modal-close" onclick="closeCustomerDetailsModal()">✕</button>
+                </div>
+                <div id="customer-details-content">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    modal.classList.add('active');
+    modal.dataset.currentCustomerId = customerId;
+    
+    // Load customer details
+    try {
+        const { data: customer, error } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('customer_id', customerId)
+            .single();
+        
+        if (error) throw error;
+        
+        const typeBadgeClass = {
+            'חנות': 'badge-new',
+            'קבלן': 'badge-won',
+            'מחסן': 'badge-pending',
+            'מפעל': 'badge-lost',
+            'אחר': 'badge-pending'
+        }[customer.customer_type] || 'badge-new';
+        
+        document.getElementById('customer-details-content').innerHTML = `
+            <div style="margin-bottom: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="margin: 0; color: var(--primary-color);">${customer.business_name}</h3>
+                    ${customer.customer_type ? `<span class="badge ${typeBadgeClass}">${customer.customer_type}</span>` : ''}
+                </div>
+                <div class="form-grid">
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">איש קשר:</span>
+                        <span class="deal-card-value">${customer.contact_name || '-'}</span>
+                    </div>
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">טלפון:</span>
+                        <span class="deal-card-value">${customer.phone || '-'}</span>
+                    </div>
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">אימייל:</span>
+                        <span class="deal-card-value">${customer.email || '-'}</span>
+                    </div>
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">עיר:</span>
+                        <span class="deal-card-value">${customer.city || '-'}</span>
+                    </div>
+                    ${customer.source ? `
+                        <div class="deal-card-info">
+                            <span class="deal-card-label">מקור:</span>
+                            <span class="deal-card-value">${customer.source}</span>
+                        </div>
+                    ` : ''}
+                    ${customer.notes ? `
+                        <div class="deal-card-info" style="grid-column: 1 / -1;">
+                            <span class="deal-card-label">הערות כלליות:</span>
+                            <span class="deal-card-value">${customer.notes}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+            
+            <!-- Add Note Section -->
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="margin-bottom: 1rem;">📝 הוסף הערה חדשה</h4>
+                <form onsubmit="addCustomerNote(event, '${customerId}')">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <textarea id="customer-new-note" class="form-textarea" rows="2" 
+                                  placeholder="הקלד הערה חדשה..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">💾 שמור הערה</button>
+                </form>
+            </div>
+            
+            <!-- Notes List -->
+            <div>
+                <h4 style="margin-bottom: 1rem;">📋 הערות קודמות</h4>
+                <div id="customer-notes-list">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        `;
+        
+        // Load notes
+        loadCustomerNotes(customerId);
+        
+    } catch (error) {
+        console.error('❌ Error loading customer details:', error);
+        document.getElementById('customer-details-content').innerHTML = `
+            <div class="alert alert-error">שגיאה בטעינת פרטי הלקוח: ${error.message}</div>
+        `;
+    }
+}
+
+function closeCustomerDetailsModal() {
+    const modal = document.getElementById('customer-details-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+async function loadCustomerNotes(customerId) {
+    const container = document.getElementById('customer-notes-list');
+    container.innerHTML = '<div class="spinner"></div>';
+    
+    try {
+        const { data: notes, error } = await supabase
+            .from('activities')
+            .select('*')
+            .eq('customer_id', customerId)
+            .is('deal_id', null)
+            .eq('activity_type', 'הערה')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (!notes || notes.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-tertiary); text-align: center;">אין הערות עבור לקוח זה</p>';
+            return;
+        }
+        
+        container.innerHTML = notes.map(note => {
+            const createdDate = new Date(note.created_at).toLocaleString('he-IL', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const editedInfo = note.edited_at ? `
+                <small style="color: var(--text-tertiary); display: block; margin-top: 0.25rem;">
+                    נערך ב-${new Date(note.edited_at).toLocaleString('he-IL')} על ידי ${note.edited_by || 'לא ידוע'}
+                </small>
+            ` : '';
+            
+            return `
+                <div class="note-item" style="background: var(--bg-secondary); padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div style="flex: 1;">
+                            <p style="margin: 0 0 0.5rem 0;">${note.description}</p>
+                            <small style="color: var(--text-tertiary);">
+                                ${createdDate} | ${note.created_by || 'משתמש מערכת'}
+                            </small>
+                            ${editedInfo}
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-right: 1rem;">
+                            <button class="btn btn-sm btn-secondary" onclick="editCustomerNote('${note.activity_id}')" title="ערוך">✏️</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteCustomerNote('${note.activity_id}')" title="מחק">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('❌ Error loading customer notes:', error);
+        container.innerHTML = `<div class="alert alert-error">שגיאה בטעינת הערות: ${error.message}</div>`;
+    }
+}
+
+async function addCustomerNote(event, customerId) {
+    event.preventDefault();
+    
+    const noteText = document.getElementById('customer-new-note').value.trim();
+    if (!noteText) return;
+    
+    const author = localStorage.getItem('crm_username') || 'משתמש מערכת';
+    
+    try {
+        const { error } = await supabase
+            .from('activities')
+            .insert({
+                customer_id: customerId,
+                activity_type: 'הערה',
+                description: noteText,
+                created_by: author
+            });
+        
+        if (error) throw error;
+        
+        document.getElementById('customer-new-note').value = '';
+        showAlert('✅ ההערה נוספה בהצלחה', 'success');
+        loadCustomerNotes(customerId);
+        
+    } catch (error) {
+        console.error('❌ Error adding customer note:', error);
+        showAlert('שגיאה בהוספת ההערה: ' + error.message, 'error');
+    }
+}
+
+async function editCustomerNote(activityId) {
+    const newText = prompt('ערוך את ההערה:');
+    if (newText === null) return;
+    
+    const editor = localStorage.getItem('crm_username') || 'משתמש מערכת';
+    
+    try {
+        const { error } = await supabase
+            .from('activities')
+            .update({
+                description: newText,
+                edited_at: new Date().toISOString(),
+                edited_by: editor
+            })
+            .eq('activity_id', activityId);
+        
+        if (error) throw error;
+        
+        showAlert('✅ ההערה עודכנה בהצלחה', 'success');
+        
+        const customerId = document.getElementById('customer-details-modal').dataset.currentCustomerId;
+        loadCustomerNotes(customerId);
+        
+    } catch (error) {
+        console.error('❌ Error editing customer note:', error);
+        showAlert('שגיאה בעריכת ההערה: ' + error.message, 'error');
+    }
+}
+
+async function deleteCustomerNote(activityId) {
+    if (!confirm('האם אתה בטוח שברצונך למחוק הערה זו?')) return;
+    
+    try {
+        const { error } = await supabase
+            .from('activities')
+            .delete()
+            .eq('activity_id', activityId);
+        
+        if (error) throw error;
+        
+        showAlert('✅ ההערה נמחקה בהצלחה', 'success');
+        
+        const customerId = document.getElementById('customer-details-modal').dataset.currentCustomerId;
+        loadCustomerNotes(customerId);
+        
+    } catch (error) {
+        console.error('❌ Error deleting customer note:', error);
+        showAlert('שגיאה במחיקת ההערה: ' + error.message, 'error');
     }
 }
 
@@ -1643,9 +1912,9 @@ async function saveActivityEdit(event) {
         closeEditActivityModal();
         
         // Reload notes for current deal
-        const dealId = document.getElementById('deal-modal').dataset.currentDealId;
-        if (dealId) {
-            loadDealNotes(dealId);
+        const currentDealId = document.getElementById('deal-modal').dataset.currentDealId;
+        if (currentDealId) {
+            loadDealNotes(currentDealId);
         }
         
         // Also reload activities tab if visible
