@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הצעת מחיר</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Heebo', sans-serif;
+            direction: rtl;
+            padding: 2rem;
+            background: #f8f9fa;
+        }
+        
+        .quote-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 3rem;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .company-info h1 {
+            color: #2563eb;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .company-info p {
+            color: #64748b;
+            margin: 0.25rem 0;
+        }
+        
+        .quote-info {
+            text-align: left;
+            direction: ltr;
+        }
+        
+        .quote-info h2 {
+            color: #2563eb;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .quote-info p {
+            color: #64748b;
+            margin: 0.25rem 0;
+        }
+        
+        .customer-section {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        
+        .customer-section h3 {
+            color: #1e293b;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .customer-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .customer-details p {
+            color: #475569;
+        }
+        
+        .customer-details strong {
+            color: #1e293b;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+        
+        .items-table thead {
+            background: #2563eb;
+            color: white;
+        }
+        
+        .items-table th {
+            padding: 1rem;
+            text-align: right;
+            font-weight: 600;
+        }
+        
+        .items-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .items-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        
+        .summary {
+            margin-right: auto;
+            width: 300px;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .summary-row.total {
+            border-top: 2px solid #2563eb;
+            border-bottom: 2px solid #2563eb;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #2563eb;
+            margin-top: 0.5rem;
+        }
+        
+        .terms {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e2e8f0;
+        }
+        
+        .terms h3 {
+            color: #1e293b;
+            margin-bottom: 1rem;
+        }
+        
+        .terms ul {
+            list-style-position: inside;
+            color: #475569;
+            line-height: 1.8;
+        }
+        
+        .footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+            }
+            
+            .quote-container {
+                box-shadow: none;
+                padding: 1rem;
+            }
+            
+            .no-print {
+                display: none;
+            }
+            
+            /* Prevent page breaks inside sections */
+            .header,
+            .customer-section,
+            .items-table,
+            .items-table tr,
+            .summary,
+            .terms,
+            .footer {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            /* Keep each table row together */
+            .items-table tbody tr {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            
+            /* Ensure sections don't get orphaned */
+            .terms {
+                page-break-before: auto;
+            }
+        }
+        
+        .print-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .print-button:hover {
+            background: #1e40af;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button no-print" onclick="window.print()">🖨️ הדפס</button>
+    
+    <div class="quote-container">
+        <div class="header">
+            <div class="company-info">
+                <img src="logo.png" alt="אנפי ייבוא ושיווק" style="height: 80px; margin-bottom: 1rem;">
+                <p>📍 תל אביב</p>
+                <p>📞 טלפון: 050-6946650</p>
+                <p>✉️ אימייל: anfi@bezeqint.net</p>
+            </div>
+            
+            <div class="quote-info">
+                <h2>הצעת מחיר</h2>
+                <p><strong>תאריך:</strong> <span id="quote-date"></span></p>
+                <p><strong>תוקף:</strong> 30 יום</p>
+            </div>
+        </div>
+        
+        <!-- Customer Information -->
+        <div class="customer-section">
+            <h3>פרטי לקוח</h3>
+            <div class="customer-details">
+                <p><strong>שם העסק:</strong> <span id="customer-business">חנות הפרזול המרכזית</span></p>
+                <p><strong>איש קשר:</strong> <span id="customer-contact">יוסי כהן</span></p>
+                <p><strong>טלפון:</strong> <span id="customer-phone">050-1234567</span></p>
+                <p><strong>עיר:</strong> <span id="customer-city">תל אביב</span></p>
+            </div>
+        </div>
+        
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>תיאור המוצר</th>
+                    <th>כמות</th>
+                    <th>מחיר יחידה</th>
+                    <th>צבע</th>
+                    <th>מידה</th>
+                    <th>סה"כ</th>
+                </tr>
+            </thead>
+            <tbody id="items-tbody">
+                <!-- Sample items -->
+                <tr>
+                    <td>1</td>
+                    <td><strong>פרופיל אלומיניום 15</strong></td>
+                    <td>50</td>
+                    <td>₪45.00</td>
+                    <td>כסף</td>
+                    <td>-</td>
+                    <td>₪2,250.00</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>גלגל דלת הזזה 7000 פלסטיק</strong></td>
+                    <td>100</td>
+                    <td>₪12.00</td>
+                    <td>שחור</td>
+                    <td>-</td>
+                    <td>₪1,200.00</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>ידית אלומיניום</strong></td>
+                    <td>30</td>
+                    <td>₪35.00</td>
+                    <td>זהב</td>
+                    <td>גדול</td>
+                    <td>₪1,050.00</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>מברשת 7000</strong></td>
+                    <td>200</td>
+                    <td>₪15.50</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>₪3,100.00</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- Summary -->
+        <div class="summary">
+            <div class="summary-row">
+                <span>סכום ביניים:</span>
+                <span id="subtotal">₪7,600.00</span>
+            </div>
+            <div class="summary-row">
+                <span>מע"מ (18%):</span>
+                <span id="vat">₪1,368.00</span>
+            </div>
+            <div class="summary-row total">
+                <span>סה"כ לתשלום:</span>
+                <span id="total">₪8,968.00</span>
+            </div>
+        </div>
+        
+        <!-- Terms and Conditions -->
+        <div class="terms">
+            <h3>תנאים והערות</h3>
+            <ul>
+                <li>המחירים אינם כוללים מע"מ</li>
+                <li>תוקף ההצעה: 30 יום מתאריך ההנפקה</li>
+                <li>תנאי תשלום: שוטף + 120</li>
+                <li>משלוח: עד 7 ימי עסקים</li>
+            </ul>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>תודה על פנייתך! נשמח לעמוד לשירותך בכל שאלה.</p>
+            <p style="margin-top: 1rem;">© 2024 אנפי ייבוא ושיווק פרזול ואלומיניום</p>
+        </div>
+    </div>
+    
+    <script>
+        // Set current date
+        document.getElementById('quote-date').textContent = new Date().toLocaleDateString('he-IL');
+        
+        // Function to populate quote from deal data
+        function populateQuote(dealData) {
+            // Update customer info
+            document.getElementById('customer-business').textContent = dealData.customer.business_name;
+            document.getElementById('customer-contact').textContent = dealData.customer.contact_name;
+            document.getElementById('customer-phone').textContent = dealData.customer.phone;
+            document.getElementById('customer-city').textContent = dealData.customer.city;
+            
+            // Update items
+            const tbody = document.getElementById('items-tbody');
+            tbody.innerHTML = '';
+            
+            dealData.items.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${item.product_name}</strong></td>
+                    <td>${item.quantity}</td>
+                    <td>₪${item.unit_price.toFixed(2)}</td>
+                    <td>${item.color || '-'}</td>
+                    <td>${item.size || '-'}</td>
+                    <td>₪${item.total_price.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Update summary
+            document.getElementById('subtotal').textContent = `₪${dealData.total_amount.toFixed(2)}`;
+            
+            const beforeVat = dealData.final_amount;
+            const vat = dealData.final_amount * 0.18;
+            const total = dealData.final_amount * 1.18;
+            
+            document.getElementById('vat').textContent = `₪${vat.toFixed(2)}`;
+            document.getElementById('total').textContent = `₪${total.toFixed(2)}`;
+        }
+        
+        // Example: Load from URL parameters or localStorage
+        // const dealId = new URLSearchParams(window.location.search).get('dealId');
+        // if (dealId) {
+        //     loadDealData(dealId).then(populateQuote);
+        // }
+    </script>
+</body>
+</html>
