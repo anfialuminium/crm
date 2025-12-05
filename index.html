@@ -19,11 +19,13 @@
             <!-- Navigation Tabs -->
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-tab="deals">עסקה חדשה</button>
+                <button class="nav-tab" data-tab="thisweek">📅 השבוע</button>
                 <button class="nav-tab" data-tab="history">עסקאות</button>
                 <button class="nav-tab" data-tab="activities">פעילויות</button>
                 <button class="nav-tab" data-tab="customers">לקוחות</button>
                 <button class="nav-tab" data-tab="contacts">אנשי קשר</button>
                 <button class="nav-tab" data-tab="products">מוצרים</button>
+                <button class="nav-tab" data-tab="auditlog">📋 פעולות</button>
             </nav>
 
             <!-- Deals Tab -->
@@ -127,6 +129,67 @@
                     <button type="button" class="btn btn-secondary" onclick="resetForm()">
                         🔄 נקה טופס
                     </button>
+                </div>
+            </div>
+
+            <!-- This Week Tab -->
+            <div id="thisweek-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                        <h2 class="section-title" style="margin-bottom: 0;">📅 פעילויות השבוע</h2>
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <button class="btn btn-secondary btn-icon" onclick="changeWeek(-1)" title="שבוע קודם" style="width: 36px; height: 36px;">
+                                ◀
+                            </button>
+                            <div id="thisweek-date-range" style="color: var(--text-secondary); font-size: 0.9rem; min-width: 180px; text-align: center;"></div>
+                            <button class="btn btn-secondary btn-icon" onclick="changeWeek(1)" title="שבוע הבא" style="width: 36px; height: 36px;">
+                                ▶
+                            </button>
+                            <button class="btn btn-primary" onclick="goToCurrentWeek()" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">
+                                היום
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי סוג פעילות</label>
+                            <select id="filter-thisweek-type" class="form-select" onchange="loadThisWeek()">
+                                <option value="">הכל</option>
+                                <option value="שיחה">📞 שיחה</option>
+                                <option value="פגישה">📅 פגישה</option>
+                                <option value="מייל">📧 מייל</option>
+                                <option value="משימה">✅ משימה</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי סטטוס</label>
+                            <select id="filter-thisweek-status" class="form-select" onchange="loadThisWeek()">
+                                <option value="">הכל</option>
+                                <option value="pending" selected>ממתין לביצוע</option>
+                                <option value="completed">בוצע</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">חיפוש</label>
+                            <input type="text" id="filter-thisweek-search" class="form-input" 
+                                   placeholder="חיפוש לקוח או תיאור..." onkeyup="loadThisWeek()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">מיון</label>
+                            <select id="filter-thisweek-sort" class="form-select" onchange="loadThisWeek()">
+                                <option value="activity-date" selected>לפי תאריך פעילות</option>
+                                <option value="customer">לפי לקוח</option>
+                                <option value="type">לפי סוג פעילות</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- This Week Content -->
+                    <div id="thisweek-list">
+                        <div class="spinner"></div>
+                    </div>
                 </div>
             </div>
 
@@ -316,6 +379,55 @@
                     
                     <div id="contacts-list">
                         <!-- Contacts will be loaded here -->
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audit Log Tab -->
+            <div id="auditlog-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <h2 class="section-title">📋 יומן פעולות</h2>
+                    
+                    <!-- Filters -->
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label class="form-label">סוג פעולה</label>
+                            <select id="filter-audit-action" class="form-select" onchange="loadAuditLog()">
+                                <option value="">הכל</option>
+                                <option value="create">יצירה</option>
+                                <option value="update">עדכון</option>
+                                <option value="delete">מחיקה</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">סוג ישות</label>
+                            <select id="filter-audit-entity" class="form-select" onchange="loadAuditLog()">
+                                <option value="">הכל</option>
+                                <option value="customer">לקוח</option>
+                                <option value="deal">עסקה</option>
+                                <option value="product">מוצר</option>
+                                <option value="activity">פעילות</option>
+                                <option value="contact">איש קשר</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">חיפוש</label>
+                            <input type="text" id="filter-audit-search" class="form-input" 
+                                   placeholder="חיפוש בתיאור או שם..." onkeyup="loadAuditLog()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">תאריך</label>
+                            <select id="filter-audit-date" class="form-select" onchange="loadAuditLog()">
+                                <option value="">הכל</option>
+                                <option value="today">היום</option>
+                                <option value="week">השבוע</option>
+                                <option value="month">החודש</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="auditlog-list">
                         <div class="spinner"></div>
                     </div>
                 </div>

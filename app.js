@@ -99,6 +99,10 @@ function setupTabs() {
                 loadActivities();
             } else if (tabName === 'contacts') {
                 displayContacts();
+            } else if (tabName === 'thisweek') {
+                loadThisWeek();
+            } else if (tabName === 'auditlog') {
+                loadAuditLog();
             }
         });
     });
@@ -454,6 +458,22 @@ async function saveDeal(status = null) {
         const finalAmount = subtotal - discountAmount;
         
         if (editDealId) {
+            // Get old items BEFORE deleting them for audit log
+            const { data: oldItems } = await supabase
+                .from('deal_items')
+                .select(`
+                    *,
+                    products (product_name)
+                `)
+                .eq('deal_id', editDealId);
+            
+            // Get old deal data for comparison
+            const { data: oldDealData } = await supabase
+                .from('deals')
+                .select('*')
+                .eq('deal_id', editDealId)
+                .single();
+            
             // Update existing deal
             const { data: updatedDeal, error: dealError } = await supabase
                 .from('deals')
@@ -502,6 +522,128 @@ async function saveDeal(status = null) {
             
             if (itemsError) throw itemsError;
             
+            // Build detailed change description for audit log
+            const customerName = customers.find(c => c.customer_id === customerId)?.business_name || 'לקוח';
+            const changes = [];
+            
+            // Compare deal-level changes
+            if (oldDealData) {
+                if (oldDealData.deal_status !== dealStatus) {
+                    changes.push(`סטטוס: ${oldDealData.deal_status} ← ${dealStatus}`);
+                }
+                if (Math.abs((oldDealData.final_amount || 0) - finalAmount) > 0.01) {
+                    changes.push(`סכום: ₪${(oldDealData.final_amount || 0).toFixed(0)} ← ₪${finalAmount.toFixed(0)}`);
+                }
+                if (Math.abs((oldDealData.discount_percentage || 0) - discountPercentage) > 0.01) {
+                    changes.push(`הנחה: ${oldDealData.discount_percentage || 0}% ← ${discountPercentage}%`);
+                }
+            }
+            
+            // Compare items changes
+            const oldItemsMap = {};
+            (oldItems || []).forEach(item => {
+                const key = item.product_id;
+                oldItemsMap[key] = item;
+            });
+            
+            const newItemsMap = {};
+            dealItems.forEach(item => {
+                const key = item.product_id;
+                newItemsMap[key] = item;
+            });
+            
+            // Find added, removed, and modified items
+            const itemChanges = [];
+            
+            // Check for removed items
+            Object.keys(oldItemsMap).forEach(productId => {
+                if (!newItemsMap[productId]) {
+                    const oldItem = oldItemsMap[productId];
+                    const productName = oldItem.products?.product_name || 'מוצר';
+                    itemChanges.push(`🗑️ הוסר: ${productName} (${oldItem.quantity} יח' ב-₪${oldItem.unit_price})`);
+                }
+            });
+            
+            // Check for added items
+            Object.keys(newItemsMap).forEach(productId => {
+                if (!oldItemsMap[productId]) {
+                    const newItem = newItemsMap[productId];
+                    const product = products.find(p => p.product_id === productId);
+                    const productName = product?.product_name || 'מוצר';
+                    itemChanges.push(`➕ נוסף: ${productName} (${newItem.quantity} יח' ב-₪${newItem.unit_price})`);
+                }
+            });
+            
+            // Check for modified items
+            Object.keys(newItemsMap).forEach(productId => {
+                if (oldItemsMap[productId]) {
+                    const oldItem = oldItemsMap[productId];
+                    const newItem = newItemsMap[productId];
+                    const product = products.find(p => p.product_id === productId);
+                    const productName = product?.product_name || oldItem.products?.product_name || 'מוצר';
+                    
+                    const itemModifications = [];
+                    if (oldItem.quantity !== newItem.quantity) {
+                        itemModifications.push(`כמות: ${oldItem.quantity} ← ${newItem.quantity}`);
+                    }
+                    if (Math.abs(oldItem.unit_price - newItem.unit_price) > 0.01) {
+                        itemModifications.push(`מחיר: ₪${oldItem.unit_price} ← ₪${newItem.unit_price}`);
+                    }
+                    if ((oldItem.color || '') !== (newItem.color || '')) {
+                        itemModifications.push(`צבע: ${oldItem.color || '-'} ← ${newItem.color || '-'}`);
+                    }
+                    if ((oldItem.size || '') !== (newItem.size || '')) {
+                        itemModifications.push(`מידה: ${oldItem.size || '-'} ← ${newItem.size || '-'}`);
+                    }
+                    
+                    if (itemModifications.length > 0) {
+                        itemChanges.push(`✏️ ${productName}: ${itemModifications.join(', ')}`);
+                    }
+                }
+            });
+            
+            // Build description
+            let description = `עדכון עסקה בסכום ₪${finalAmount.toFixed(0)}`;
+            if (changes.length > 0 || itemChanges.length > 0) {
+                description = changes.length > 0 
+                    ? changes.join(' | ') 
+                    : `עדכון עסקה`;
+            }
+            
+            // Build old and new values for detailed log
+            const oldValue = {
+                status: oldDealData?.deal_status,
+                total: oldDealData?.final_amount,
+                discount: oldDealData?.discount_percentage,
+                items: (oldItems || []).map(i => ({
+                    product: i.products?.product_name || i.product_id,
+                    quantity: i.quantity,
+                    price: i.unit_price,
+                    color: i.color,
+                    size: i.size
+                }))
+            };
+            
+            const newValue = {
+                status: dealStatus,
+                total: finalAmount,
+                discount: discountPercentage,
+                items: dealItems.map(i => {
+                    const product = products.find(p => p.product_id === i.product_id);
+                    return {
+                        product: product?.product_name || i.product_id,
+                        quantity: i.quantity,
+                        price: i.unit_price,
+                        color: i.color,
+                        size: i.size
+                    };
+                }),
+                itemChanges: itemChanges
+            };
+            
+            // Log the action with detailed changes
+            logAction('update', 'deal', editDealId, `עסקה - ${customerName}`, description, oldValue, newValue);
+            
             showAlert('✅ העסקה עודכנה בהצלחה!', 'success');
             
         } else {
@@ -538,6 +680,10 @@ async function saveDeal(status = null) {
                 .insert(itemsToInsert);
             
             if (itemsError) throw itemsError;
+            
+            // Log the action
+            const customerNameNew = customers.find(c => c.customer_id === customerId)?.business_name || 'לקוח';
+            logAction('create', 'deal', dealData.deal_id, `עסקה - ${customerNameNew}`, `יצירת עסקה חדשה בסכום ₪${finalAmount.toFixed(0)}`);
             
             showAlert('✅ העסקה נשמרה בהצלחה!', 'success');
         }
@@ -657,6 +803,15 @@ async function saveCustomer(event) {
                 console.log('ℹ️ Could not create contact (table may not exist):', contactErr.message);
             }
         }
+        
+        // Log the action
+        logAction(
+            customerId ? 'update' : 'create',
+            'customer',
+            savedCustomer.customer_id,
+            savedCustomer.business_name,
+            customerId ? 'עדכון פרטי לקוח' : 'יצירת לקוח חדש'
+        );
         
         showAlert(customerId ? '✅ הלקוח עודכן בהצלחה!' : '✅ הלקוח נשמר בהצלחה!', 'success');
         
@@ -806,6 +961,10 @@ async function deleteCustomer(customerId) {
             .eq('customer_id', customerId);
         
         if (error) throw error;
+        
+        // Log the action
+        const deletedCustomer = customers.find(c => c.customer_id === customerId);
+        logAction('delete', 'customer', customerId, deletedCustomer?.business_name || 'לקוח', 'מחיקת לקוח');
         
         showAlert('✅ הלקוח נמחק בהצלחה', 'success');
         
@@ -1755,6 +1914,15 @@ async function saveProduct(event) {
         
         if (result.error) throw result.error;
         
+        // Log the action
+        logAction(
+            productId ? 'update' : 'create',
+            'product',
+            result.data.product_id,
+            result.data.product_name,
+            productId ? 'עדכון פרטי מוצר' : 'הוספת מוצר חדש'
+        );
+        
         showAlert(productId ? '✅ המוצר עודכן בהצלחה!' : '✅ המוצר נוסף בהצלחה!', 'success');
         
         closeProductModal();
@@ -1779,6 +1947,10 @@ async function deleteProduct(productId) {
             .eq('product_id', productId);
         
         if (error) throw error;
+        
+        // Log the action
+        const deletedProduct = products.find(p => p.product_id === productId);
+        logAction('delete', 'product', productId, deletedProduct?.product_name || 'מוצר', 'מחיקת מוצר');
         
         showAlert('✅ המוצר נמחק בהצלחה', 'success');
         
@@ -2646,11 +2818,16 @@ async function saveNewActivity(event) {
             activityData.customer_id = customerId;
         }
         
-        const { error } = await supabase
+        const { data: newActivity, error } = await supabase
             .from('activities')
-            .insert(activityData);
+            .insert(activityData)
+            .select()
+            .single();
         
         if (error) throw error;
+        
+        // Log the action
+        logAction('create', 'activity', newActivity.activity_id, activityData.activity_type, `יצירת פעילות: ${activityData.description || activityData.activity_type}`);
         
         showAlert('✅ הפעילות נוספה בהצלחה', 'success');
         closeNewActivityModal();
@@ -2837,6 +3014,361 @@ async function deleteActivity(activityId) {
     } catch (error) {
         console.error('❌ Error deleting activity:', error);
         showAlert('שגיאה במחיקת הפעילות: ' + error.message, 'error');
+    }
+}
+
+// ============================================
+// This Week Tab
+// ============================================
+
+let currentWeekOffset = 0; // 0 = current week, -1 = last week, 1 = next week, etc.
+
+function getWeekDates(offset = 0) {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday
+    
+    // Start of current week (Sunday)
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - dayOfWeek + (offset * 7));
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    // End of week (Saturday)
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    return { startOfWeek, endOfWeek };
+}
+
+function formatDateRange(start, end) {
+    const options = { day: 'numeric', month: 'long' };
+    const startStr = start.toLocaleDateString('he-IL', options);
+    const endStr = end.toLocaleDateString('he-IL', options);
+    const year = end.getFullYear();
+    return `${startStr} - ${endStr}, ${year}`;
+}
+
+function changeWeek(direction) {
+    currentWeekOffset += direction;
+    loadThisWeek();
+}
+
+function goToCurrentWeek() {
+    currentWeekOffset = 0;
+    loadThisWeek();
+}
+
+async function loadThisWeek() {
+    const container = document.getElementById('thisweek-list');
+    container.innerHTML = '<div class="spinner"></div>';
+    
+    // Update date range display
+    const { startOfWeek, endOfWeek } = getWeekDates(currentWeekOffset);
+    const dateRangeDisplay = document.getElementById('thisweek-date-range');
+    if (dateRangeDisplay) {
+        let weekLabel = '';
+        if (currentWeekOffset === 0) {
+            weekLabel = 'השבוע: ';
+        } else if (currentWeekOffset === -1) {
+            weekLabel = 'שבוע שעבר: ';
+        } else if (currentWeekOffset === 1) {
+            weekLabel = 'שבוע הבא: ';
+        } else if (currentWeekOffset < 0) {
+            weekLabel = `לפני ${Math.abs(currentWeekOffset)} שבועות: `;
+        } else {
+            weekLabel = `בעוד ${currentWeekOffset} שבועות: `;
+        }
+        dateRangeDisplay.innerHTML = `<strong>${weekLabel}</strong>${formatDateRange(startOfWeek, endOfWeek)}`;
+    }
+    
+    try {
+        // Get filter values
+        const typeFilter = document.getElementById('filter-thisweek-type')?.value || '';
+        const statusFilter = document.getElementById('filter-thisweek-status')?.value || '';
+        const searchFilter = document.getElementById('filter-thisweek-search')?.value.toLowerCase() || '';
+        const sortFilter = document.getElementById('filter-thisweek-sort')?.value || 'activity-date';
+        
+        // Build query for activities in this week
+        let query = supabase
+            .from('activities')
+            .select(`
+                *,
+                deals (
+                    deal_id,
+                    deal_status,
+                    final_amount,
+                    customers (
+                        customer_id,
+                        business_name,
+                        contact_name,
+                        phone
+                    )
+                ),
+                customers (
+                    customer_id,
+                    business_name,
+                    contact_name,
+                    phone
+                )
+            `)
+            .neq('activity_type', 'הערה')
+            .gte('activity_date', startOfWeek.toISOString())
+            .lte('activity_date', endOfWeek.toISOString());
+        
+        // Apply type filter
+        if (typeFilter) {
+            query = query.eq('activity_type', typeFilter);
+        }
+        
+        // Apply status filter
+        if (statusFilter === 'pending') {
+            query = query.or('completed.is.null,completed.eq.false');
+        } else if (statusFilter === 'completed') {
+            query = query.eq('completed', true);
+        }
+        
+        // Apply sorting
+        if (sortFilter === 'activity-date') {
+            query = query.order('activity_date', { ascending: true });
+        } else if (sortFilter === 'customer') {
+            query = query.order('activity_date', { ascending: true });
+        } else if (sortFilter === 'type') {
+            query = query.order('activity_type', { ascending: true });
+        }
+        
+        const { data: activities, error } = await query;
+        
+        if (error) throw error;
+        
+        // Filter by search (client-side)
+        let filteredActivities = activities || [];
+        if (searchFilter) {
+            filteredActivities = filteredActivities.filter(activity => {
+                const customerName = activity.deals?.customers?.business_name || 
+                                    activity.customers?.business_name || '';
+                const description = activity.description || '';
+                return customerName.toLowerCase().includes(searchFilter) ||
+                       description.toLowerCase().includes(searchFilter);
+            });
+        }
+        
+        // Sort by customer if needed (client-side)
+        if (sortFilter === 'customer') {
+            filteredActivities.sort((a, b) => {
+                const nameA = a.deals?.customers?.business_name || a.customers?.business_name || '';
+                const nameB = b.deals?.customers?.business_name || b.customers?.business_name || '';
+                return nameA.localeCompare(nameB, 'he');
+            });
+        }
+        
+        if (filteredActivities.length === 0) {
+            container.innerHTML = `
+                <div class="text-center" style="padding: 3rem; color: var(--text-tertiary);">
+                    <p style="font-size: 1.3rem;">📭 אין פעילויות מתוכננות השבוע</p>
+                    <p>נסה לשנות את הסינון או הוסף פעילויות חדשות</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Group activities by day
+        const groupedByDay = {};
+        const dayNames = ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'שבת'];
+        
+        filteredActivities.forEach(activity => {
+            const activityDate = new Date(activity.activity_date);
+            const dateKey = activityDate.toISOString().split('T')[0];
+            const dayName = dayNames[activityDate.getDay()];
+            const formattedDate = activityDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
+            
+            if (!groupedByDay[dateKey]) {
+                groupedByDay[dateKey] = {
+                    dayName,
+                    formattedDate,
+                    activities: []
+                };
+            }
+            groupedByDay[dateKey].activities.push(activity);
+        });
+        
+        // Build HTML
+        let html = '';
+        const sortedDays = Object.keys(groupedByDay).sort();
+        const today = new Date().toISOString().split('T')[0];
+        
+        sortedDays.forEach(dateKey => {
+            const dayData = groupedByDay[dateKey];
+            const isToday = dateKey === today;
+            
+            html += `
+                <div class="thisweek-day-section" style="margin-bottom: 2rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid ${isToday ? 'var(--primary-color)' : 'var(--border-color)'};">
+                        <span style="font-size: 1.1rem; font-weight: 600; color: ${isToday ? 'var(--primary-color)' : 'var(--text-primary)'};">
+                            ${dayData.dayName}
+                        </span>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">${dayData.formattedDate}</span>
+                        ${isToday ? '<span style="background: var(--primary-color); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">היום</span>' : ''}
+                        <span style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; color: var(--text-secondary);">
+                            ${dayData.activities.length} פעילויות
+                        </span>
+                    </div>
+                    <div class="deals-grid" style="gap: 1rem;">
+            `;
+            
+            dayData.activities.forEach(activity => {
+                const customer = activity.deals?.customers || activity.customers;
+                const customerName = customer?.business_name || 'לקוח לא ידוע';
+                const contactName = customer?.contact_name || '';
+                const phone = customer?.phone || '';
+                const dealId = activity.deal_id;
+                const dealStatus = activity.deals?.deal_status || '';
+                const dealAmount = activity.deals?.final_amount;
+                
+                const activityTime = new Date(activity.activity_date).toLocaleTimeString('he-IL', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                const typeIcons = {
+                    'שיחה': '📞',
+                    'פגישה': '📅',
+                    'מייל': '📧',
+                    'משימה': '✅'
+                };
+                const icon = typeIcons[activity.activity_type] || '📝';
+                
+                const isCompleted = activity.completed === true;
+                const statusClass = isCompleted ? 'badge-won' : 'badge-pending';
+                const statusText = isCompleted ? 'בוצע' : 'ממתין';
+                
+                html += `
+                    <div class="deal-card" style="padding: 1rem; ${isCompleted ? 'opacity: 0.7;' : ''}">
+                        <div class="deal-card-header" style="margin-bottom: 0.75rem; padding-bottom: 0.75rem;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                    <span style="font-size: 1.2rem;">${icon}</span>
+                                    <span class="deal-card-title" style="font-size: 1rem;">${activity.activity_type}</span>
+                                    <span style="color: var(--text-tertiary); font-size: 0.85rem;">⏰ ${activityTime}</span>
+                                </div>
+                                <div class="deal-card-date" style="font-size: 0.9rem;">
+                                    🏢 ${customerName}${contactName ? ` • ${contactName}` : ''}
+                                </div>
+                            </div>
+                            <span class="badge ${statusClass}">${statusText}</span>
+                        </div>
+                        
+                        ${activity.description ? `
+                            <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9rem;">
+                                ${activity.description}
+                            </div>
+                        ` : ''}
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.8rem;">
+                                ${phone ? `<span style="color: var(--text-secondary);">📱 ${phone}</span>` : ''}
+                                ${dealId ? `<span style="color: var(--primary-color);">💼 עסקה${dealAmount ? ` • ₪${dealAmount.toFixed(0)}` : ''}</span>` : ''}
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                ${!isCompleted ? `
+                                    <button class="btn btn-success btn-icon" style="width: 32px; height: 32px;" 
+                                            onclick="markActivityComplete('${activity.activity_id}')" title="סמן כבוצע">
+                                        ✓
+                                    </button>
+                                ` : ''}
+                                ${dealId ? `
+                                    <button class="btn btn-primary btn-icon" style="width: 32px; height: 32px;" 
+                                            onclick="openDealModal('${dealId}')" title="פתח עסקה">
+                                        👁️
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-secondary btn-icon" style="width: 32px; height: 32px;" 
+                                        onclick="editActivity('${activity.activity_id}')" title="ערוך">
+                                    ✏️
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Add summary at top
+        const totalActivities = filteredActivities.length;
+        const pendingCount = filteredActivities.filter(a => !a.completed).length;
+        const completedCount = filteredActivities.filter(a => a.completed === true).length;
+        
+        const summaryHtml = `
+            <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 1.5rem; border-radius: 12px; text-align: center; min-width: 120px;">
+                    <div style="font-size: 1.8rem; font-weight: 700;">${totalActivities}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.9;">סה"כ פעילויות</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 1rem 1.5rem; border-radius: 12px; text-align: center; min-width: 120px;">
+                    <div style="font-size: 1.8rem; font-weight: 700;">${pendingCount}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.9;">ממתינות</div>
+                </div>
+                <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 1rem 1.5rem; border-radius: 12px; text-align: center; min-width: 120px;">
+                    <div style="font-size: 1.8rem; font-weight: 700;">${completedCount}</div>
+                    <div style="font-size: 0.85rem; opacity: 0.9;">הושלמו</div>
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = summaryHtml + html;
+        
+    } catch (error) {
+        console.error('❌ Error loading this week activities:', error);
+        container.innerHTML = `
+            <div class="alert alert-error">שגיאה בטעינת פעילויות השבוע: ${error.message}</div>
+        `;
+    }
+}
+
+async function markActivityComplete(activityId) {
+    try {
+        const { error } = await supabase
+            .from('activities')
+            .update({ completed: true })
+            .eq('activity_id', activityId);
+        
+        if (error) throw error;
+        
+        showAlert('✅ הפעילות סומנה כבוצעה!', 'success');
+        loadThisWeek();
+        
+    } catch (error) {
+        console.error('❌ Error marking activity complete:', error);
+        showAlert('שגיאה בעדכון הפעילות: ' + error.message, 'error');
+    }
+}
+
+async function editActivity(activityId) {
+    try {
+        // Load activity from database
+        const { data: activity, error } = await supabase
+            .from('activities')
+            .select('*')
+            .eq('activity_id', activityId)
+            .single();
+        
+        if (error) throw error;
+        
+        if (!activity) {
+            showAlert('הפעילות לא נמצאה', 'error');
+            return;
+        }
+        
+        // Open edit modal with the activity data
+        showEditActivityModal(activity);
+        
+    } catch (error) {
+        console.error('❌ Error loading activity for edit:', error);
+        showAlert('שגיאה בטעינת הפעילות: ' + error.message, 'error');
     }
 }
 
@@ -3380,3 +3912,209 @@ window.CRM = {
     saveDeal,
     resetForm
 };
+
+// ============================================
+// Audit Log Functions
+// ============================================
+
+async function logAction(actionType, entityType, entityId, entityName, description, oldValue = null, newValue = null) {
+    try {
+        const performedBy = localStorage.getItem('crm_username') || 'משתמש מערכת';
+        
+        await supabase
+            .from('audit_log')
+            .insert({
+                action_type: actionType,
+                entity_type: entityType,
+                entity_id: entityId,
+                entity_name: entityName,
+                description: description,
+                old_value: oldValue,
+                new_value: newValue,
+                performed_by: performedBy
+            });
+            
+    } catch (error) {
+        console.error('❌ Error logging action:', error);
+        // Don't throw - logging should not break the main operation
+    }
+}
+
+async function loadAuditLog() {
+    const container = document.getElementById('auditlog-list');
+    container.innerHTML = '<div class="spinner"></div>';
+    
+    try {
+        // Get filter values
+        const actionFilter = document.getElementById('filter-audit-action')?.value || '';
+        const entityFilter = document.getElementById('filter-audit-entity')?.value || '';
+        const searchFilter = document.getElementById('filter-audit-search')?.value.toLowerCase() || '';
+        const dateFilter = document.getElementById('filter-audit-date')?.value || '';
+        
+        // Build query
+        let query = supabase
+            .from('audit_log')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(100);
+        
+        // Apply filters
+        if (actionFilter) {
+            query = query.eq('action_type', actionFilter);
+        }
+        
+        if (entityFilter) {
+            query = query.eq('entity_type', entityFilter);
+        }
+        
+        // Date filter
+        if (dateFilter) {
+            const now = new Date();
+            let startDate;
+            
+            if (dateFilter === 'today') {
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            } else if (dateFilter === 'week') {
+                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            } else if (dateFilter === 'month') {
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            }
+            
+            if (startDate) {
+                query = query.gte('created_at', startDate.toISOString());
+            }
+        }
+        
+        const { data: logs, error } = await query;
+        
+        if (error) throw error;
+        
+        // Filter by search (client-side)
+        let filteredLogs = logs || [];
+        if (searchFilter) {
+            filteredLogs = filteredLogs.filter(log => {
+                const name = (log.entity_name || '').toLowerCase();
+                const desc = (log.description || '').toLowerCase();
+                const performer = (log.performed_by || '').toLowerCase();
+                return name.includes(searchFilter) || 
+                       desc.includes(searchFilter) || 
+                       performer.includes(searchFilter);
+            });
+        }
+        
+        if (filteredLogs.length === 0) {
+            container.innerHTML = `
+                <div class="text-center" style="padding: 3rem; color: var(--text-tertiary);">
+                    <p style="font-size: 1.3rem;">📋 אין פעולות להצגה</p>
+                    <p>לא נמצאו רשומות ביומן הפעולות${actionFilter || entityFilter || dateFilter ? ' לפי הסינון שנבחר' : ''}</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Action type icons and labels
+        const actionLabels = {
+            'create': { icon: '➕', label: 'יצירה', class: 'badge-won' },
+            'update': { icon: '✏️', label: 'עדכון', class: 'badge-pending' },
+            'delete': { icon: '🗑️', label: 'מחיקה', class: 'badge-lost' }
+        };
+        
+        // Entity type labels
+        const entityLabels = {
+            'customer': 'לקוח',
+            'deal': 'עסקה',
+            'product': 'מוצר',
+            'activity': 'פעילות',
+            'contact': 'איש קשר'
+        };
+        
+        // Build HTML
+        let html = `
+            <p style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+                מציג ${filteredLogs.length} פעולות אחרונות
+            </p>
+        `;
+        
+        // Group by date
+        const groupedByDate = {};
+        filteredLogs.forEach(log => {
+            const dateKey = new Date(log.created_at).toLocaleDateString('he-IL', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            if (!groupedByDate[dateKey]) {
+                groupedByDate[dateKey] = [];
+            }
+            groupedByDate[dateKey].push(log);
+        });
+        
+        Object.keys(groupedByDate).forEach(dateKey => {
+            html += `
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
+                        <span style="font-weight: 600; color: var(--text-primary);">${dateKey}</span>
+                        <span style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; color: var(--text-secondary);">
+                            ${groupedByDate[dateKey].length} פעולות
+                        </span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            `;
+            
+            groupedByDate[dateKey].forEach(log => {
+                const action = actionLabels[log.action_type] || { icon: '📌', label: log.action_type, class: 'badge-new' };
+                const entity = entityLabels[log.entity_type] || log.entity_type;
+                const time = new Date(log.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+                
+                // Check for detailed item changes
+                let itemChangesHtml = '';
+                if (log.new_value && log.new_value.itemChanges && log.new_value.itemChanges.length > 0) {
+                    itemChangesHtml = `
+                        <div style="width: 100%; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border-color);">
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">📋 פירוט שינויים:</div>
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem;">
+                                ${log.new_value.itemChanges.map(change => `
+                                    <div style="padding: 0.25rem 0.5rem; background: var(--bg-tertiary); border-radius: 4px; color: var(--text-primary);">
+                                        ${change}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                html += `
+                    <div style="display: flex; align-items: flex-start; gap: 1rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; flex-wrap: wrap;">
+                        <span style="font-size: 1.2rem;">${action.icon}</span>
+                        <span class="badge ${action.class}" style="font-size: 0.75rem;">${action.label}</span>
+                        <span style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 8px; font-size: 0.8rem; color: var(--text-secondary);">
+                            ${entity}
+                        </span>
+                        <div style="flex: 1; min-width: 200px;">
+                            <span style="font-weight: 600; color: var(--text-primary);">${log.entity_name || '-'}</span>
+                            ${log.description ? `<span style="color: var(--text-secondary); margin-right: 0.5rem;">• ${log.description}</span>` : ''}
+                            ${itemChangesHtml}
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-tertiary);">
+                            <span>👤 ${log.performed_by}</span>
+                            <span>⏰ ${time}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('❌ Error loading audit log:', error);
+        container.innerHTML = `
+            <div class="alert alert-error">שגיאה בטעינת יומן הפעולות: ${error.message}</div>
+        `;
+    }
+}
