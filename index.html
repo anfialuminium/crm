@@ -22,6 +22,7 @@
                 <button class="nav-tab" data-tab="history">עסקאות</button>
                 <button class="nav-tab" data-tab="activities">פעילויות</button>
                 <button class="nav-tab" data-tab="customers">לקוחות</button>
+                <button class="nav-tab" data-tab="contacts">אנשי קשר</button>
                 <button class="nav-tab" data-tab="products">מוצרים</button>
             </nav>
 
@@ -208,9 +209,9 @@
                         <div class="form-group">
                             <label class="form-label">מיון</label>
                             <select id="filter-activity-sort" class="form-select" onchange="loadActivities()">
+                                <option value="activity-date" selected>לפי תאריך פעילות</option>
                                 <option value="newest">החדשים ביותר</option>
                                 <option value="oldest">הישנים ביותר</option>
-                                <option value="activity-date">לפי תאריך פעילות</option>
                             </select>
                         </div>
                     </div>
@@ -279,6 +280,46 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Contacts Tab -->
+            <div id="contacts-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h2 class="section-title" style="margin-bottom: 0;">אנשי קשר</h2>
+                        <button type="button" class="btn btn-primary" onclick="openContactModal()">
+                            ➕ איש קשר חדש
+                        </button>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label class="form-label">חיפוש</label>
+                            <input type="text" id="filter-contact-search" class="form-input" 
+                                   placeholder="הקלד שם, טלפון או אימייל..." onkeyup="filterContacts()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי לקוח</label>
+                            <select id="filter-contact-customer" class="form-select" onchange="filterContacts()">
+                                <option value="">כל הלקוחות</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">מיון</label>
+                            <select id="filter-contact-sort" class="form-select" onchange="filterContacts()">
+                                <option value="name-asc">שם (א-ת)</option>
+                                <option value="name-desc">שם (ת-א)</option>
+                                <option value="customer">לפי לקוח</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="contacts-list">
+                        <!-- Contacts will be loaded here -->
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -291,22 +332,11 @@
             </div>
             
             <form id="customer-form" onsubmit="saveCustomer(event)">
+                <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">פרטי העסק</h4>
                 <div class="form-grid">
                     <div class="form-group">
                         <label class="form-label required">שם העסק</label>
                         <input type="text" id="new-business-name" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">שם איש קשר</label>
-                        <input type="text" id="new-contact-name" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label required">טלפון</label>
-                        <input type="tel" id="new-phone" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">אימייל</label>
-                        <input type="email" id="new-email" class="form-input">
                     </div>
                     <div class="form-group">
                         <label class="form-label">עיר</label>
@@ -328,8 +358,31 @@
                         <input type="text" id="new-source" class="form-input" placeholder="המלצה, אתר, תערוכה...">
                     </div>
                 </div>
+                
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+                
+                <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">👤 איש קשר ראשי <small style="font-weight: normal;">(ייווצר אוטומטית)</small></h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">שם איש קשר</label>
+                        <input type="text" id="new-contact-name" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">תפקיד</label>
+                        <input type="text" id="new-contact-role" class="form-input" placeholder="מנהל, רכש, מזכירה...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">טלפון</label>
+                        <input type="tel" id="new-phone" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">אימייל</label>
+                        <input type="email" id="new-email" class="form-input">
+                    </div>
+                </div>
+                
                 <div class="form-group">
-                    <label class="form-label">הערות</label>
+                    <label class="form-label">הערות על הלקוח</label>
                     <textarea id="new-notes" class="form-textarea"></textarea>
                 </div>
                 

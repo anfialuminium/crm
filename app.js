@@ -29,6 +29,7 @@ function handleLogin(event) {
 // Global state
 let products = [];
 let customers = [];
+let contacts = [];
 let dealItems = [];
 let itemCounter = 0;
 
@@ -96,6 +97,8 @@ function setupTabs() {
                 loadDealsHistory();
             } else if (tabName === 'activities') {
                 loadActivities();
+            } else if (tabName === 'contacts') {
+                displayContacts();
             }
         });
     });
@@ -126,11 +129,44 @@ async function loadProducts() {
 
 async function loadCustomers() {
     try {
-        const { data, error } = await supabase
-            .from('customers')
-            .select('*')
-            .eq('active', true)
-            .order('business_name');
+        // Try to load with primary contact (requires contacts table)
+        let data, error;
+        
+        try {
+            const result = await supabase
+                .from('customers')
+                .select(`
+                    *,
+                    primary_contact:contacts!customers_primary_contact_id_fkey (
+                        contact_id,
+                        contact_name,
+                        phone,
+                        email,
+                        role
+                    )
+                `)
+                .eq('active', true)
+                .order('business_name');
+            
+            data = result.data;
+            error = result.error;
+            
+            // If there's an error (table doesn't exist), fallback to simple query
+            if (error) {
+                throw error;
+            }
+        } catch (joinError) {
+            // Fallback: load without primary contact join
+            console.log('ℹ️ Loading customers without contacts join (contacts table may not exist yet)');
+            const result = await supabase
+                .from('customers')
+                .select('*')
+                .eq('active', true)
+                .order('business_name');
+            
+            data = result.data;
+            error = result.error;
+        }
         
         if (error) throw error;
         
@@ -549,15 +585,22 @@ async function saveCustomer(event) {
     try {
         const customerId = document.getElementById('customer-form').dataset.customerId;
         
+        // Get contact details
+        const contactName = document.getElementById('new-contact-name').value.trim();
+        const contactRole = document.getElementById('new-contact-role')?.value.trim() || '';
+        const contactPhone = document.getElementById('new-phone').value.trim();
+        const contactEmail = document.getElementById('new-email').value.trim();
+        
         const customerData = {
             business_name: document.getElementById('new-business-name').value,
-            contact_name: document.getElementById('new-contact-name').value || null,
-            phone: document.getElementById('new-phone').value,
-            email: document.getElementById('new-email').value || null,
             city: document.getElementById('new-city').value || null,
             customer_type: document.getElementById('new-customer-type').value || null,
             source: document.getElementById('new-source').value || null,
-            notes: document.getElementById('new-notes').value || null
+            notes: document.getElementById('new-notes').value || null,
+            // Keep legacy fields for backwards compatibility
+            contact_name: contactName || null,
+            phone: contactPhone || null,
+            email: contactEmail || null
         };
         
         let result;
@@ -580,6 +623,41 @@ async function saveCustomer(event) {
         
         if (result.error) throw result.error;
         
+        const savedCustomer = result.data;
+        
+        // Create contact if contact details were provided (only for new customers)
+        if (!customerId && contactName) {
+            try {
+                const contactData = {
+                    contact_name: contactName,
+                    role: contactRole || null,
+                    phone: contactPhone || null,
+                    email: contactEmail || null,
+                    customer_id: savedCustomer.customer_id,
+                    created_by: localStorage.getItem('crm_username') || 'משתמש מערכת'
+                };
+                
+                const { data: newContact, error: contactError } = await supabase
+                    .from('contacts')
+                    .insert(contactData)
+                    .select()
+                    .single();
+                
+                if (!contactError && newContact) {
+                    // Set as primary contact
+                    await supabase
+                        .from('customers')
+                        .update({ primary_contact_id: newContact.contact_id })
+                        .eq('customer_id', savedCustomer.customer_id);
+                    
+                    console.log('✅ Created primary contact for customer');
+                }
+            } catch (contactErr) {
+                // Contact creation failed - maybe table doesn't exist yet
+                console.log('ℹ️ Could not create contact (table may not exist):', contactErr.message);
+            }
+        }
+        
         showAlert(customerId ? '✅ הלקוח עודכן בהצלחה!' : '✅ הלקוח נשמר בהצלחה!', 'success');
         
         // Reload customers and select the new/updated one if on deals tab
@@ -590,7 +668,7 @@ async function saveCustomer(event) {
             displayCustomers();
         } else if (!customerId) {
             // Only select if it's a new customer and we're on deals tab
-            document.getElementById('customer-select').value = result.data.customer_id;
+            document.getElementById('customer-select').value = savedCustomer.customer_id;
         }
         
         closeCustomerModal();
@@ -631,22 +709,31 @@ async function displayCustomers() {
             'אחר': 'badge-pending'
         }[customer.customer_type] || 'badge-new';
         
+        // Get primary contact info
+        const primaryContact = customer.primary_contact;
+        const contactName = primaryContact?.contact_name || customer.contact_name || 'ללא איש קשר';
+        const contactPhone = primaryContact?.phone || customer.phone || '-';
+        const contactEmail = primaryContact?.email || customer.email || '-';
+        const contactRole = primaryContact?.role || '';
+        
         card.innerHTML = `
             <div class="deal-card-header">
                 <div>
                     <div class="deal-card-title">${customer.business_name}</div>
-                    <div class="deal-card-date">${customer.contact_name || 'ללא איש קשר'}</div>
+                    <div class="deal-card-date">
+                        👤 ${contactName}${contactRole ? ` (${contactRole})` : ''}
+                    </div>
                 </div>
                 ${customer.customer_type ? `<span class="badge ${typeBadgeClass}">${customer.customer_type}</span>` : ''}
             </div>
             <div class="deal-card-body">
                 <div class="deal-card-info">
                     <span class="deal-card-label">טלפון:</span>
-                    <span class="deal-card-value">${customer.phone || '-'}</span>
+                    <span class="deal-card-value">${contactPhone}</span>
                 </div>
                 <div class="deal-card-info">
                     <span class="deal-card-label">אימייל:</span>
-                    <span class="deal-card-value">${customer.email || '-'}</span>
+                    <span class="deal-card-value">${contactEmail}</span>
                 </div>
                 <div class="deal-card-info">
                     <span class="deal-card-label">עיר:</span>
@@ -689,6 +776,8 @@ function editCustomer(customer) {
     // Populate the modal with customer data
     document.getElementById('new-business-name').value = customer.business_name || '';
     document.getElementById('new-contact-name').value = customer.contact_name || '';
+    const roleField = document.getElementById('new-contact-role');
+    if (roleField) roleField.value = '';  // Role is not stored in legacy customer table
     document.getElementById('new-phone').value = customer.phone || '';
     document.getElementById('new-email').value = customer.email || '';
     document.getElementById('new-city').value = customer.city || '';
@@ -815,6 +904,22 @@ async function viewCustomerDetails(customerId) {
             
             <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
             
+            <!-- Primary Contact Section -->
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="margin-bottom: 1rem;">⭐ איש קשר מוביל</h4>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <select id="customer-primary-contact" class="form-select" style="flex: 1;">
+                        <option value="">-- ללא איש קשר מוביל --</option>
+                    </select>
+                    <button type="button" class="btn btn-primary" onclick="savePrimaryContact('${customerId}')">💾 שמור</button>
+                </div>
+                <div id="customer-contacts-list" style="margin-top: 1rem;">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+            
             <!-- Add Note Section -->
             <div style="margin-bottom: 1.5rem;">
                 <h4 style="margin-bottom: 1rem;">📝 הוסף הערה חדשה</h4>
@@ -836,6 +941,9 @@ async function viewCustomerDetails(customerId) {
             </div>
         `;
         
+        // Load contacts for this customer
+        loadCustomerContacts(customerId, customer.primary_contact_id);
+        
         // Load notes
         loadCustomerNotes(customerId);
         
@@ -851,6 +959,101 @@ function closeCustomerDetailsModal() {
     const modal = document.getElementById('customer-details-modal');
     if (modal) {
         modal.classList.remove('active');
+    }
+}
+
+async function loadCustomerContacts(customerId, primaryContactId) {
+    const select = document.getElementById('customer-primary-contact');
+    const container = document.getElementById('customer-contacts-list');
+    
+    select.innerHTML = '<option value="">-- ללא איש קשר מוביל --</option>';
+    container.innerHTML = '<div class="spinner"></div>';
+    
+    try {
+        const { data: customerContacts, error } = await supabase
+            .from('contacts')
+            .select('*')
+            .eq('customer_id', customerId)
+            .order('contact_name');
+        
+        if (error) throw error;
+        
+        if (!customerContacts || customerContacts.length === 0) {
+            container.innerHTML = `
+                <p style="color: var(--text-tertiary); text-align: center;">
+                    אין אנשי קשר משויכים ללקוח זה. 
+                    <button class="btn btn-sm btn-primary" onclick="openContactModalForCustomer('${customerId}')" style="margin-right: 0.5rem;">
+                        ➕ הוסף איש קשר
+                    </button>
+                </p>
+            `;
+            return;
+        }
+        
+        // Populate dropdown
+        customerContacts.forEach(contact => {
+            const option = document.createElement('option');
+            option.value = contact.contact_id;
+            option.textContent = `${contact.contact_name}${contact.role ? ` (${contact.role})` : ''}`;
+            if (contact.contact_id === primaryContactId) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+        
+        // Display contacts list
+        container.innerHTML = `
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                אנשי קשר משויכים (${customerContacts.length}):
+            </p>
+            ${customerContacts.map(c => `
+                <div style="display: inline-block; background: var(--bg-secondary); padding: 0.3rem 0.6rem; border-radius: 15px; margin: 0.2rem; font-size: 0.85rem;">
+                    👤 ${c.contact_name}${c.role ? ` - ${c.role}` : ''}
+                    ${c.contact_id === primaryContactId ? '<span style="color: var(--primary-color);">⭐</span>' : ''}
+                </div>
+            `).join('')}
+            <button class="btn btn-sm btn-secondary" onclick="openContactModalForCustomer('${customerId}')" style="margin-top: 0.5rem;">
+                ➕ הוסף איש קשר
+            </button>
+        `;
+        
+    } catch (error) {
+        console.error('❌ Error loading customer contacts:', error);
+        container.innerHTML = '<p style="color: var(--error-color);">שגיאה בטעינת אנשי קשר</p>';
+    }
+}
+
+function openContactModalForCustomer(customerId) {
+    openContactModal();
+    // Set the customer dropdown to this customer
+    setTimeout(() => {
+        document.getElementById('contact-customer').value = customerId;
+    }, 100);
+}
+
+async function savePrimaryContact(customerId) {
+    const contactId = document.getElementById('customer-primary-contact').value || null;
+    
+    try {
+        const { error } = await supabase
+            .from('customers')
+            .update({ primary_contact_id: contactId })
+            .eq('customer_id', customerId);
+        
+        if (error) throw error;
+        
+        showAlert('✅ איש הקשר המוביל עודכן בהצלחה', 'success');
+        
+        // Reload customers to update cards
+        await loadCustomers();
+        displayCustomers();
+        
+        // Refresh the current modal
+        viewCustomerDetails(customerId);
+        
+    } catch (error) {
+        console.error('❌ Error saving primary contact:', error);
+        showAlert('שגיאה בשמירת איש הקשר המוביל: ' + error.message, 'error');
     }
 }
 
@@ -995,6 +1198,351 @@ async function deleteCustomerNote(activityId) {
     }
 }
 
+// ============================================
+// Contacts Management
+// ============================================
+
+async function loadContacts() {
+    try {
+        // First, try simple query to load contacts
+        const { data, error } = await supabase
+            .from('contacts')
+            .select('*')
+            .order('contact_name', { ascending: true });
+        
+        if (error) throw error;
+        
+        // Enrich with customer names
+        contacts = data || [];
+        
+        // Add customer info for each contact
+        for (let contact of contacts) {
+            if (contact.customer_id) {
+                const customer = customers.find(c => c.customer_id === contact.customer_id);
+                if (customer) {
+                    contact.customers = {
+                        customer_id: customer.customer_id,
+                        business_name: customer.business_name
+                    };
+                }
+            }
+        }
+        
+        console.log(`✅ Loaded ${contacts.length} contacts`);
+    } catch (error) {
+        console.error('❌ Error loading contacts:', error.message || error);
+        // Check if table doesn't exist
+        if (error.message?.includes('does not exist') || error.code === '42P01' || error.code === 'PGRST116') {
+            console.log('ℹ️ Contacts table does not exist yet. Please run the migration: create_contacts_table.sql');
+        }
+        contacts = [];
+    }
+}
+
+async function displayContacts() {
+    const container = document.getElementById('contacts-list');
+    container.innerHTML = '<div class="spinner"></div>';
+    
+    await loadContacts();
+    
+    // Check if contacts table exists
+    if (contacts.length === 0) {
+        // Check if we got an error or just no data
+        try {
+            const { error } = await supabase.from('contacts').select('contact_id').limit(1);
+            if (error && (error.message?.includes('does not exist') || error.code === '42P01')) {
+                container.innerHTML = `
+                    <div class="text-center" style="padding: 2rem; color: var(--text-tertiary);">
+                        <p style="font-size: 1.2rem;">⚠️ טבלת אנשי קשר לא קיימת</p>
+                        <p>יש להריץ את קובץ המיגרציה <code>create_contacts_table.sql</code> ב-Supabase</p>
+                    </div>
+                `;
+                return;
+            }
+        } catch (e) {
+            // Ignore - will show empty state
+        }
+    }
+    
+    // Populate customer filter
+    populateContactCustomerFilter();
+    
+    // Apply filters and display
+    filterContacts();
+}
+
+function populateContactCustomerFilter() {
+    const select = document.getElementById('filter-contact-customer');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">כל הלקוחות</option>';
+    customers.forEach(customer => {
+        const option = document.createElement('option');
+        option.value = customer.customer_id;
+        option.textContent = customer.business_name;
+        select.appendChild(option);
+    });
+}
+
+function filterContacts() {
+    const container = document.getElementById('contacts-list');
+    
+    const searchQuery = document.getElementById('filter-contact-search')?.value.toLowerCase() || '';
+    const customerFilter = document.getElementById('filter-contact-customer')?.value || '';
+    const sortBy = document.getElementById('filter-contact-sort')?.value || 'name-asc';
+    
+    // Filter contacts
+    let filteredContacts = contacts.filter(contact => {
+        const matchesSearch = !searchQuery || 
+            contact.contact_name?.toLowerCase().includes(searchQuery) ||
+            contact.phone?.toLowerCase().includes(searchQuery) ||
+            contact.email?.toLowerCase().includes(searchQuery) ||
+            contact.role?.toLowerCase().includes(searchQuery);
+        
+        const matchesCustomer = !customerFilter || contact.customer_id === customerFilter;
+        
+        return matchesSearch && matchesCustomer;
+    });
+    
+    // Sort contacts
+    filteredContacts.sort((a, b) => {
+        switch (sortBy) {
+            case 'name-asc':
+                return (a.contact_name || '').localeCompare(b.contact_name || '', 'he');
+            case 'name-desc':
+                return (b.contact_name || '').localeCompare(a.contact_name || '', 'he');
+            case 'customer':
+                return (a.customers?.business_name || 'ת').localeCompare(b.customers?.business_name || 'ת', 'he');
+            default:
+                return 0;
+        }
+    });
+    
+    // Display results
+    if (filteredContacts.length === 0) {
+        container.innerHTML = `
+            <div class="text-center" style="padding: 2rem; color: var(--text-tertiary);">
+                <p style="font-size: 1.2rem;">👥 לא נמצאו אנשי קשר</p>
+                <p>${contacts.length > 0 ? 'נסה לשנות את הסינון' : 'הוסף אנשי קשר למערכת'}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const grid = document.createElement('div');
+    grid.className = 'deals-grid';
+    
+    filteredContacts.forEach(contact => {
+        const card = document.createElement('div');
+        card.className = 'deal-card';
+        
+        card.innerHTML = `
+            <div class="deal-card-header">
+                <div>
+                    <div class="deal-card-title">👤 ${contact.contact_name}</div>
+                    <div class="deal-card-date">${contact.role || 'ללא תפקיד'}</div>
+                </div>
+                ${contact.customers ? `<span class="badge badge-new">${contact.customers.business_name}</span>` : '<span class="badge badge-pending">ללא לקוח</span>'}
+            </div>
+            <div class="deal-card-body">
+                <div class="deal-card-info">
+                    <span class="deal-card-label">טלפון:</span>
+                    <span class="deal-card-value">${contact.phone || '-'}</span>
+                </div>
+                <div class="deal-card-info">
+                    <span class="deal-card-label">אימייל:</span>
+                    <span class="deal-card-value">${contact.email || '-'}</span>
+                </div>
+                ${contact.notes ? `
+                    <div class="deal-card-info" style="grid-column: 1 / -1;">
+                        <span class="deal-card-label">הערות:</span>
+                        <span class="deal-card-value">${contact.notes}</span>
+                    </div>
+                ` : ''}
+            </div>
+            <div class="deal-card-footer">
+                <div class="deal-card-actions" style="margin-right: auto;">
+                    <button class="btn btn-secondary btn-icon" onclick='editContact(${JSON.stringify(contact).replace(/'/g, "&apos;")})' title="ערוך">
+                        ✏️
+                    </button>
+                    <button class="btn btn-danger btn-icon" onclick="deleteContact('${contact.contact_id}')" title="מחק">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        grid.appendChild(card);
+    });
+    
+    container.innerHTML = '';
+    
+    const countInfo = document.createElement('p');
+    countInfo.style.cssText = 'margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.9rem;';
+    countInfo.textContent = `מציג ${filteredContacts.length} מתוך ${contacts.length} אנשי קשר`;
+    container.appendChild(countInfo);
+    
+    container.appendChild(grid);
+}
+
+function openContactModal(contact = null) {
+    let modal = document.getElementById('contact-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'contact-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>👤 איש קשר חדש</h2>
+                    <button class="modal-close" onclick="closeContactModal()">✕</button>
+                </div>
+                <form id="contact-form" onsubmit="saveContact(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label required">שם איש קשר</label>
+                            <input type="text" id="contact-name" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">תפקיד</label>
+                            <input type="text" id="contact-role" class="form-input" placeholder="מנהל, רכש, מזכירה...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">טלפון</label>
+                            <input type="tel" id="contact-phone" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">אימייל</label>
+                            <input type="email" id="contact-email" class="form-input">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">שייך ללקוח</label>
+                            <select id="contact-customer" class="form-select">
+                                <option value="">-- ללא לקוח --</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">הערות</label>
+                            <textarea id="contact-notes" class="form-textarea" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">💾 שמור</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeContactModal()">ביטול</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    // Populate customer dropdown
+    const customerSelect = document.getElementById('contact-customer');
+    customerSelect.innerHTML = '<option value="">-- ללא לקוח --</option>';
+    customers.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c.customer_id;
+        option.textContent = c.business_name;
+        customerSelect.appendChild(option);
+    });
+    
+    // Reset or populate form
+    if (contact) {
+        document.getElementById('contact-name').value = contact.contact_name || '';
+        document.getElementById('contact-role').value = contact.role || '';
+        document.getElementById('contact-phone').value = contact.phone || '';
+        document.getElementById('contact-email').value = contact.email || '';
+        document.getElementById('contact-customer').value = contact.customer_id || '';
+        document.getElementById('contact-notes').value = contact.notes || '';
+        document.getElementById('contact-form').dataset.contactId = contact.contact_id;
+        document.querySelector('#contact-modal .modal-header h2').textContent = '✏️ ערוך איש קשר';
+    } else {
+        document.getElementById('contact-form').reset();
+        delete document.getElementById('contact-form').dataset.contactId;
+        document.querySelector('#contact-modal .modal-header h2').textContent = '👤 איש קשר חדש';
+    }
+    
+    modal.classList.add('active');
+}
+
+function closeContactModal() {
+    const modal = document.getElementById('contact-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+function editContact(contact) {
+    openContactModal(contact);
+}
+
+async function saveContact(event) {
+    event.preventDefault();
+    
+    const contactId = document.getElementById('contact-form').dataset.contactId;
+    const author = localStorage.getItem('crm_username') || 'משתמש מערכת';
+    
+    const contactData = {
+        contact_name: document.getElementById('contact-name').value,
+        role: document.getElementById('contact-role').value || null,
+        phone: document.getElementById('contact-phone').value || null,
+        email: document.getElementById('contact-email').value || null,
+        customer_id: document.getElementById('contact-customer').value || null,
+        notes: document.getElementById('contact-notes').value || null
+    };
+    
+    try {
+        if (contactId) {
+            // Update
+            const { error } = await supabase
+                .from('contacts')
+                .update(contactData)
+                .eq('contact_id', contactId);
+            
+            if (error) throw error;
+            showAlert('✅ איש הקשר עודכן בהצלחה', 'success');
+        } else {
+            // Insert
+            contactData.created_by = author;
+            const { error } = await supabase
+                .from('contacts')
+                .insert(contactData);
+            
+            if (error) throw error;
+            showAlert('✅ איש הקשר נוסף בהצלחה', 'success');
+        }
+        
+        closeContactModal();
+        displayContacts();
+        
+    } catch (error) {
+        console.error('❌ Error saving contact:', error);
+        showAlert('שגיאה בשמירת איש הקשר: ' + error.message, 'error');
+    }
+}
+
+async function deleteContact(contactId) {
+    if (!confirm('האם אתה בטוח שברצונך למחוק איש קשר זה?')) {
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('contacts')
+            .delete()
+            .eq('contact_id', contactId);
+        
+        if (error) throw error;
+        
+        showAlert('✅ איש הקשר נמחק בהצלחה', 'success');
+        displayContacts();
+        
+    } catch (error) {
+        console.error('❌ Error deleting contact:', error);
+        showAlert('שגיאה במחיקת איש הקשר: ' + error.message, 'error');
+    }
+}
+
 async function displayProducts() {
     const container = document.getElementById('products-list');
     container.innerHTML = '<div class="spinner"></div>';
@@ -1077,43 +1625,35 @@ function filterProducts() {
     }
     
     const grid = document.createElement('div');
-    grid.className = 'deals-grid';
+    grid.className = 'products-grid';
     
     filteredProducts.forEach(product => {
         const card = document.createElement('div');
-        card.className = 'deal-card';
+        card.className = 'product-card';
+        
+        // Check if product has an image URL
+        const imageSection = product.image_url 
+            ? `<div class="product-card-image">
+                   <img src="${product.image_url}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='<span class=\\'product-card-image-placeholder\\'>📦</span>'">
+               </div>`
+            : `<div class="product-card-image">
+                   <span class="product-card-image-placeholder">📦</span>
+               </div>`;
         
         card.innerHTML = `
-            <div class="deal-card-header">
-                <div>
-                    <div class="deal-card-title">${product.product_name}</div>
-                    <div class="deal-card-date">${product.category || 'ללא קטגוריה'}</div>
+            ${imageSection}
+            <div class="product-card-content">
+                <div class="product-card-header">
+                    <div class="product-card-title">${product.product_name}</div>
+                    ${product.sku ? `<span class="badge badge-new" style="font-size: 0.65rem; padding: 2px 5px;">${product.sku}</span>` : ''}
                 </div>
-                ${product.sku ? `<span class="badge badge-new">${product.sku}</span>` : ''}
-            </div>
-            <div class="deal-card-body">
-                ${product.description ? `
-                    <div class="deal-card-info" style="grid-column: 1 / -1;">
-                        <span class="deal-card-value" style="font-weight: 400; color: var(--text-secondary);">
-                            ${product.description}
-                        </span>
-                    </div>
-                ` : ''}
-                <div class="deal-card-info">
-                    <span class="deal-card-label">מחיר:</span>
-                    <span class="deal-card-value">₪${product.price ? product.price.toFixed(2) : '0.00'}</span>
+                <div class="product-card-category">${product.category || 'ללא קטגוריה'}</div>
+                <div class="product-card-price">₪${product.price ? product.price.toFixed(2) : '0.00'}</div>
+                <div class="product-card-meta">
+                    ${product.requires_color ? '<span>🎨 צבע</span>' : ''}
+                    ${product.requires_size ? '<span>📏 מידה</span>' : ''}
                 </div>
-                <div class="deal-card-info">
-                    <span class="deal-card-label">דורש צבע:</span>
-                    <span class="deal-card-value">${product.requires_color ? '✅ כן' : '❌ לא'}</span>
-                </div>
-                <div class="deal-card-info">
-                    <span class="deal-card-label">דורש מידה:</span>
-                    <span class="deal-card-value">${product.requires_size ? '✅ כן' : '❌ לא'}</span>
-                </div>
-            </div>
-            <div class="deal-card-footer">
-                <div class="deal-card-actions" style="margin-right: auto;">
+                <div class="product-card-actions">
                     <button class="btn btn-secondary btn-icon" onclick='editProduct(${JSON.stringify(product).replace(/'/g, "&apos;")})' title="ערוך">
                         ✏️
                     </button>
@@ -2309,7 +2849,7 @@ async function loadActivities() {
         const typeFilter = document.getElementById('filter-activity-type')?.value || '';
         const statusFilter = document.getElementById('filter-activity-status')?.value || '';
         const searchFilter = document.getElementById('filter-activity-search')?.value.toLowerCase() || '';
-        const sortFilter = document.getElementById('filter-activity-sort')?.value || 'newest';
+        const sortFilter = document.getElementById('filter-activity-sort')?.value || 'activity-date';
         
         // Build query - exclude "הערה" type
         let query = supabase
