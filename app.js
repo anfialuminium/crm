@@ -2564,7 +2564,7 @@ function showEditActivityModal(activity) {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 550px;">
                 <div class="modal-header">
-                    <h2>✏️ עריכת פעילות</h2>
+                    <h2>👁️ פרטי פעילות</h2>
                     <button class="modal-close" onclick="closeEditActivityModal()">✕</button>
                 </div>
                 <form id="edit-activity-form" onsubmit="saveActivityEdit(event)">
@@ -3730,9 +3730,8 @@ async function loadActivities() {
                                     <td>${activity.created_by || 'מערכת'}</td>
                                     <td>
                                         <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
-                                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">👁️</button>` : ''}
-                                            <button class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="editActivity('${activity.activity_id}')" title="הערות">📝</button>
-                                            <button class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
+                                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">🔗</button>` : ''}
+                                            <button class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="editActivity('${activity.activity_id}')" title="פרטים והערות">👁️</button>
                                             <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
                                                     style="padding: 0.15rem 0.3rem; font-size: 0.65rem;"
                                                     onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})" title="${activity.completed ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
@@ -3804,9 +3803,8 @@ async function loadActivities() {
                                 : `<span class="badge badge-pending" style="font-size: 0.65rem; padding: 2px 6px;">ממתין</span>`}
                         </div>
                         <div style="display: flex; gap: 0.25rem;">
-                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">👁️</button>` : ''}
-                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="הערות">📝</button>
-                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
+                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">🔗</button>` : ''}
+                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="פרטים והערות">👁️</button>
                             <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
                                     style="padding: 0.2rem 0.4rem; font-size: 0.7rem;"
                                     onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})" title="${activity.completed ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
