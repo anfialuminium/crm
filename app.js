@@ -58,6 +58,9 @@ async function initializeApp() {
     await loadProducts();
     await loadCustomers();
     
+    // Load dashboard data (default tab)
+    await loadThisWeek();
+    
     // Update empty state
     updateEmptyState();
     
@@ -2459,6 +2462,97 @@ async function editNote(activityId) {
     showEditActivityModal(note);
 }
 
+// ============================================
+// Activity Notes Logic
+// ============================================
+
+async function loadActivityNotes(activityId) {
+    const container = document.getElementById('activity-notes-list');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="text-center" style="font-size: 0.8rem; color: var(--text-tertiary);">טוען...</div>';
+    
+    try {
+        const { data: notes, error } = await supabase
+            .from('activity_notes')
+            .select('*')
+            .eq('activity_id', activityId)
+            .order('created_at', { ascending: true });
+            
+        if (error) throw error;
+        
+        if (!notes || notes.length === 0) {
+            container.innerHTML = '<div class="text-center" style="font-size: 0.8rem; color: var(--text-tertiary);">אין הערות</div>';
+            return;
+        }
+        
+        container.innerHTML = notes.map(note => `
+            <div style="background: var(--bg-primary); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                     <div style="font-size: 0.9rem; white-space: pre-wrap;">${note.content}</div>
+                     <button onclick="deleteActivityNote(${note.id})" type="button" style="color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1.1em;">×</button>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem;">
+                    ${note.created_by} • ${new Date(note.created_at).toLocaleString('he-IL')}
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('❌ Error loading activity notes:', error);
+        container.innerHTML = '<div class="text-center" style="color: var(--danger-color);">שגיאה בטעינת הערות</div>';
+    }
+}
+
+async function addActivityNote() {
+    const activityId = document.getElementById('edit-activity-id').value;
+    const input = document.getElementById('new-activity-note');
+    const content = input.value.trim();
+    
+    if (!content) return;
+    
+    try {
+        const performedBy = localStorage.getItem('crm_username') || 'משתמש מערכת';
+        
+        const { error } = await supabase
+            .from('activity_notes')
+            .insert({
+                activity_id: activityId,
+                content: content,
+                created_by: performedBy
+            });
+            
+        if (error) throw error;
+        
+        input.value = '';
+        await loadActivityNotes(activityId);
+        
+    } catch (error) {
+        console.error('❌ Error adding activity note:', error);
+        showAlert('שגיאה בהוספת הערה', 'error');
+    }
+}
+
+async function deleteActivityNote(noteId) {
+    if (!confirm('האם למחוק את ההערה?')) return;
+    
+    try {
+        const { error } = await supabase
+            .from('activity_notes')
+            .delete()
+            .eq('id', noteId);
+            
+        if (error) throw error;
+        
+        const activityId = document.getElementById('edit-activity-id').value;
+        await loadActivityNotes(activityId);
+        
+    } catch (error) {
+        console.error('❌ Error deleting activity note:', error);
+        showAlert('שגיאה במחיקת הערה', 'error');
+    }
+}
+
 // Show edit activity modal with all editable fields
 function showEditActivityModal(activity) {
     // Create or get modal
@@ -2517,6 +2611,17 @@ function showEditActivityModal(activity) {
                         <input type="text" id="edit-activity-editor" class="form-input" placeholder="הזן את שמך">
                     </div>
                     
+                    <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                        <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--text-primary);">📝 הערות לפעילות</h3>
+                        <div id="activity-notes-list" style="margin-bottom: 1rem; max-height: 150px; overflow-y: auto; background: var(--bg-secondary); padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <!-- Notes will be loaded here -->
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="new-activity-note" class="form-input" placeholder="הוסף הערה..." onkeypress="if(event.key==='Enter'){event.preventDefault(); addActivityNote();}">
+                            <button type="button" class="btn btn-secondary" onclick="addActivityNote()">➕</button>
+                        </div>
+                    </div>
+
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-primary">💾 שמור שינויים</button>
                         <button type="button" class="btn btn-secondary" onclick="closeEditActivityModal()">ביטול</button>
@@ -2550,6 +2655,9 @@ function showEditActivityModal(activity) {
     
     // Populate and set customer dropdown
     populateEditActivityCustomers(activity.customer_id);
+    
+    // Load activity notes
+    loadActivityNotes(activity.activity_id);
     
     modal.classList.add('active');
 }
@@ -3061,7 +3169,8 @@ async function deleteActivity(activityId) {
 // This Week Tab
 // ============================================
 
-let currentWeekOffset = 0; // 0 = current week, -1 = last week, 1 = next week, etc.
+const todayDay = new Date().getDay();
+let currentWeekOffset = (todayDay === 5 || todayDay === 6) ? 1 : 0; // Friday/Saturday -> Next Week, else Current Week
 
 function getWeekDates(offset = 0) {
     const now = new Date();
@@ -3257,7 +3366,7 @@ async function loadThisWeek() {
             
             dayData.activities.forEach(activity => {
                 const customer = activity.deals?.customers || activity.customers;
-                const customerName = customer?.business_name || 'לקוח לא ידוע';
+                const customerName = customer?.business_name || 'ללא לקוח';
                 const contactName = customer?.contact_name || '';
                 const phone = customer?.phone || '';
                 const dealId = activity.deal_id;
@@ -3621,14 +3730,15 @@ async function loadActivities() {
                                     <td>${activity.created_by || 'מערכת'}</td>
                                     <td>
                                         <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
-                                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="viewDealDetails('${activity.deal_id}')">👁️</button>` : ''}
-                                            <button class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="editNote('${activity.activity_id}')">✏️</button>
+                                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">👁️</button>` : ''}
+                                            <button class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="editActivity('${activity.activity_id}')" title="הערות">📝</button>
+                                            <button class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
                                             <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
                                                     style="padding: 0.15rem 0.3rem; font-size: 0.65rem;"
-                                                    onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})">
+                                                    onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})" title="${activity.completed ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
                                                 ${activity.completed ? '↩️' : '✓'}
                                             </button>
-                                            <button class="btn btn-sm btn-danger" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="deleteActivity('${activity.activity_id}')">🗑️</button>
+                                            <button class="btn btn-sm btn-danger" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="deleteActivity('${activity.activity_id}')" title="מחק">🗑️</button>
                                         </div>
                                     </td>
                                 </tr>
@@ -3694,14 +3804,15 @@ async function loadActivities() {
                                 : `<span class="badge badge-pending" style="font-size: 0.65rem; padding: 2px 6px;">ממתין</span>`}
                         </div>
                         <div style="display: flex; gap: 0.25rem;">
-                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')">👁️</button>` : ''}
-                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editNote('${activity.activity_id}')">✏️</button>
+                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">👁️</button>` : ''}
+                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="הערות">📝</button>
+                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
                             <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
                                     style="padding: 0.2rem 0.4rem; font-size: 0.7rem;"
-                                    onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})">
+                                    onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})" title="${activity.completed ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
                                 ${activity.completed ? '↩️' : '✓'}
                             </button>
-                            <button class="btn btn-sm btn-danger" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="deleteActivity('${activity.activity_id}')">🗑️</button>
+                            <button class="btn btn-sm btn-danger" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="deleteActivity('${activity.activity_id}')" title="מחק">🗑️</button>
                         </div>
                     </div>
                     <div class="deal-card-body" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="מערכת ניהול קשרי לקוחות">
     <title>מערכת ניהול קשרי לקוחות</title>
+    <link rel="icon" type="image/png" href="analysis.png">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,8 +19,8 @@
         <main class="main-content">
             <!-- Navigation Tabs -->
             <nav class="nav-tabs">
-                <button class="nav-tab active" data-tab="deals">עסקה חדשה</button>
-                <button class="nav-tab" data-tab="thisweek">📅 השבוע</button>
+                <button class="nav-tab active" data-tab="thisweek">📅 השבוע</button>
+                <button class="nav-tab" data-tab="deals">עסקה חדשה</button>
                 <button class="nav-tab" data-tab="history">עסקאות</button>
                 <button class="nav-tab" data-tab="activities">פעילויות</button>
                 <button class="nav-tab" data-tab="customers">לקוחות</button>
@@ -29,7 +30,7 @@
             </nav>
 
             <!-- Deals Tab -->
-            <div id="deals-tab" class="tab-content">
+            <div id="deals-tab" class="tab-content hidden">
                 <div class="form-section">
                     <h2 class="section-title">עסקה חדשה</h2>
                     
@@ -133,7 +134,7 @@
             </div>
 
             <!-- This Week Tab -->
-            <div id="thisweek-tab" class="tab-content hidden">
+            <div id="thisweek-tab" class="tab-content">
                 <div class="form-section">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
                         <h2 class="section-title" style="margin-bottom: 0;">📅 פעילויות השבוע</h2>
@@ -595,7 +596,7 @@
                                placeholder="פרופילים, אביזרים, רשתות...">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">SKU / מק״ט</label>
+                        <label class="form-label">מק״ט</label>
                         <input type="text" id="product-sku" class="form-input">
                     </div>
                     <div class="form-group">
