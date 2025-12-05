@@ -1792,7 +1792,7 @@ function filterProducts() {
         
         // Check if product has an image URL
         const imageSection = product.image_url 
-            ? `<div class="product-card-image">
+            ? `<div class="product-card-image" onclick="openImageModal('${product.image_url}', '${product.product_name.replace(/'/g, "\\'")}')" style="cursor: pointer;">
                    <img src="${product.image_url}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='<span class=\\'product-card-image-placeholder\\'>📦</span>'">
                </div>`
             : `<div class="product-card-image">
@@ -1871,6 +1871,46 @@ function openProductModal(product = null) {
 
 function closeProductModal() {
     document.getElementById('product-modal').classList.remove('active');
+}
+
+// Image lightbox modal
+function openImageModal(imageUrl, imageName) {
+    // Create modal if it doesn't exist
+    let modal = document.getElementById('image-lightbox-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'image-lightbox-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 90vw; max-height: 90vh; background: transparent; box-shadow: none; padding: 0; overflow: visible; position: relative;">
+                <button onclick="closeImageModal()" style="position: fixed; top: 20px; right: 20px; background: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 1.5rem; cursor: pointer; z-index: 10001; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">✕</button>
+                <div id="image-lightbox-content" style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+                    <img id="image-lightbox-img" src="" alt="" style="max-width: 100%; max-height: 80vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                    <div id="image-lightbox-title" style="color: white; font-size: 1.1rem; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"></div>
+                </div>
+            </div>
+        `;
+        modal.style.background = 'rgba(0,0,0,0.85)';
+        modal.onclick = function(e) {
+            if (e.target === modal) closeImageModal();
+        };
+        document.body.appendChild(modal);
+    }
+    
+    // Set image and title
+    document.getElementById('image-lightbox-img').src = imageUrl;
+    document.getElementById('image-lightbox-img').alt = imageName;
+    document.getElementById('image-lightbox-title').textContent = imageName;
+    
+    // Show modal
+    modal.classList.add('active');
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('image-lightbox-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
 }
 
 function editProduct(product) {
@@ -2466,7 +2506,7 @@ function showEditActivityModal(activity) {
                     </div>
                     
                     <div class="form-group" style="margin-bottom: 1rem;">
-                        <label class="form-label">או קשר ללקוח (אם אין עסקה)</label>
+                        <label class="form-label">קשר ללקוח</label>
                         <select id="edit-activity-customer" class="form-select">
                             <option value="">-- ללא לקוח --</option>
                         </select>
@@ -2693,7 +2733,7 @@ function openNewActivityModal() {
                     </div>
                     
                     <div class="form-group" style="margin-bottom: 1rem;">
-                        <label class="form-label">או קשר ללקוח (אם אין עסקה)</label>
+                        <label class="form-label">קשר ללקוח</label>
                         <select id="new-activity-customer" class="form-select">
                             <option value="">-- ללא לקוח --</option>
                         </select>
@@ -3303,18 +3343,18 @@ async function loadThisWeek() {
         const completedCount = filteredActivities.filter(a => a.completed === true).length;
         
         const summaryHtml = `
-            <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem 1.5rem; border-radius: 12px; text-align: center; min-width: 120px;">
-                    <div style="font-size: 1.8rem; font-weight: 700;">${totalActivities}</div>
-                    <div style="font-size: 0.85rem; opacity: 0.9;">סה"כ פעילויות</div>
+            <div style="display: flex; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: nowrap; justify-content: center;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.75rem 1rem; border-radius: 12px; text-align: center; min-width: 90px; flex: 1; max-width: 140px;">
+                    <div style="font-size: 1.5rem; font-weight: 700;">${totalActivities}</div>
+                    <div style="font-size: 0.75rem; opacity: 0.9;">סה"כ פעילויות</div>
                 </div>
-                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 1rem 1.5rem; border-radius: 12px; text-align: center; min-width: 120px;">
-                    <div style="font-size: 1.8rem; font-weight: 700;">${pendingCount}</div>
-                    <div style="font-size: 0.85rem; opacity: 0.9;">ממתינות</div>
+                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 0.75rem 1rem; border-radius: 12px; text-align: center; min-width: 90px; flex: 1; max-width: 140px;">
+                    <div style="font-size: 1.5rem; font-weight: 700;">${pendingCount}</div>
+                    <div style="font-size: 0.75rem; opacity: 0.9;">ממתינות</div>
                 </div>
-                <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 1rem 1.5rem; border-radius: 12px; text-align: center; min-width: 120px;">
-                    <div style="font-size: 1.8rem; font-weight: 700;">${completedCount}</div>
-                    <div style="font-size: 0.85rem; opacity: 0.9;">הושלמו</div>
+                <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 0.75rem 1rem; border-radius: 12px; text-align: center; min-width: 90px; flex: 1; max-width: 140px;">
+                    <div style="font-size: 1.5rem; font-weight: 700;">${completedCount}</div>
+                    <div style="font-size: 0.75rem; opacity: 0.9;">הושלמו</div>
                 </div>
             </div>
         `;
@@ -3372,6 +3412,34 @@ async function editActivity(activityId) {
     }
 }
 
+// Activities view mode: 'cards' or 'table'
+let activitiesViewMode = localStorage.getItem('activitiesViewMode') || 'cards';
+
+function setActivitiesView(mode) {
+    activitiesViewMode = mode;
+    localStorage.setItem('activitiesViewMode', mode);
+    
+    // Update button styles
+    const cardsBtn = document.getElementById('activities-view-cards');
+    const tableBtn = document.getElementById('activities-view-table');
+    
+    if (cardsBtn && tableBtn) {
+        if (mode === 'cards') {
+            cardsBtn.style.background = 'var(--primary-color)';
+            cardsBtn.style.color = 'white';
+            tableBtn.style.background = '';
+            tableBtn.style.color = '';
+        } else {
+            tableBtn.style.background = 'var(--primary-color)';
+            tableBtn.style.color = 'white';
+            cardsBtn.style.background = '';
+            cardsBtn.style.color = '';
+        }
+    }
+    
+    loadActivities();
+}
+
 async function loadActivities() {
     const container = document.getElementById('activities-list');
     container.innerHTML = '<div class="spinner"></div>';
@@ -3381,6 +3449,7 @@ async function loadActivities() {
         const typeFilter = document.getElementById('filter-activity-type')?.value || '';
         const statusFilter = document.getElementById('filter-activity-status')?.value || '';
         const searchFilter = document.getElementById('filter-activity-search')?.value.toLowerCase() || '';
+        const creatorFilter = document.getElementById('filter-activity-creator')?.value || '';
         const sortFilter = document.getElementById('filter-activity-sort')?.value || 'activity-date';
         
         // Build query - exclude "הערה" type
@@ -3416,10 +3485,30 @@ async function loadActivities() {
             query = query.eq('completed', false);
         }
         
+        // Apply creator filter
+        if (creatorFilter) {
+            query = query.eq('created_by', creatorFilter);
+        }
+        
         // Execute query
         const { data: activities, error } = await query;
         
         if (error) throw error;
+        
+        // Populate creator dropdown with unique creators
+        const creatorSelect = document.getElementById('filter-activity-creator');
+        if (creatorSelect && activities) {
+            const currentValue = creatorSelect.value;
+            const creators = [...new Set(activities.map(a => a.created_by).filter(Boolean))].sort();
+            creatorSelect.innerHTML = '<option value="">הכל</option>';
+            creators.forEach(creator => {
+                const option = document.createElement('option');
+                option.value = creator;
+                option.textContent = creator;
+                if (creator === currentValue) option.selected = true;
+                creatorSelect.appendChild(option);
+            });
+        }
         
         // Filter by search text (client-side)
         let filteredActivities = activities || [];
@@ -3464,111 +3553,177 @@ async function loadActivities() {
             'משימה': '✅'
         };
         
-        const activitiesGrid = document.createElement('div');
-        activitiesGrid.className = 'deals-grid';
-        
-        filteredActivities.forEach(activity => {
-            const card = document.createElement('div');
-            card.className = 'deal-card';
-            
-            // Add completed styling
-            if (activity.completed) {
-                card.style.opacity = '0.7';
-                card.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
+        // Update view buttons styling
+        const cardsBtn = document.getElementById('activities-view-cards');
+        const tableBtn = document.getElementById('activities-view-table');
+        if (cardsBtn && tableBtn) {
+            if (activitiesViewMode === 'cards') {
+                cardsBtn.style.background = 'var(--primary-color)';
+                cardsBtn.style.color = 'white';
+                tableBtn.style.background = '';
+                tableBtn.style.color = '';
+            } else {
+                tableBtn.style.background = 'var(--primary-color)';
+                tableBtn.style.color = 'white';
+                cardsBtn.style.background = '';
+                cardsBtn.style.color = '';
             }
+        }
+        
+        container.innerHTML = '';
+        
+        // Render based on view mode
+        if (activitiesViewMode === 'table') {
+            // Table view
+            const table = document.createElement('div');
+            table.style.overflowX = 'auto';
+            table.innerHTML = `
+                <table class="items-table" style="min-width: 800px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">סוג</th>
+                            <th style="width: 80px;">סטטוס</th>
+                            <th>תיאור</th>
+                            <th style="width: 120px;">לקוח</th>
+                            <th style="width: 140px;">תאריך פעילות</th>
+                            <th style="width: 100px;">נוצר ע"י</th>
+                            <th style="width: 120px;">פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredActivities.map(activity => {
+                            const icon = typeIcons[activity.activity_type] || '📝';
+                            const activityDate = activity.activity_date 
+                                ? new Date(activity.activity_date).toLocaleDateString('he-IL')
+                                : '-';
+                            
+                            let businessName = 'לא משויך';
+                            if (activity.deals?.customers) {
+                                businessName = activity.deals.customers.business_name || 'לא משויך';
+                            } else if (activity.customers) {
+                                businessName = activity.customers.business_name || 'לא משויך';
+                            }
+                            
+                            const rowStyle = activity.completed ? 'opacity: 0.6; background: #f0fdf4;' : '';
+                            const textStyle = activity.completed ? 'text-decoration: line-through;' : '';
+                            
+                            return `
+                                <tr style="${rowStyle}">
+                                    <td>${icon} ${activity.activity_type}</td>
+                                    <td>
+                                        ${activity.completed 
+                                            ? '<span class="badge badge-won" style="font-size: 0.7rem;">בוצע</span>'
+                                            : '<span class="badge badge-pending" style="font-size: 0.7rem;">ממתין</span>'}
+                                    </td>
+                                    <td style="${textStyle}">${activity.description || '-'}</td>
+                                    <td>${businessName}</td>
+                                    <td style="color: var(--primary-color);">${activityDate}</td>
+                                    <td>${activity.created_by || 'מערכת'}</td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
+                                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="viewDealDetails('${activity.deal_id}')">👁️</button>` : ''}
+                                            <button class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="editNote('${activity.activity_id}')">✏️</button>
+                                            <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
+                                                    style="padding: 0.15rem 0.3rem; font-size: 0.65rem;"
+                                                    onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})">
+                                                ${activity.completed ? '↩️' : '✓'}
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="deleteActivity('${activity.activity_id}')">🗑️</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+            container.appendChild(table);
+        } else {
+            // Cards view
+            const activitiesGrid = document.createElement('div');
+            activitiesGrid.className = 'deals-grid';
             
-            const icon = typeIcons[activity.activity_type] || '📝';
-            const createdDate = new Date(activity.created_at).toLocaleString('he-IL', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            
-            const activityDate = activity.activity_date 
-                ? new Date(activity.activity_date).toLocaleString('he-IL', {
+            filteredActivities.forEach(activity => {
+                const card = document.createElement('div');
+                card.className = 'deal-card';
+                
+                // Add completed styling
+                if (activity.completed) {
+                    card.style.opacity = '0.7';
+                    card.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
+                }
+                
+                const icon = typeIcons[activity.activity_type] || '📝';
+                const createdDate = new Date(activity.created_at).toLocaleString('he-IL', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit'
-                })
-                : null;
-            
-            // Get customer info - first from deal, then from direct customer link
-            let businessName = 'לא משויך';
-            let contactName = '';
-            
-            if (activity.deals?.customers) {
-                businessName = activity.deals.customers.business_name || 'לא משויך';
-                contactName = activity.deals.customers.contact_name || '';
-            } else if (activity.customers) {
-                businessName = activity.customers.business_name || 'לא משויך';
-                contactName = activity.customers.contact_name || '';
-            }
-            
-            const completedBadge = activity.completed 
-                ? `<span class="badge badge-won" style="display: block; text-align: center; margin-top: 0.5rem; margin-left: 1rem;">בוצע</span>`
-                : `<span class="badge badge-pending" style="display: block; text-align: center; margin-top: 0.5rem; margin-left: 1rem;">ממתין</span>`;
-            
-            card.innerHTML = `
-                <div class="deal-card-header">
-                    <div style="display: flex; flex-direction: column; align-items: flex-start; margin-left: 1.5rem;">
-                        <div class="deal-card-title" style="margin-bottom: 0;">${icon} ${activity.activity_type}</div>
-                        ${completedBadge}
-                        <div class="deal-card-date" style="margin-top: 0.5rem;">נוצר ב: ${createdDate}</div>
-                    </div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: flex-start;">
-                        ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="viewDealDetails('${activity.deal_id}')">👁️</button>` : ''}
-                        <button class="btn btn-sm btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="editNote('${activity.activity_id}')">✏️</button>
-                        <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
-                                style="padding: 0.25rem 0.5rem; font-size: 0.75rem;"
-                                onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})">
-                            ${activity.completed ? '↩️' : '✓'}
-                        </button>
-                        <button class="btn btn-sm btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteActivity('${activity.activity_id}')">🗑️</button>
-                    </div>
-                </div>
-                <div class="deal-card-body">
-                    <div class="deal-card-info" style="grid-column: 1 / -1;">
-                        <span class="deal-card-label">תיאור:</span>
-                        <span class="deal-card-value" style="${activity.completed ? 'text-decoration: line-through;' : ''}">${activity.description || '-'}</span>
-                    </div>
-                    ${activityDate ? `
-                        <div class="deal-card-info" style="grid-column: 1 / -1;">
-                            <span class="deal-card-label">תאריך יעד/פעילות:</span>
-                            <span class="deal-card-value" style="color: var(--primary-color); font-weight: 500;">${activityDate}</span>
+                });
+                
+                const activityDate = activity.activity_date 
+                    ? new Date(activity.activity_date).toLocaleString('he-IL', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })
+                    : null;
+                
+                // Get customer info
+                let businessName = 'לא משויך';
+                let contactName = '';
+                
+                if (activity.deals?.customers) {
+                    businessName = activity.deals.customers.business_name || 'לא משויך';
+                    contactName = activity.deals.customers.contact_name || '';
+                } else if (activity.customers) {
+                    businessName = activity.customers.business_name || 'לא משויך';
+                    contactName = activity.customers.contact_name || '';
+                }
+                
+                card.innerHTML = `
+                    <div class="deal-card-header" style="padding: 0.5rem 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                            <span style="font-size: 1rem;">${icon}</span>
+                            <span style="font-weight: 600; font-size: 0.9rem;">${activity.activity_type}</span>
+                            ${activity.completed 
+                                ? `<span class="badge badge-won" style="font-size: 0.65rem; padding: 2px 6px;">בוצע</span>`
+                                : `<span class="badge badge-pending" style="font-size: 0.65rem; padding: 2px 6px;">ממתין</span>`}
                         </div>
-                    ` : ''}
-                    ${activity.completed && activity.completed_at ? `
-                        <div class="deal-card-info" style="grid-column: 1 / -1;">
-                            <span class="deal-card-label">בוצע ב:</span>
-                            <span class="deal-card-value" style="color: var(--success-color);">${new Date(activity.completed_at).toLocaleString('he-IL')}</span>
+                        <div style="display: flex; gap: 0.25rem;">
+                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')">👁️</button>` : ''}
+                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editNote('${activity.activity_id}')">✏️</button>
+                            <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
+                                    style="padding: 0.2rem 0.4rem; font-size: 0.7rem;"
+                                    onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})">
+                                ${activity.completed ? '↩️' : '✓'}
+                            </button>
+                            <button class="btn btn-sm btn-danger" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="deleteActivity('${activity.activity_id}')">🗑️</button>
                         </div>
-                    ` : ''}
-                    <div class="deal-card-info">
-                        <span class="deal-card-label">לקוח:</span>
-                        <span class="deal-card-value">${businessName}</span>
                     </div>
-                    ${contactName ? `
-                        <div class="deal-card-info">
-                            <span class="deal-card-label">איש קשר:</span>
-                            <span class="deal-card-value">${contactName}</span>
+                    <div class="deal-card-body" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">
+                        <div style="margin-bottom: 0.4rem; ${activity.completed ? 'text-decoration: line-through; opacity: 0.7;' : ''}">
+                            <strong>תיאור:</strong> ${activity.description || '-'}
                         </div>
-                    ` : ''}
-                    <div class="deal-card-info">
-                        <span class="deal-card-label">נוצר על ידי:</span>
-                        <span class="deal-card-value">${activity.created_by || 'משתמש מערכת'}</span>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 1rem; font-size: 0.8rem; color: var(--text-secondary);">
+                            ${activityDate ? `<div><strong>תאריך:</strong> <span style="color: var(--primary-color);">${activityDate}</span></div>` : ''}
+                            <div><strong>לקוח:</strong> ${businessName}</div>
+                            ${contactName ? `<div><strong>איש קשר:</strong> ${contactName}</div>` : ''}
+                            <div><strong>נוצר:</strong> ${activity.created_by || 'מערכת'}</div>
+                            ${activity.completed && activity.completed_at ? `<div><strong>בוצע:</strong> <span style="color: var(--success-color);">${new Date(activity.completed_at).toLocaleDateString('he-IL')}</span></div>` : ''}
+                        </div>
+                        <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.3rem;">נוצר: ${createdDate}</div>
                     </div>
-                </div>
-            `;
+                `;
+                
+                activitiesGrid.appendChild(card);
+            });
             
-            activitiesGrid.appendChild(card);
-        });
-        
-        container.innerHTML = '';
-        container.appendChild(activitiesGrid);
+            container.appendChild(activitiesGrid);
+        }
         
     } catch (error) {
         console.error('❌ Error loading activities:', error);
@@ -3950,6 +4105,7 @@ async function loadAuditLog() {
         const entityFilter = document.getElementById('filter-audit-entity')?.value || '';
         const searchFilter = document.getElementById('filter-audit-search')?.value.toLowerCase() || '';
         const dateFilter = document.getElementById('filter-audit-date')?.value || '';
+        const performerFilter = document.getElementById('filter-audit-performer')?.value || '';
         
         // Build query
         let query = supabase
@@ -3965,6 +4121,11 @@ async function loadAuditLog() {
         
         if (entityFilter) {
             query = query.eq('entity_type', entityFilter);
+        }
+        
+        // Apply performer filter
+        if (performerFilter) {
+            query = query.eq('performed_by', performerFilter);
         }
         
         // Date filter
@@ -3988,6 +4149,21 @@ async function loadAuditLog() {
         const { data: logs, error } = await query;
         
         if (error) throw error;
+        
+        // Populate performer dropdown with unique performers
+        const performerSelect = document.getElementById('filter-audit-performer');
+        if (performerSelect && logs) {
+            const currentValue = performerSelect.value;
+            const performers = [...new Set(logs.map(l => l.performed_by).filter(Boolean))].sort();
+            performerSelect.innerHTML = '<option value="">הכל</option>';
+            performers.forEach(performer => {
+                const option = document.createElement('option');
+                option.value = performer;
+                option.textContent = performer;
+                if (performer === currentValue) option.selected = true;
+                performerSelect.appendChild(option);
+            });
+        }
         
         // Filter by search (client-side)
         let filteredLogs = logs || [];

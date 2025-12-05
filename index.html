@@ -237,11 +237,21 @@
             <!-- Activities Tab -->
             <div id="activities-tab" class="tab-content hidden">
                 <div class="form-section">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
                         <h2 class="section-title" style="margin-bottom: 0;">פעילויות</h2>
-                        <button type="button" class="btn btn-primary" onclick="openNewActivityModal()">
-                            ➕ פעילות חדשה
-                        </button>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <div style="display: flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                <button type="button" id="activities-view-cards" class="btn btn-secondary" onclick="setActivitiesView('cards')" style="border-radius: 0; border: none; padding: 0.4rem 0.75rem;" title="תצוגת כרטיסיות">
+                                    🃏
+                                </button>
+                                <button type="button" id="activities-view-table" class="btn btn-secondary" onclick="setActivitiesView('table')" style="border-radius: 0; border: none; border-right: 1px solid var(--border-color); padding: 0.4rem 0.75rem;" title="תצוגת טבלה">
+                                    📋
+                                </button>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="openNewActivityModal()">
+                                ➕ פעילות חדשה
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Filters -->
@@ -268,6 +278,12 @@
                             <label class="form-label">חיפוש</label>
                             <input type="text" id="filter-activity-search" class="form-input" 
                                    placeholder="חיפוש בתיאור..." onkeyup="loadActivities()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">יוצר הפעילות</label>
+                            <select id="filter-activity-creator" class="form-select" onchange="loadActivities()">
+                                <option value="">הכל</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">מיון</label>
@@ -423,6 +439,12 @@
                                 <option value="today">היום</option>
                                 <option value="week">השבוע</option>
                                 <option value="month">החודש</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">בוצע ע"י</label>
+                            <select id="filter-audit-performer" class="form-select" onchange="loadAuditLog()">
+                                <option value="">הכל</option>
                             </select>
                         </div>
                     </div>
