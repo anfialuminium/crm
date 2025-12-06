@@ -318,6 +318,22 @@ body {
     color: white;
 }
 
+.btn-info {
+    background: linear-gradient(135deg, var(--info-color), #2563eb);
+    color: white;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-info:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-sm {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.85rem;
+}
+
 .btn-icon {
     padding: var(--spacing-sm);
     width: 36px;
@@ -1395,5 +1411,59 @@ body {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* ============================================
+   Enhanced Mobile Responsiveness
+   ============================================ */
+
+/* Make phone links look clickable and ensure formatting */
+a[href^="tel:"] {
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* Ensure long text in cards doesn't overflow */
+.deal-card-value {
+    word-break: break-word; /* Allow long emails/names to wrap */
+    overflow-wrap: break-word;
+    min-width: 0; /* Flexbox overflow fix */
+}
+
+.deal-card-info {
+    min-width: 0; /* Flexbox overflow fix */
+}
+
+/* Mobile specific improvements */
+@media (max-width: 768px) {
+    /* Improve modal width on mobile */
+    .modal-content {
+        padding: var(--spacing-lg);
+        max-width: 95%; /* Use more screen real estate */
+        margin: 10px auto;
+    }
+
+    /* Wrap flex containers in cards if tight */
+    .deal-card-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-xs);
+    }
+
+    /* Ensure action buttons in cards are easy to tap */
+    .deal-card-actions button {
+        padding: 0.5rem;
+        min-height: 40px;
+    }
+    
+    /* Better spacing for form groups */
+    .form-group {
+        margin-bottom: var(--spacing-md);
+    }
+    
+    /* Allow scrolling for horizontally overflowing elements */
+    .deal-card-info {
+        overflow-x: inherit; /* Reset if needed */
     }
 }

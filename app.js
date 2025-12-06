@@ -890,7 +890,10 @@ async function displayCustomers() {
                     <span class="deal-card-value">
                         ${contactPhone ? `
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <a href="tel:${contactPhone}" style="color: var(--text-primary); text-decoration: none;">${contactPhone}</a>
+                                <span style="color: var(--text-primary);">${contactPhone}</span>
+                                <a href="tel:${contactPhone}" title="התקשר">
+                                    <img src="call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
+                                </a>
                                 <a href="https://wa.me/${contactPhone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                     <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
                                 </a>
@@ -1059,7 +1062,10 @@ async function viewCustomerDetails(customerId) {
                         <span class="deal-card-value">
                             ${customer.phone ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <a href="tel:${customer.phone}" style="color: var(--text-primary); text-decoration: none;">${customer.phone}</a>
+                                    <span style="color: var(--text-primary);">${customer.phone}</span>
+                                    <a href="tel:${customer.phone}" title="התקשר">
+                                        <img src="call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
+                                    </a>
                                     <a href="https://wa.me/${customer.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                         <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
@@ -1545,7 +1551,10 @@ function filterContacts() {
                     <span class="deal-card-value">
                         ${contact.phone ? `
                             <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <a href="tel:${contact.phone}" style="color: var(--text-primary); text-decoration: none;">${contact.phone}</a>
+                                <span style="color: var(--text-primary);">${contact.phone}</span>
+                                <a href="tel:${contact.phone}" title="התקשר">
+                                    <img src="call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
+                                </a>
                                 <a href="https://wa.me/${contact.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                     <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
                                 </a>
@@ -2183,7 +2192,10 @@ function createDealCard(deal) {
                 <span class="deal-card-value">
                     ${deal.customers.phone ? `
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <a href="tel:${deal.customers.phone}" style="color: var(--text-primary); text-decoration: none;">${deal.customers.phone}</a>
+                            <span style="color: var(--text-primary);">${deal.customers.phone}</span>
+                            <a href="tel:${deal.customers.phone}" title="התקשר">
+                                <img src="call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
+                            </a>
                             <a href="https://wa.me/${deal.customers.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                 <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
                             </a>
@@ -2288,7 +2300,10 @@ async function viewDealDetails(dealId) {
                     <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
                         <strong>טלפון:</strong> 
                         ${deal.customers.phone ? `
-                            <a href="tel:${deal.customers.phone}" style="color: var(--text-primary); text-decoration: none;">${deal.customers.phone}</a>
+                            <span style="color: var(--text-primary);">${deal.customers.phone}</span>
+                            <a href="tel:${deal.customers.phone}" title="התקשר">
+                                <img src="call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
+                            </a>
                             <a href="https://wa.me/${deal.customers.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                 <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
                             </a>
@@ -3448,7 +3463,7 @@ async function loadThisWeek() {
             
             html += `
                 <div class="thisweek-day-section" style="margin-bottom: 2rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid ${isToday ? 'var(--primary-color)' : 'var(--border-color)'};">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid ${isToday ? 'var(--primary-color)' : 'var(--border-color)'}; flex-wrap: wrap;">
                         <span style="font-size: 1.1rem; font-weight: 600; color: ${isToday ? 'var(--primary-color)' : 'var(--text-primary)'};">
                             ${dayData.dayName}
                         </span>
@@ -3514,7 +3529,10 @@ async function loadThisWeek() {
                                 ${phone ? `
                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                                         <span style="color: var(--text-secondary);">📱</span>
-                                        <a href="tel:${phone}" style="color: var(--text-primary); text-decoration: none;">${phone}</a>
+                                        <span style="color: var(--text-primary);">${phone}</span>
+                                        <a href="tel:${phone}" title="התקשר">
+                                            <img src="call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
+                                        </a>
                                         <a href="https://wa.me/${phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                             <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
                                         </a>
@@ -3539,12 +3557,16 @@ async function loadThisWeek() {
                                 ${dealId ? `
                                     <button class="btn btn-primary btn-icon" style="width: 32px; height: 32px;" 
                                             onclick="openDealModal('${dealId}')" title="פתח עסקה">
-                                        👁️
+                                        💼
                                     </button>
                                 ` : ''}
-                                <button class="btn btn-secondary btn-icon" style="width: 32px; height: 32px;" 
-                                        onclick="editActivity('${activity.activity_id}')" title="ערוך">
-                                    ✏️
+                                    <button class="btn btn-info btn-icon" style="width: 32px; height: 32px;" 
+                                            onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">
+                                        👁️
+                                    </button>
+                                    <button class="btn btn-secondary btn-icon" style="width: 32px; height: 32px;" 
+                                            onclick="editActivity('${activity.activity_id}')" title="ערוך">
+                                        ✏️
                                 </button>
                             </div>
                         </div>
@@ -3726,7 +3748,23 @@ async function viewActivityDetails(activityId) {
                     </div>
                     <div class="deal-card-info">
                         <span class="deal-card-label">איש קשר:</span>
-                        <span class="deal-card-value">${contactInfo}</span>
+                        <span class="deal-card-value">${customer?.contact_name || '-'}</span>
+                    </div>
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">טלפון:</span>
+                        <span class="deal-card-value">
+                            ${customer?.phone ? `
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="color: var(--text-primary);">${customer.phone}</span>
+                                    <a href="tel:${customer.phone}" title="התקשר">
+                                        <img src="call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
+                                    </a>
+                                    <a href="https://wa.me/${customer.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
+                                        <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
+                                    </a>
+                                </div>
+                            ` : '-'}
+                        </span>
                     </div>
                 </div>
                 
