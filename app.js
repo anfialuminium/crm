@@ -2285,8 +2285,22 @@ async function viewDealDetails(dealId) {
                 <div class="customer-details">
                     <p><strong>שם העסק:</strong> ${deal.customers.business_name}</p>
                     <p><strong>איש קשר:</strong> ${deal.customers.contact_name || '-'}</p>
-                    <p><strong>טלפון:</strong> ${deal.customers.phone || '-'}</p>
-                    <p><strong>אימייל:</strong> ${deal.customers.email || '-'}</p>
+                    <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <strong>טלפון:</strong> 
+                        ${deal.customers.phone ? `
+                            <a href="tel:${deal.customers.phone}" style="color: var(--text-primary); text-decoration: none;">${deal.customers.phone}</a>
+                            <a href="https://wa.me/${deal.customers.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
+                                <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
+                            </a>
+                        ` : '-'}
+                    </div>
+                    <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <strong>אימייל:</strong> 
+                        ${deal.customers.email ? `
+                            <a href="mailto:${deal.customers.email}" style="color: var(--primary-color);">${deal.customers.email}</a>
+                            <img src="copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${deal.customers.email}')" title="העתק אימייל">
+                        ` : '-'}
+                    </div>
                     <p><strong>עיר:</strong> ${deal.customers.city || '-'}</p>
                 </div>
             </div>
