@@ -2579,7 +2579,10 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
             <div style="background: var(--bg-primary); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                      <div style="font-size: 0.9rem; white-space: pre-wrap;">${formattedContent}</div>
-                     <button onclick="deleteActivityNote(${note.id}, '${activityId}')" type="button" style="color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1.1em;">×</button>
+                     <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="editActivityNote(${note.id}, '${activityId}')" type="button" style="background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1rem;" title="ערוך">✏️</button>
+                        <button onclick="deleteActivityNote(${note.id}, '${activityId}')" type="button" style="color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1.1em;" title="מחק">×</button>
+                     </div>
                 </div>
                 <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem;">
                     ${note.created_by} • ${new Date(note.created_at).toLocaleString('he-IL')}
@@ -2590,6 +2593,40 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
     } catch (error) {
         console.error('❌ Error loading activity notes:', error);
         container.innerHTML = '<div class="text-center" style="color: var(--danger-color);">שגיאה בטעינת הערות</div>';
+    }
+}
+
+async function editActivityNote(noteId, activityId) {
+    try {
+        // Fetch current content
+        const { data: note, error: fetchError } = await supabase
+            .from('activity_notes')
+            .select('content')
+            .eq('id', noteId)
+            .single();
+            
+        if (fetchError) throw fetchError;
+        
+        // Ask for new content
+        const newContent = prompt('ערוך את ההערה:', note.content);
+        if (newContent === null) return; // Cancelled
+        if (!newContent.trim()) return; // Empty
+        
+        // Update
+        const { error: updateError } = await supabase
+            .from('activity_notes')
+            .update({ content: newContent.trim() })
+            .eq('id', noteId);
+            
+        if (updateError) throw updateError;
+        
+        // Reload
+        loadActivityNotes(activityId, 'activity-notes-list');
+        loadActivityNotes(activityId, 'view-activity-notes-list');
+        
+    } catch (error) {
+        console.error('❌ Error editing activity note:', error);
+        showAlert('שגיאה בעריכת הערה', 'error');
     }
 }
 
