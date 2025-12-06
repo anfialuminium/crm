@@ -887,11 +887,28 @@ async function displayCustomers() {
             <div class="deal-card-body">
                 <div class="deal-card-info">
                     <span class="deal-card-label">טלפון:</span>
-                    <span class="deal-card-value">${contactPhone}</span>
+                    <span class="deal-card-value">
+                        ${contactPhone ? `
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <a href="tel:${contactPhone}" style="color: var(--text-primary); text-decoration: none;">${contactPhone}</a>
+                                <a href="https://wa.me/${contactPhone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
+                                    <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
+                                </a>
+                            </div>
+                        ` : '<span class="deal-card-value">-</span>'}
+
+                    </span>
                 </div>
                 <div class="deal-card-info">
                     <span class="deal-card-label">אימייל:</span>
-                    <span class="deal-card-value">${contactEmail}</span>
+                    <span class="deal-card-value">
+                        ${contactEmail ? `
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <a href="mailto:${contactEmail}" style="color: var(--primary-color);">${contactEmail}</a>
+                                <img src="copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${contactEmail}')" title="העתק אימייל">
+                            </div>
+                        ` : '-'}
+                    </span>
                 </div>
                 <div class="deal-card-info">
                     <span class="deal-card-label">עיר:</span>
@@ -1039,11 +1056,27 @@ async function viewCustomerDetails(customerId) {
                     </div>
                     <div class="deal-card-info">
                         <span class="deal-card-label">טלפון:</span>
-                        <span class="deal-card-value">${customer.phone || '-'}</span>
+                        <span class="deal-card-value">
+                            ${customer.phone ? `
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <a href="tel:${customer.phone}" style="color: var(--text-primary); text-decoration: none;">${customer.phone}</a>
+                                    <a href="https://wa.me/${customer.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
+                                        <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
+                                    </a>
+                                </div>
+                            ` : '-'}
+                        </span>
                     </div>
                     <div class="deal-card-info">
                         <span class="deal-card-label">אימייל:</span>
-                        <span class="deal-card-value">${customer.email || '-'}</span>
+                        <span class="deal-card-value">
+                            ${customer.email ? `
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <a href="mailto:${customer.email}" style="color: var(--primary-color);">${customer.email}</a>
+                                    <img src="copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${customer.email}')" title="העתק אימייל">
+                                </div>
+                            ` : '-'}
+                        </span>
                     </div>
                     <div class="deal-card-info">
                         <span class="deal-card-label">עיר:</span>
@@ -1509,11 +1542,27 @@ function filterContacts() {
             <div class="deal-card-body">
                 <div class="deal-card-info">
                     <span class="deal-card-label">טלפון:</span>
-                    <span class="deal-card-value">${contact.phone || '-'}</span>
+                    <span class="deal-card-value">
+                        ${contact.phone ? `
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <a href="tel:${contact.phone}" style="color: var(--text-primary); text-decoration: none;">${contact.phone}</a>
+                                <a href="https://wa.me/${contact.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
+                                    <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
+                                </a>
+                            </div>
+                        ` : '-'}
+                    </span>
                 </div>
                 <div class="deal-card-info">
                     <span class="deal-card-label">אימייל:</span>
-                    <span class="deal-card-value">${contact.email || '-'}</span>
+                    <span class="deal-card-value">
+                        ${contact.email ? `
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <a href="mailto:${contact.email}" style="color: var(--primary-color);">${contact.email}</a>
+                                <img src="copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${contact.email}')" title="העתק אימייל">
+                            </div>
+                        ` : '-'}
+                    </span>
                 </div>
                 ${contact.notes ? `
                     <div class="deal-card-info" style="grid-column: 1 / -1;">
@@ -2131,7 +2180,16 @@ function createDealCard(deal) {
             </div>
             <div class="deal-card-info">
                 <span class="deal-card-label">טלפון:</span>
-                <span class="deal-card-value">${deal.customers.phone || '-'}</span>
+                <span class="deal-card-value">
+                    ${deal.customers.phone ? `
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <a href="tel:${deal.customers.phone}" style="color: var(--text-primary); text-decoration: none;">${deal.customers.phone}</a>
+                            <a href="https://wa.me/${deal.customers.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
+                                <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
+                            </a>
+                        </div>
+                    ` : '-'}
+                </span>
             </div>
             ${deal.notes ? `
                 <div class="deal-card-info">
@@ -2466,8 +2524,8 @@ async function editNote(activityId) {
 // Activity Notes Logic
 // ============================================
 
-async function loadActivityNotes(activityId) {
-    const container = document.getElementById('activity-notes-list');
+async function loadActivityNotes(activityId, containerId = 'activity-notes-list') {
+    const container = document.getElementById(containerId);
     if (!container) return;
     
     container.innerHTML = '<div class="text-center" style="font-size: 0.8rem; color: var(--text-tertiary);">טוען...</div>';
@@ -2486,22 +2544,32 @@ async function loadActivityNotes(activityId) {
             return;
         }
         
-        container.innerHTML = notes.map(note => `
+        container.innerHTML = notes.map(note => {
+            const formattedContent = linkify(note.content);
+            return `
             <div style="background: var(--bg-primary); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                     <div style="font-size: 0.9rem; white-space: pre-wrap;">${note.content}</div>
-                     <button onclick="deleteActivityNote(${note.id})" type="button" style="color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1.1em;">×</button>
+                     <div style="font-size: 0.9rem; white-space: pre-wrap;">${formattedContent}</div>
+                     <button onclick="deleteActivityNote(${note.id}, '${activityId}')" type="button" style="color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1.1em;">×</button>
                 </div>
                 <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem;">
                     ${note.created_by} • ${new Date(note.created_at).toLocaleString('he-IL')}
                 </div>
             </div>
-        `).join('');
+        `}).join('');
         
     } catch (error) {
         console.error('❌ Error loading activity notes:', error);
         container.innerHTML = '<div class="text-center" style="color: var(--danger-color);">שגיאה בטעינת הערות</div>';
     }
+}
+
+function linkify(text) {
+    if (!text) return '';
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlRegex, function(url) {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${url}</a>`;
+    });
 }
 
 async function addActivityNote() {
@@ -2512,28 +2580,40 @@ async function addActivityNote() {
     if (!content) return;
     
     try {
-        const performedBy = localStorage.getItem('crm_username') || 'משתמש מערכת';
-        
-        const { error } = await supabase
-            .from('activity_notes')
-            .insert({
-                activity_id: activityId,
-                content: content,
-                created_by: performedBy
-            });
-            
-        if (error) throw error;
-        
+        await insertActivityNoteToDb(activityId, content);
         input.value = '';
-        await loadActivityNotes(activityId);
-        
+        await loadActivityNotes(activityId, 'activity-notes-list');
     } catch (error) {
         console.error('❌ Error adding activity note:', error);
         showAlert('שגיאה בהוספת הערה', 'error');
     }
 }
 
-async function deleteActivityNote(noteId) {
+async function addActivityNoteFromView(activityId) {
+    const input = document.getElementById('view-activity-new-note');
+    const content = input.value.trim();
+    
+    if (!content) return;
+    
+    try {
+        await insertActivityNoteToDb(activityId, content);
+        input.value = '';
+        await loadActivityNotes(activityId, 'view-activity-notes-list');
+    } catch (error) {
+        console.error('❌ Error adding activity note from view:', error);
+        showAlert('שגיאה בהוספת הערה', 'error');
+    }
+}
+
+async function insertActivityNoteToDb(activityId, content) {
+    const performedBy = localStorage.getItem('crm_username') || 'משתמש מערכת';
+    const { error } = await supabase.from('activity_notes').insert({
+        activity_id: activityId, content, created_by: performedBy
+    });
+    if (error) throw error;
+}
+
+async function deleteActivityNote(noteId, activityId) {
     if (!confirm('האם למחוק את ההערה?')) return;
     
     try {
@@ -2544,8 +2624,9 @@ async function deleteActivityNote(noteId) {
             
         if (error) throw error;
         
-        const activityId = document.getElementById('edit-activity-id').value;
-        await loadActivityNotes(activityId);
+        // Try reload both containers if they exist
+        loadActivityNotes(activityId, 'activity-notes-list');
+        loadActivityNotes(activityId, 'view-activity-notes-list');
         
     } catch (error) {
         console.error('❌ Error deleting activity note:', error);
@@ -2564,7 +2645,7 @@ function showEditActivityModal(activity) {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 550px;">
                 <div class="modal-header">
-                    <h2>👁️ פרטי פעילות</h2>
+                    <h2>✏️ עריכת פעילות</h2>
                     <button class="modal-close" onclick="closeEditActivityModal()">✕</button>
                 </div>
                 <form id="edit-activity-form" onsubmit="saveActivityEdit(event)">
@@ -3250,14 +3331,16 @@ async function loadThisWeek() {
                         customer_id,
                         business_name,
                         contact_name,
-                        phone
+                        phone,
+                        email
                     )
                 ),
                 customers (
                     customer_id,
                     business_name,
                     contact_name,
-                    phone
+                    phone,
+                    email
                 )
             `)
             .neq('activity_type', 'הערה')
@@ -3413,8 +3496,23 @@ async function loadThisWeek() {
                         ` : ''}
                         
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.8rem;">
-                                ${phone ? `<span style="color: var(--text-secondary);">📱 ${phone}</span>` : ''}
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem;">
+                                ${phone ? `
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <span style="color: var(--text-secondary);">📱</span>
+                                        <a href="tel:${phone}" style="color: var(--text-primary); text-decoration: none;">${phone}</a>
+                                        <a href="https://wa.me/${phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
+                                            <img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;">
+                                        </a>
+                                    </div>
+                                ` : ''}
+                                ${customer?.email ? `
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <strong>📧</strong> 
+                                        <a href="mailto:${customer.email}" style="color: var(--primary-color);">${customer.email}</a>
+                                        <img src="copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${customer.email}')" title="העתק אימייל">
+                                    </div>
+                                ` : ''}
                                 ${dealId ? `<span style="color: var(--primary-color);">💼 עסקה${dealAmount ? ` • ₪${dealAmount.toFixed(0)}` : ''}</span>` : ''}
                             </div>
                             <div style="display: flex; gap: 0.5rem;">
@@ -3521,6 +3619,139 @@ async function editActivity(activityId) {
     }
 }
 
+async function viewActivityDetails(activityId) {
+    try {
+        // Load activity details with relations
+        const { data: activity, error } = await supabase
+            .from('activities')
+            .select(`
+                *,
+                deals (
+                    deal_id,
+                    customers (
+                        business_name,
+                        contact_name,
+                        phone,
+                        email
+                    )
+                ),
+                customers (
+                    business_name,
+                    contact_name,
+                    phone,
+                    email
+                )
+            `)
+            .eq('activity_id', activityId)
+            .single();
+            
+        if (error) throw error;
+        
+        if (!activity) {
+            showAlert('הפעילות לא נמצאה', 'error');
+            return;
+        }
+        
+        let modal = document.getElementById('view-activity-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'view-activity-modal';
+            modal.className = 'modal';
+            document.body.appendChild(modal);
+        }
+        
+        const typeIcons = {
+            'שיחה': '📞',
+            'פגישה': '📅',
+            'מייל': '📧',
+            'משימה': '✅',
+            'הערה': '📝'
+        };
+        const icon = typeIcons[activity.activity_type] || '📝';
+        
+        // Resolve customer/contact info
+        let customerInfo = '-';
+        let contactInfo = '-';
+        
+        const customer = activity.deals?.customers || activity.customers;
+        if (customer) {
+            customerInfo = customer.business_name || '-';
+            contactInfo = customer.contact_name ? `${customer.contact_name} ${customer.phone ? `(${customer.phone})` : ''}` : '-';
+        }
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2>${icon} פרטי פעילות</h2>
+                    <button class="modal-close" onclick="closeViewActivityModal()">✕</button>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">סוג:</span>
+                        <span class="deal-card-value">${activity.activity_type}</span>
+                    </div>
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">תאריך:</span>
+                        <span class="deal-card-value">${activity.activity_date ? new Date(activity.activity_date).toLocaleString('he-IL') : '-'}</span>
+                    </div>
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">סטטוס:</span>
+                        <span class="deal-card-value">
+                            ${activity.completed ? '<span class="badge badge-won">בוצע</span>' : '<span class="badge badge-pending">ממתין</span>'}
+                        </span>
+                    </div>
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">נוצר ע"י:</span>
+                        <span class="deal-card-value">${activity.created_by || 'מערכת'}</span>
+                    </div>
+                    
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">לקוח:</span>
+                        <span class="deal-card-value">${customerInfo}</span>
+                    </div>
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">איש קשר:</span>
+                        <span class="deal-card-value">${contactInfo}</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">תיאור הפעילות:</label>
+                    <div style="white-space: pre-wrap;">${activity.description || '-'}</div>
+                </div>
+                
+                <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--text-primary);">📝 הערות</h3>
+                    <div id="view-activity-notes-list" style="margin-bottom: 1rem; max-height: 200px; overflow-y: auto; background: var(--bg-secondary); padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                        <div class="spinner"></div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="view-activity-new-note" class="form-input" placeholder="הוסף הערה חדשה..." onkeypress="if(event.key==='Enter'){event.preventDefault(); addActivityNoteFromView('${activityId}');}">
+                        <button type="button" class="btn btn-primary" onclick="addActivityNoteFromView('${activityId}')">💾 הוסף</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        modal.classList.add('active');
+        
+        // Load notes
+        loadActivityNotes(activityId, 'view-activity-notes-list');
+        
+    } catch (error) {
+        console.error('❌ Error viewing activity details:', error);
+        showAlert('שגיאה בטעינת פרטי הפעילות', 'error');
+    }
+}
+
+function closeViewActivityModal() {
+    const modal = document.getElementById('view-activity-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
 // Activities view mode: 'cards' or 'table'
 let activitiesViewMode = localStorage.getItem('activitiesViewMode') || 'cards';
 
@@ -3549,6 +3780,15 @@ function setActivitiesView(mode) {
     loadActivities();
 }
 
+function copyToClipboard(text) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        showAlert('האימייל הועתק ללוח', 'success');
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+    });
+}
+
 async function loadActivities() {
     const container = document.getElementById('activities-list');
     container.innerHTML = '<div class="spinner"></div>';
@@ -3571,13 +3811,17 @@ async function loadActivities() {
                     deal_status,
                     customers (
                         business_name,
-                        contact_name
+                        contact_name,
+                        phone,
+                        email
                     )
                 ),
                 customers (
                     customer_id,
                     business_name,
-                    contact_name
+                    contact_name,
+                    phone,
+                    email
                 )
             `)
             .neq('activity_type', 'הערה');
@@ -3730,8 +3974,9 @@ async function loadActivities() {
                                     <td>${activity.created_by || 'מערכת'}</td>
                                     <td>
                                         <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
-                                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">🔗</button>` : ''}
-                                            <button class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="editActivity('${activity.activity_id}')" title="פרטים והערות">👁️</button>
+                                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">💼</button>` : ''}
+                                            <button class="btn btn-sm btn-info" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">👁️</button>
+                                            <button class="btn btn-sm btn-secondary" style="padding: 0.15rem 0.3rem; font-size: 0.65rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
                                             <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
                                                     style="padding: 0.15rem 0.3rem; font-size: 0.65rem;"
                                                     onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})" title="${activity.completed ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
@@ -3784,13 +4029,27 @@ async function loadActivities() {
                 // Get customer info
                 let businessName = 'לא משויך';
                 let contactName = '';
+                let phone = '';
+                let email = '';
                 
                 if (activity.deals?.customers) {
                     businessName = activity.deals.customers.business_name || 'לא משויך';
                     contactName = activity.deals.customers.contact_name || '';
+                    phone = activity.deals.customers.phone || '';
+                    email = activity.deals.customers.email || '';
                 } else if (activity.customers) {
                     businessName = activity.customers.business_name || 'לא משויך';
                     contactName = activity.customers.contact_name || '';
+                    phone = activity.customers.phone || '';
+                    email = activity.customers.email || '';
+                }
+                
+                // Format phone for WhatsApp (remove dashes, ensure +972)
+                let whatsappLink = '';
+                if (phone) {
+                    let cleanPhone = phone.replace(/\D/g, '');
+                    if (cleanPhone.startsWith('0')) cleanPhone = '972' + cleanPhone.substring(1);
+                    whatsappLink = `https://wa.me/${cleanPhone}`;
                 }
                 
                 card.innerHTML = `
@@ -3803,8 +4062,9 @@ async function loadActivities() {
                                 : `<span class="badge badge-pending" style="font-size: 0.65rem; padding: 2px 6px;">ממתין</span>`}
                         </div>
                         <div style="display: flex; gap: 0.25rem;">
-                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">🔗</button>` : ''}
-                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="פרטים והערות">👁️</button>
+                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">💼</button>` : ''}
+                            <button class="btn btn-sm btn-info" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">👁️</button>
+                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
                             <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
                                     style="padding: 0.2rem 0.4rem; font-size: 0.7rem;"
                                     onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})" title="${activity.completed ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
@@ -3821,6 +4081,20 @@ async function loadActivities() {
                             ${activityDate ? `<div><strong>תאריך:</strong> <span style="color: var(--primary-color);">${activityDate}</span></div>` : ''}
                             <div><strong>לקוח:</strong> ${businessName}</div>
                             ${contactName ? `<div><strong>איש קשר:</strong> ${contactName}</div>` : ''}
+                            ${email ? `
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <strong>מייל:</strong> 
+                                    <a href="mailto:${email}" style="color: var(--primary-color);">${email}</a>
+                                    <img src="copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${email}')" title="העתק אימייל">
+                                </div>
+                            ` : ''}
+                            ${phone ? `
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <strong>טלפון:</strong> 
+                                    <a href="tel:${phone}" style="color: var(--text-primary); text-decoration: none;">${phone}</a>
+                                    ${whatsappLink ? `<a href="${whatsappLink}" target="_blank" title="שלח הודעה בווטסאפ"><img src="whatsapp.png" alt="WhatsApp" style="width: 16px; height: 16px; vertical-align: middle;"></a>` : ''}
+                                </div>
+                            ` : ''}
                             <div><strong>נוצר:</strong> ${activity.created_by || 'מערכת'}</div>
                             ${activity.completed && activity.completed_at ? `<div><strong>בוצע:</strong> <span style="color: var(--success-color);">${new Date(activity.completed_at).toLocaleDateString('he-IL')}</span></div>` : ''}
                         </div>
