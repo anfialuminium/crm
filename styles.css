@@ -366,7 +366,7 @@ body {
     border-collapse: separate;
     border-spacing: 0;
     margin-bottom: var(--spacing-lg);
-    table-layout: fixed; /* Enforce column widths */
+    table-layout: auto; /* Allow columns to adjust to content */
 }
 
 .items-table thead {
