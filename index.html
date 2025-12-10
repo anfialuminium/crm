@@ -11,6 +11,7 @@
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -1101,7 +1102,7 @@
                 <input type="hidden" id="edit-supplier-order-id">
                 
                 <!-- Edit Mode Header -->
-                <div id="supplier-order-edit-header" class="form-grid" style="grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                <div id="supplier-order-edit-header" class="form-grid" style="grid-template-columns: repeat(4, 1fr); gap: 1rem;">
                     <div class="form-group">
                         <label class="form-label required">ספק</label>
                         <select id="order-supplier-select" class="form-select" required>
@@ -1119,13 +1120,17 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">תאריך ביצוע</label>
+                        <input type="date" id="order-creation-date" class="form-input">
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">צפי הגעה</label>
                         <input type="date" id="order-expected-date" class="form-input">
                     </div>
                 </div>
 
                 <!-- Read Only Mode Header -->
-                <div id="supplier-order-view-header" style="display: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+                <div id="supplier-order-view-header" style="display: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
                     <div>
                         <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">ספק</label>
                         <div id="view-order-supplier" style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 0.25rem;"></div>
@@ -1133,6 +1138,10 @@
                     <div>
                         <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">סטטוס</label>
                         <div id="view-order-status" class="badge" style="font-size: 1rem; margin-top: 0.25rem; display: inline-block;"></div>
+                    </div>
+                    <div>
+                        <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">תאריך ביצוע</label>
+                        <div id="view-order-creation-date" style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 0.25rem;"></div>
                     </div>
                     <div>
                         <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">צפי הגעה</label>

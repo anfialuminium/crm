@@ -514,6 +514,14 @@ body {
     z-index: 1100;
 }
 
+#supplier-order-modal {
+    z-index: 1100;
+}
+
+#confirmation-modal {
+    z-index: 20000 !important;
+}
+
 .modal.active {
     display: flex;
     animation: fadeIn 0.3s ease-out;
@@ -1743,4 +1751,9 @@ a[href^="tel:"] {
     border-bottom: 1px solid var(--border-color);
     padding: 1rem 0.75rem;
     color: var(--text-primary);
+}
+
+/* SweetAlert z-index fix */
+div.swal2-container {
+    z-index: 20000 !important;
 }

@@ -318,7 +318,18 @@ async function loadProducts() {
         
         if (error) throw error;
         
-        products = data || [];
+        products = (data || []).map(p => {
+            if (p.image_url && !p.image_url.startsWith('http') && !p.image_url.startsWith('data:')) {
+                // Ensure we don't duplicate 'images/' if it's already in the path and the base might have it (though base is catalog/)
+                // Just Clean leading slash
+                const cleanPath = p.image_url.startsWith('/') ? p.image_url.substring(1) : p.image_url;
+                return {
+                    ...p,
+                    image_url: `https://anfialuminium.github.io/catalog/${cleanPath}`
+                };
+            }
+            return p;
+        });
         console.log(`✅ Loaded ${products.length} products`);
         
     } catch (error) {
@@ -1408,7 +1419,10 @@ function filterCustomers(preservePage = false) {
                                     ? `<a href="javascript:void(0)" onclick="viewContactDetails('${contactId}')" style="font-weight: 500;">${contactName}</a>`
                                     : contactName}
                             </td>
-                            <td>${contactPhone !== '-' ? `<a href="tel:${contactPhone}">${contactPhone}</a>` : '-'}</td>
+                            <td>${contactPhone !== '-' ? contactPhone.split(',').map(p => {
+                                const clean = p.replace(/[^\d+]/g, '');
+                                return clean.length > 6 ? `<a href="tel:${clean}">${p.trim()}</a>` : p.trim();
+                            }).join(', <br>') : '-'}</td>
                             <td>${customer.city || '-'}</td>
                             <td>${customer.customer_type ? `<span class="badge ${typeBadgeClass}">${customer.customer_type}</span>` : '-'}</td>
                             <td>${customer.source || '-'}</td>
@@ -3230,7 +3244,7 @@ function filterProducts(preservePage = false) {
                         <tr>
                             <td>
                                 ${product.image_url ? 
-                                    `<img src="${product.image_url}" alt="${product.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" onclick="openImageModal('${product.image_url}', '${product.product_name.replace(/'/g, "\\'")}')">` : 
+                                    `<img src="${product.image_url}" alt="${product.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" onclick="openImageModal('${product.image_url}', '${product.product_name.replace(/'/g, "\\'")}')" onerror="this.outerHTML='<span style=\\'font-size: 1.5rem;\\'>📦</span>'">` : 
                                     '<span style="font-size: 1.5rem;">📦</span>'}
                             </td>
                             <td><strong>${product.product_name}</strong></td>
@@ -8493,32 +8507,32 @@ function renderSuppliersList(list) {
     
     const tableHTML = `
         <div class="table-responsive">
-            <table class="items-table" style="width: 100%; min-width: 1200px; table-layout: fixed;">
+            <table class="items-table" style="width: 100%; min-width: 1600px; table-layout: auto;">
                 <thead>
                     <tr>
-                        <th style="width: 20%;">שם הספק</th>
-                        <th style="width: 15%;">קטגוריה</th>
-                        <th style="width: 15%;">איש קשר</th>
-                        <th style="width: 12%;">טלפון</th>
-                        <th style="width: 15%;">אימייל</th>
-                        <th style="width: 15%;">אתר</th>
+                        <th style="width: 15%;">שם הספק</th>
+                        <th style="width: 10%;">קטגוריה</th>
+                        <th style="width: 10%;">איש קשר</th>
+                        <th style="width: 10%;">טלפון</th>
+                        <th style="width: 20%;">אימייל</th>
+                        <th style="width: 20%;">אתר</th>
                         <th style="width: 140px;">פעולות</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${list.map(s => `
                         <tr>
-                            <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${s.supplier_name}">
+                            <td style="white-space: nowrap;" title="${s.supplier_name}" dir="auto">
                                 <strong>${s.supplier_name}</strong>
                             </td>
                             <td><span class="badge badge-pending">${s.category || '-'}</span></td>
                             <td>${s.contact_name || '-'}</td>
                             <td style="direction: ltr; text-align: right;">${s.phone || '-'}</td>
-                            <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${s.email || ''}">
+                            <td style="white-space: nowrap;">
                                 ${s.email ? `<a href="mailto:${s.email}">${s.email}</a>` : '-'}
                             </td>
-                            <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${s.website || ''}">
-                                ${s.website ? `<a href="${s.website.startsWith('http') ? s.website : 'http://' + s.website}" target="_blank">🌐 אתר</a>` : '-'}
+                            <td style="white-space: nowrap;">
+                                ${s.website ? `<a href="${s.website.startsWith('http') ? s.website : 'http://' + s.website}" target="_blank">${s.website}</a>` : '-'}
                             </td>
                             <td>
                                 <button class="btn btn-sm btn-info" onclick="viewSupplierDetails('${s.supplier_id}')">👁️</button>
@@ -8761,24 +8775,33 @@ async function viewSupplierDetails(id) {
                         </div>
                      ` : ''}
                      
-                     <div class="deal-card-info" style="margin-top: 1rem; display: block;">
-                        <strong>הערות:</strong><br>
-                        ${s.clean_notes || s.notes || '-'}
-                     </div>
+                     <div class="deal-card-info" style="margin-top: 1rem; display: block; white-space: pre-wrap;" dir="auto"><strong>הערות:</strong><br>${s.clean_notes || s.notes || '-'}</div>
                 </div>
                 <div>
                     <h4>הזמנות אחרונות</h4>
                     ${orders && orders.length > 0 ? `
                         <table class="items-table" style="width:100%">
-                            <thead><tr><th>תאריך</th><th>סכום</th><th>סטטוס</th></tr></thead>
+                            <thead><tr><th>תאריך</th><th>סכום</th><th>סטטוס</th><th>פעולות</th></tr></thead>
                             <tbody>
-                                ${orders.map(o => `
+                                ${orders.map(o => {
+                                    let currencySymbol = '₪';
+                                    if (s.address && s.address.toLowerCase().includes('china') || 
+                                       (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
+                                       (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
+                                       (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
+                                       (s.email && s.email.endsWith('.cn'))) {
+                                        currencySymbol = '$';
+                                    }
+                                    return `
                                     <tr>
                                         <td>${new Date(o.created_at).toLocaleDateString('he-IL')}</td>
-                                        <td>₪${o.total_amount}</td>
+                                        <td>${currencySymbol}${(parseFloat(o.total_amount) || 0).toLocaleString()}</td>
                                         <td><span class="badge ${getStatusBadgeClass(o.order_status)}">${o.order_status}</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-secondary btn-icon" onclick="viewSupplierOrder('${o.order_id}', '${s.supplier_id}')" title="צפה בהזמנה">👁️</button>
+                                        </td>
                                     </tr>
-                                `).join('')}
+                                `}).join('')}
                             </tbody>
                         </table>
                     ` : '<p>אין הזמנות</p>'}
@@ -8861,21 +8884,31 @@ function renderSupplierOrdersList(list) {
                     </tr>
                 </thead>
                 <tbody>
-                    ${list.map(o => `
+                    ${list.map(o => {
+                        let currencySymbol = '₪';
+                        const s = o.suppliers;
+                        if (s && ((s.address && s.address.toLowerCase().includes('china')) || 
+                                 (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
+                                 (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
+                                 (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
+                                 (s.email && s.email.endsWith('.cn')))) {
+                            currencySymbol = '$';
+                        }
+                        return `
                         <tr>
                             <td><strong>${o.order_number ? '#' + o.order_number : '#' + o.order_id.slice(0, 6).toUpperCase()}</strong></td>
-                            <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${o.suppliers?.supplier_name || ''}">${o.suppliers?.supplier_name || 'לא ידוע'}</td>
+                            <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${o.suppliers?.supplier_name || ''}" dir="auto">${o.suppliers?.supplier_name || 'לא ידוע'}</td>
                             <td>${new Date(o.created_at).toLocaleDateString('he-IL')}</td>
                             <td>${o.expected_date ? new Date(o.expected_date).toLocaleDateString('he-IL') : '-'}</td>
-                            <td>₪${o.total_amount || 0}</td>
+                            <td>${currencySymbol}${(parseFloat(o.total_amount) || 0).toLocaleString()}</td>
                             <td><span class="badge ${getStatusBadgeClass(o.order_status)}">${o.order_status}</span></td>
                             <td>
-                                <button class="btn btn-sm btn-info" onclick="viewSupplierOrder('${o.order_id}')" title="צפה">👁️</button>
+                                <button class="btn btn-sm btn-info" onclick="viewSupplierOrder('${o.order_id}', '${o.supplier_id}')" title="צפה">👁️</button>
                                 <button class="btn btn-sm btn-secondary" onclick="openSupplierOrderModal('${o.order_id}')" title="ערוך">✏️</button>
                                 <button class="btn btn-sm btn-danger" onclick="deleteSupplierOrder('${o.order_id}')" title="מחק">🗑️</button>
                             </td>
                         </tr>
-                    `).join('')}
+                    `}).join('')}
                 </tbody>
             </table>
         </div>
@@ -8898,7 +8931,7 @@ let currentOrderItems = [];
 
 let isSupplierOrderReadOnly = false;
 
-function viewSupplierOrder(orderId) {
+function viewSupplierOrder(orderId, supplierId) {
     openSupplierOrderModal(orderId, true);
 }
 
@@ -8945,9 +8978,39 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
         notesHistory.style.display = 'block';
         noteControls.style.display = 'flex';
         notesEditor.style.display = 'none';
+
+        // Add Export PDF Button if not exists
+        if (!document.getElementById('btn-export-pdf')) {
+            const btn = document.createElement('button');
+            btn.id = 'btn-export-pdf';
+            btn.type = 'button';
+            btn.className = 'btn btn-secondary';
+            btn.style.marginRight = '10px';
+            btn.innerHTML = '📄 ייצא PDF';
+            btn.onclick = () => exportSupplierOrderPDF(orderId);
+            const headerActions = document.querySelector('#supplier-order-modal .modal-header');
+            if (headerActions) {
+                 // Insert before close button or somewhere suitable. 
+                 // Actually easier to put it near the edit button logic or append to header
+                 // Let's look for a container in header or create one.
+                 // The modal header usually contains title and close button. 
+                 // We can inject it into the header.
+                 headerActions.insertBefore(btn, headerActions.firstChild);
+            }
+        } else {
+             const btn = document.getElementById('btn-export-pdf');
+             btn.style.display = 'inline-block';
+             btn.onclick = () => exportSupplierOrderPDF(orderId);
+        }
         
     } else {
         modal.classList.remove('read-only-mode');
+        // ... (existing code)
+        
+        // Hide Export PDF Button
+        const pdfBtn = document.getElementById('btn-export-pdf');
+        if (pdfBtn) pdfBtn.style.display = 'none';
+        
         title.textContent = orderId ? 'ערוך הזמנה' : 'הזמנה חדשה';
         saveBtn.style.display = 'inline-block';
         saveBtn.innerHTML = '💾 שמור שינויים'; 
@@ -8989,6 +9052,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             document.getElementById('order-supplier-select').value = order.supplier_id;
             document.getElementById('order-status').value = order.order_status;
             document.getElementById('order-expected-date').value = order.expected_date ? order.expected_date.split('T')[0] : '';
+            document.getElementById('order-creation-date').value = order.created_at ? order.created_at.split('T')[0] : '';
             document.getElementById('order-notes').value = order.notes || '';
             document.getElementById('order-notes').value = order.notes || '';
             
@@ -9006,6 +9070,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
                 statusEl.className = `badge ${getStatusBadgeClass(order.order_status)}`;
                 
                 document.getElementById('view-order-date').textContent = order.expected_date ? new Date(order.expected_date).toLocaleDateString('he-IL') : '-';
+                document.getElementById('view-order-creation-date').textContent = order.created_at ? new Date(order.created_at).toLocaleDateString('he-IL') : '-';
             }
             
             // Fetch items
@@ -9014,7 +9079,21 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
                 .select('*')
                 .eq('order_id', orderId);
                 
-            currentOrderItems = items || [];
+            // Fix legacy items where color is inside description
+            currentOrderItems = (items || []).map(item => {
+                const legacyMatch = item.description && typeof item.description === 'string' 
+                    ? item.description.match(/(.*)\s\((.+)\)$/) 
+                    : null;
+                
+                if (!item.color && legacyMatch) {
+                    return {
+                        ...item,
+                        description: legacyMatch[1].trim(),
+                        color: legacyMatch[2].trim()
+                    };
+                }
+                return item;
+            });
             
         } catch (e) {
             console.error(e);
@@ -9024,7 +9103,9 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
     } else {
         // Defaults
         document.getElementById('order-status').value = 'חדש';
-        document.getElementById('order-expected-date').value = new Date().toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('order-expected-date').value = today;
+        document.getElementById('order-creation-date').value = today;
     }
     
     renderSupplierOrderItems();
@@ -9043,6 +9124,28 @@ function renderSupplierOrderItems() {
     tbody.innerHTML = '';
     let total = 0;
     
+    // Determine currency based on supplier
+    const supplierId = document.getElementById('order-supplier-select')?.value;
+    let currencySymbol = '₪';
+    
+    // Attempt to detect if supplier is from abroad (e.g., China)
+    // We can check the supplier object if available, or infer from current view
+    if (supplierId) {
+       const supplier = suppliers.find(s => s.supplier_id == supplierId);
+       if (supplier && (
+           (supplier.address && supplier.address.toLowerCase().includes('china')) || 
+           (supplier.supplier_name && /[\u4e00-\u9fa5]/.test(supplier.supplier_name)) || // Chinese characters
+           (supplier.supplier_name && supplier.supplier_name.toLowerCase().includes('china')) ||
+           (supplier.supplier_name && supplier.supplier_name.toLowerCase().includes('qingdao')) ||
+           (supplier.email && supplier.email.endsWith('.cn'))
+       )) {
+           currencySymbol = '$';
+       }
+    }
+    
+    // Also check for view mode where select might act differently or we use the cached order details if possible
+    // But renderSupplierOrderItems relies on UI state primarily.
+
     if (currentOrderItems.length === 0) {
         emptyState.style.display = 'block';
     } else {
@@ -9071,7 +9174,7 @@ function renderSupplierOrderItems() {
                     <td>${item.sku || '-'}</td>
                     <td style="text-align: center;">${item.quantity || 0}</td>
                     <td style="text-align: center;">${item.unit_price || 0}</td>
-                    <td style="vertical-align: middle; font-weight: bold; color: var(--primary-dark); text-align: center;">₪${itemTotal.toFixed(2)}</td>
+                    <td style="vertical-align: middle; font-weight: bold; color: var(--primary-dark); text-align: center;">${currencySymbol}${itemTotal.toLocaleString()}</td>
                     <td></td>
                 `;
             } else {
@@ -9096,7 +9199,7 @@ function renderSupplierOrderItems() {
                     <td><input type="text" class="form-input table-input" value="${item.sku || ''}" onchange="updateOrderItem(${index}, 'sku', this.value)" placeholder="מק״ט" style="width: 100%"></td>
                     <td style="text-align: center;"><input type="number" class="form-input table-input" value="${item.quantity || 1}" step="any" onchange="updateOrderItem(${index}, 'quantity', this.value)" style="width: 60px; text-align: center;"></td>
                     <td style="text-align: center;"><input type="number" class="form-input table-input" value="${item.unit_price || 0}" step="0.01" onchange="updateOrderItem(${index}, 'unit_price', this.value)" style="width: 90px; text-align: center;"></td>
-                    <td style="vertical-align: middle; font-weight: bold; color: var(--primary-dark); text-align: center;">₪${itemTotal.toFixed(2)}</td>
+                    <td style="vertical-align: middle; font-weight: bold; color: var(--primary-dark); text-align: center;">${currencySymbol}${itemTotal.toLocaleString()}</td>
                     <td style="text-align: center;"><button type="button" class="btn btn-sm btn-danger btn-icon" onclick="removeSupplierOrderItem(${index})" title="הסר">🗑️</button></td>
                 `;
             }
@@ -9104,7 +9207,7 @@ function renderSupplierOrderItems() {
         });
     }
     
-    totalEl.textContent = '₪' + total.toFixed(2);
+    totalEl.textContent = currencySymbol + total.toLocaleString();
 }
 
 async function handleProductSelect(index, selectEl) {
@@ -9393,6 +9496,7 @@ async function saveSupplierOrder(event) {
         supplier_id: document.getElementById('order-supplier-select').value,
         order_status: document.getElementById('order-status').value,
         expected_date: document.getElementById('order-expected-date').value || null,
+        created_at: document.getElementById('order-creation-date').value ? new Date(document.getElementById('order-creation-date').value).toISOString() : new Date().toISOString(),
         notes: document.getElementById('order-notes').value,
         total_amount: parseFloat(document.getElementById('supplier-order-total').textContent.replace(/[^\d.-]/g, ''))
     };
@@ -9417,13 +9521,22 @@ async function saveSupplierOrder(event) {
         
         // Insert Items
         if (currentOrderItems.length > 0) {
-            const itemsToInsert = currentOrderItems.map(item => ({
-                order_id: savedOrderId,
-                description: item.color ? `${item.description} (${item.color})` : item.description, // Combine color
-                sku: item.sku,
-                quantity: parseFloat(item.quantity),
-                unit_price: parseFloat(item.unit_price)
-            }));
+            const itemsToInsert = currentOrderItems.map(item => {
+                // Combine description and color if color exists, as DB might not have color column
+                let dbDescription = item.description;
+                if (item.color && item.color.trim()) {
+                    dbDescription = `${item.description} (${item.color})`;
+                }
+
+                return {
+                    order_id: savedOrderId,
+                    description: dbDescription,
+                    // color: item.color || null, // Removed to avoid 400 error if column doesn't exist
+                    sku: item.sku,
+                    quantity: parseFloat(item.quantity),
+                    unit_price: parseFloat(item.unit_price)
+                };
+            });
             
             const { error: itemsError } = await supabase.from('supplier_order_items').insert(itemsToInsert);
             if (itemsError) throw itemsError;
@@ -9481,7 +9594,6 @@ async function deleteSupplierOrder(orderId) {
         confirmButtonText: 'כן, מחק!',
         cancelButtonText: 'ביטול'
     });
-
     if (result.isConfirmed) {
         try {
             const { error } = await supabase
@@ -9492,7 +9604,6 @@ async function deleteSupplierOrder(orderId) {
             if (error) throw error;
             
             showAlert('ההזמנה נמחקה בהצלחה', 'success');
-            showAlert('ההזמנה נמחקה בהצלחה', 'success');
             await loadSupplierOrders();
         } catch (e) {
             console.error(e);
@@ -9501,13 +9612,184 @@ async function deleteSupplierOrder(orderId) {
     }
 }
 
-function exportSupplierOrderPDF() {
+
+
+async function exportSupplierOrderPDF() {
+    // Determine currency logic from total element
+    const totalElContent = document.getElementById('supplier-order-total').textContent;
+    const isDollar = totalElContent.includes('$');
+    const currencySym = isDollar ? '$' : '₪';
+
+    // Get order ID from DOM
     const orderId = document.getElementById('edit-supplier-order-id').value;
-    if (!orderId) {
-        alert('יש לשמור את ההזמנה לפני ייצוא ל-PDF');
-        return;
+    
+    
+    // Get notes text properly
+    const notesContainer = document.getElementById('order-notes-history');
+    let notesText = '';
+    if (notesContainer) {
+        const noteBlocks = notesContainer.querySelectorAll('div[id^="note-block-"]');
+        noteBlocks.forEach(block => {
+             const clone = block.cloneNode(true);
+             const actions = clone.querySelector('div[style*="position: absolute"]');
+             if (actions) actions.remove();
+             notesText += clone.innerText + '\n\n';
+        });
+        if (notesText.trim() === '') notesText = notesContainer.innerText; 
     }
-    // Placeholder - user didn't explicitly ask for PDF implementation details, but requested "Management Interface". 
-    // Usually this would generate a PDF. For now, we'll just alert or could implement window.print() style.
-    alert('ייצוא ל-PDF יתווסף בקרוב (דורש ספריית PDF)');
+    
+    // Fix parenthesis direction for PDF by injecting RLM markers
+    if (notesText) {
+        notesText = '\u200F' + notesText.replace(/\(/g, '\u200F(').replace(/\)/g, '\u200F)');
+    }
+
+    // Clone items
+    const itemsTbody = document.getElementById('supplier-order-items-tbody');
+    // Fetch real Order Number and Creation Date
+    let displayOrderId = orderId ? orderId.slice(0, 6).toUpperCase() : '';
+    let creationDate = new Date().toLocaleDateString('he-IL'); // Fallback
+
+    try {
+        const { data, error } = await supabase
+            .from('supplier_orders')
+            .select('order_number, created_at')
+            .eq('order_id', orderId)
+            .single();
+            
+        if (data) {
+            if (data.order_number) displayOrderId = data.order_number;
+            if (data.created_at) creationDate = new Date(data.created_at).toLocaleDateString('he-IL');
+        }
+    } catch (e) {
+        console.error('Could not fetch order details for PDF', e);
+    }
+
+    // Fix parenthesis direction for PDF by physically swapping them for the render
+    // This is a workaround for the visual rendering issue where they appear reversed
+    let processedNotes = '';
+    if (notesText) {
+        processedNotes = notesText.replace(/[()]/g, m => m === '(' ? ')' : '(');
+    }
+
+    // Show loading or feedback
+    const supplierName = document.getElementById('view-order-supplier').textContent;
+    const orderDate = document.getElementById('view-order-date').textContent; // This is expected date
+    const orderStatus = document.getElementById('view-order-status').textContent;
+    
+    // Clone items
+    const itemsRows = Array.from(itemsTbody.querySelectorAll('tr')).map(tr => {
+       const cells = tr.querySelectorAll('td');
+       // Assuming structure: Desc, Color, SKU, Qty, Unit, Total
+       return {
+           desc: cells[0].innerText,
+           color: cells[1].innerText,
+           sku: cells[2].innerText,
+           qty: cells[3].innerText,
+           price: cells[4].innerText,
+           total: cells[5].innerText
+       };
+    });
+
+    const totalText = document.getElementById('supplier-order-total').textContent;
+
+    // Build PDF HTML
+    const pdfContent = document.createElement('div');
+    pdfContent.style.direction = 'rtl';
+    pdfContent.style.fontFamily = 'Arial, Helvetica, sans-serif'; 
+    pdfContent.style.fontSize = '13px'; // Increased from 12px
+    pdfContent.style.padding = '20px';
+    pdfContent.style.background = '#fff';
+    pdfContent.style.color = '#333';
+    pdfContent.style.width = '100%'; 
+    pdfContent.style.textAlign = 'right';
+    pdfContent.style.letterSpacing = '0.5px'; // Restored to prevent merged text
+
+    pdfContent.innerHTML = `
+        <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 5px;">
+                <h1 style="color: #2563eb; margin: 0; font-size: 22px;">הזמנת רכש</h1>
+                <h1 style="color: #2563eb; margin: 0; font-size: 22px; direction: ltr;">#${displayOrderId}</h1>
+            </div>
+            <p style="margin: 5px 0 0; color: #666; font-size: 11px;">
+                הופק ע"י: <span dir="ltr" style="display: inline-block;">CRM</span>&nbsp;מערכת ניהול
+            </p>
+        </div>
+
+        <table style="width: 100%; border-collapse: separate; border-spacing: 15px 0; margin-bottom: 20px; table-layout: fixed;">
+            <tr>
+                <td style="width: 50%; vertical-align: top; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                    <h3 style="margin: 0 0 10px; color: #1e40af; font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">פרטי&nbsp;ספק</h3>
+                    <div style="font-weight: bold; font-size: 13px; word-wrap: break-word; word-break: break-word; overflow-wrap: anywhere; line-height: 1.4; padding: 2px;">${supplierName}</div>
+                </td>
+                <td style="width: 50%; vertical-align: top; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                     <h3 style="margin: 0 0 10px; color: #1e40af; font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">פרטי&nbsp;הזמנה</h3>
+                    <div style="margin-bottom: 5px;"><strong>תאריך&nbsp;ביצוע:</strong> <span dir="ltr" style="float: left;">${creationDate}</span></div>
+                    <div style="margin-bottom: 5px; clear: both;"><strong>תאריך&nbsp;צפי:</strong> <span dir="ltr" style="float: left;">${orderDate}</span></div>
+                    <div style="clear: both;"><strong>סטטוס:</strong> ${orderStatus}</div>
+                </td>
+            </tr>
+        </table>
+
+        <h3 style="border-right: 4px solid #2563eb; padding-right: 10px; margin-bottom: 10px; font-size: 16px;">פריטים</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px;">
+            <thead>
+                <tr style="background: #2563eb; color: white;">
+                    <th style="padding: 8px; text-align: right;">מוצר</th>
+                    <th style="padding: 8px; text-align: right;">צבע</th>
+                    <th style="padding: 8px; text-align: right;">מק"ט</th>
+                    <th style="padding: 8px; text-align: center;">כמות</th>
+                    <th style="padding: 8px; text-align: center;">מחיר יחידה</th>
+                    <th style="padding: 8px; text-align: center;">סה"כ</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${itemsRows.map((item, i) => `
+                    <tr style="background: ${i % 2 === 0 ? '#fff' : '#f9fafb'}; border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 8px 5px;">${item.desc}</td>
+                        <td style="padding: 8px;">${item.color}</td>
+                        <td style="padding: 8px;">${item.sku}</td>
+                        <td style="padding: 8px; text-align: center;">${item.qty}</td>
+                        <td style="padding: 8px; text-align: center;">${item.price}</td>
+                        <td style="padding: 8px; text-align: center; font-weight: bold;">${item.total}</td>
+                    </tr>
+                `).join('')}
+                <tr style="background: #eff6ff; border-top: 2px solid #2563eb;">
+                    <td colspan="5" style="padding: 10px; text-align: left; font-weight: bold; font-size: 14px;">סה"כ&nbsp;לתשלום:</td>
+                    <td style="padding: 10px; text-align: center; font-weight: bold; font-size: 14px; color: #1e40af;">${totalText}</td>
+                </tr>
+            </tbody>
+        </table>
+
+         ${processedNotes.trim() ? `
+        <div style="margin-top: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; text-align: right;">
+            <h3 style="margin: 0 0 10px; color: #4b5563; font-size: 14px;">הערות&nbsp;והיסטוריה</h3>
+            <div dir="rtl" style="white-space: pre-wrap; font-size: 11px; color: #666; line-height: 1.5;">${processedNotes}</div>
+        </div>
+        ` : ''}
+
+        <div style="margin-top: 30px; text-align: center; color: #9ca3af; font-size: 10px;">
+            המסמך הופק באופן אוטומטי בתאריך <span dir="ltr">${new Date().toLocaleDateString('he-IL')}</span>
+        </div>
+    `;
+
+    // Configuration for html2pdf
+    const opt = {
+        margin: [10, 10, 10, 10], 
+        filename: `הזמנת רכש (${creationDate}).pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true }, 
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // Use html2pdf to download/open
+    if (typeof html2pdf !== 'undefined') {
+        html2pdf().set(opt).from(pdfContent).toPdf().get('pdf').then(function(pdf) {
+            window.open(pdf.output('bloburl'), '_blank');
+        }).catch(err => {
+             console.error(err);
+             showAlert('שגיאה ביצירת ה-PDF', 'error');
+        });
+    } else {
+        showAlert('ספריית ה-PDF לא נטענה כראוי. אנא רענן את העמוד ונסה שוב.', 'error');
+    }
 }
