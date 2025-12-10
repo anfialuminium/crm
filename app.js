@@ -2097,6 +2097,10 @@ async function addCustomerNote(event, customerId) {
         
         if (error) throw error;
         
+        // Log action
+        const customerName = document.getElementById('customer-business-name')?.textContent || 'לקוח';
+        logAction('create', 'note', customerId, customerName, `הערה חדשה: ${noteText}`);
+        
         document.getElementById('customer-new-note').value = '';
         showAlert('✅ ההערה נוספה בהצלחה', 'success');
         loadCustomerNotes(customerId);
@@ -2148,12 +2152,16 @@ async function saveCustomerNoteEdit(activityId) {
         
         if (error) throw error;
         
+        // Log action
+        const customerId = document.getElementById('customer-details-modal').dataset.currentCustomerId;
+        const customerName = document.getElementById('customer-business-name')?.textContent || 'לקוח';
+        logAction('update', 'note', activityId, customerName, `עדכון הערה: ${newText}`);
+        
         showAlert('✅ ההערה עודכנה בהצלחה', 'success');
         
         const container = document.getElementById('customer-notes-list');
         delete container.dataset.editingId;
         
-        const customerId = document.getElementById('customer-details-modal').dataset.currentCustomerId;
         loadCustomerNotes(customerId);
         
     } catch (error) {
@@ -2171,6 +2179,11 @@ function deleteCustomerNote(activityId) {
                 .eq('activity_id', activityId);
             
             if (error) throw error;
+            
+            // Log action
+            const customerName = document.getElementById('customer-business-name')?.textContent || 'לקוח';
+            // We used activityId as ID, but entity name context helps
+            logAction('delete', 'note', activityId, customerName, 'מחיקת הערה');
             
             showAlert('✅ ההערה נמחקה בהצלחה', 'success');
             
@@ -7101,6 +7114,29 @@ async function loadReports() {
         
         const totalSales = wonDeals.reduce((sum, deal) => sum + (deal.final_amount || 0), 0);
         
+        // Fetch Supplier Orders for Procurement Report
+        const { data: supplierOrdersData, error: supplierOrdersError } = await supabase
+            .from('supplier_orders')
+            .select('total_amount, order_status'); // Select only needed fields
+
+        const supplierOrders = supplierOrdersData || [];
+        
+        const totalSupplierExpenses = supplierOrders
+            .filter(o => o.order_status !== 'בוטל')
+            .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+            
+        const totalOrdersCount = supplierOrders.length;
+        const openOrdersCount = supplierOrders.filter(o => !['התקבל', 'בוטל'].includes(o.order_status)).length;
+        
+        // Update DOM for Procurement
+        const expensesEl = document.getElementById('report-total-expenses');
+        const ordersCountEl = document.getElementById('report-total-supplier-orders');
+        const openOrdersEl = document.getElementById('report-open-supplier-orders');
+        
+        if (expensesEl) expensesEl.textContent = `₪${totalSupplierExpenses.toLocaleString()}`;
+        if (ordersCountEl) ordersCountEl.textContent = totalOrdersCount;
+        if (openOrdersEl) openOrdersEl.textContent = openOrdersCount;
+        
         // Update Summary Cards
         const totalSalesEl = document.getElementById('report-total-sales');
         const wonEl = document.getElementById('report-deals-won');
@@ -7912,6 +7948,12 @@ async function exportInteractiveReport() {
         const totalSales = document.getElementById('report-total-sales').textContent;
         const wonDeals = document.getElementById('report-deals-won').textContent;
         const pendingDeals = document.getElementById('report-deals-pending').textContent;
+        
+        // Capture new Supplier Stats
+        const totalExpenses = document.getElementById('report-total-expenses')?.textContent || '₪0.00';
+        const totalSupplierOrders = document.getElementById('report-total-supplier-orders')?.textContent || '0';
+        const openSupplierOrders = document.getElementById('report-open-supplier-orders')?.textContent || '0';
+
         const insightsHTML = document.getElementById('insights-content').innerHTML;
 
         // Capture Chart Data (Images) using toDataURL
@@ -7938,7 +7980,7 @@ async function exportInteractiveReport() {
         h1 { text-align: center; color: #2563eb; margin-bottom: 0.5rem; }
         .date { text-align: center; color: #64748b; margin-bottom: 3rem; }
         
-        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 3rem; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 2rem; } /* Reduced margin */
         .card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); text-align: center; }
         .card h3 { margin: 0 0 0.5rem 0; font-size: 1rem; color: #64748b; }
         .card .value { font-size: 2rem; font-weight: 800; color: #0f172a; }
@@ -7970,6 +8012,22 @@ async function exportInteractiveReport() {
         <div class="card">
             <h3>עסקאות בהמתנה</h3>
             <div class="value" style="color: #f59e0b;">${pendingDeals}</div>
+        </div>
+    </div>
+    
+    <h3 style="text-align: center; color: #64748b; margin-bottom: 1rem; margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 2rem;">רכש וספקים</h3>
+    <div class="summary-grid">
+        <div class="card">
+            <h3>סה"כ הוצאות רכש</h3>
+            <div class="value" style="color: #ef4444;">${totalExpenses}</div>
+        </div>
+        <div class="card">
+            <h3>הזמנות רכש</h3>
+            <div class="value" style="color: #8b5cf6;">${totalSupplierOrders}</div>
+        </div>
+        <div class="card">
+            <h3>הזמנות פתוחות</h3>
+            <div class="value" style="color: #f59e0b;">${openSupplierOrders}</div>
         </div>
     </div>
 
@@ -9024,9 +9082,10 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
         viewHeader.style.display = 'none';
         
         // Notes Edit
-        notesHistory.style.display = 'none';
-        noteControls.style.display = 'none';
-        notesEditor.style.display = 'block';
+        // Notes Edit - NOW USES SAME STRUCTURE AS VIEW MODE
+        notesHistory.style.display = 'block'; // Show history in edit mode too
+        noteControls.style.display = 'flex';  // Show "Add Note" controls
+        notesEditor.style.display = 'none';   // Hide raw textarea (it's internal now)
         
         // Reset disabled state
         inputs.forEach(input => input.disabled = false);
@@ -9344,12 +9403,31 @@ function renderOrderNotes(fullText) {
     notes.forEach((noteText, index) => {
         const noteEl = document.createElement('div');
         noteEl.id = `note-block-${index}`;
-        noteEl.style.cssText = 'background: #fff; border: 1px solid #eee; border-radius: 4px; padding: 8px; margin-bottom: 8px; position: relative;';
+        noteEl.style.cssText = 'background: #fff; border: 1px solid #eee; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px; position: relative;';
         
+        // Parse Header and Content
+        const firstLineBreak = noteText.indexOf('\n');
+        let header = noteText;
+        let content = '';
+        
+        if (firstLineBreak !== -1) {
+            header = noteText.substring(0, firstLineBreak);
+            content = noteText.substring(firstLineBreak + 1);
+        } else {
+             content = noteText; // Fallback if no newline found, though unexpected for system notes
+             header = '';
+        }
+
         // Content
         const contentEl = document.createElement('div');
-        contentEl.style.whiteSpace = 'pre-wrap';
-        contentEl.textContent = noteText;
+        
+        let html = '';
+        if (header) {
+             html += `<div style="font-size: 0.85rem; color: #666; margin-bottom: 0px; direction: rtl; text-align: right; padding: 0 5px;">${header}</div>`;
+        }
+        html += `<div style="white-space: pre-wrap; padding: 0 5px; line-height: 1.2;">${content}</div>`;
+        
+        contentEl.innerHTML = html;
         noteEl.appendChild(contentEl);
         
         // Actions
@@ -9396,9 +9474,9 @@ function enableInlineEdit(index) {
     
     // Replace block content with editor
     block.innerHTML = `
-        <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px; direction: ltr; text-align: right;">${header}</div>
-        <textarea id="note-edit-area-${index}" class="form-textarea" style="width: 100%; min-height: 80px; margin-bottom: 5px;">${content}</textarea>
-        <div style="display: flex; gap: 5px; justify-content: flex-end;">
+        <div style="font-size: 0.85rem; color: #666; margin-bottom: 0px; direction: rtl; text-align: right; padding: 0 7px;">${header}</div>
+        <textarea id="note-edit-area-${index}" class="form-textarea" style="width: 100%; height: 38px; min-height: 38px !important; padding: 2px 5px; margin-bottom: 1px; line-height: 1.1; resize: vertical;" rows="1">${content}</textarea>
+        <div style="display: flex; gap: 5px; justify-content: flex-end; margin-top: 1px;">
             <button type="button" class="btn btn-sm btn-primary" onclick="saveInlineNote(${index})">שמור</button>
             <button type="button" class="btn btn-sm btn-secondary" onclick="cancelInlineEdit()">ביטול</button>
         </div>
@@ -9416,8 +9494,14 @@ async function saveInlineNote(index) {
     if (!notes[index]) return;
     
     // Reconstruct note: Header + New Content
-    const noteParts = notes[index].split('\n');
-    const header = noteParts[0];
+    // Reconstruct note: Header + New Content
+    // We assume the first line is ALWAYS the header generated by the system
+    const firstLineBreak = notes[index].indexOf('\n');
+    let header = notes[index];
+    if (firstLineBreak !== -1) {
+        header = notes[index].substring(0, firstLineBreak);
+    }
+    
     const newContent = textarea.value.trim();
     
     if (newContent) {
@@ -9492,12 +9576,37 @@ async function saveSupplierOrder(event) {
     const orderId = document.getElementById('edit-supplier-order-id').value;
     const author = localStorage.getItem('crm_username') || 'Unknown';
     
+    // Prepare Notes: History + New Note
+    let finalNotes = document.getElementById('order-notes').value;
+    const newNoteInput = document.getElementById('new-order-note-input');
+    const newNoteContent = newNoteInput ? newNoteInput.value.trim() : '';
+
+    if (newNoteContent) {
+        const now = new Date();
+        const timestamp = now.toLocaleDateString('he-IL') + ', ' + now.toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+        // Get current user name (assuming simple auth or 'משתמש')
+        // Ideally fetch from session or config. Using hardcoded or simple retrieval if available.
+        // Looking at other parts of app, 'שחר' is used in example, or we can use generic.
+        // Let's use a generic 'משתמש' or try to find where user name is stored if poss.
+        // For now, consistent with other parts:
+        const userName = sessionStorage.getItem('userName') || 'שחר'; // Fallback or session
+        const header = `📅 ${timestamp} | ${userName}:`;
+        
+        const newNoteEntry = `${header}\n${newNoteContent}`;
+        
+        if (finalNotes) {
+            finalNotes = finalNotes + NOTE_SEPARATOR + newNoteEntry;
+        } else {
+            finalNotes = newNoteEntry;
+        }
+    }
+
     const orderData = {
         supplier_id: document.getElementById('order-supplier-select').value,
         order_status: document.getElementById('order-status').value,
         expected_date: document.getElementById('order-expected-date').value || null,
         created_at: document.getElementById('order-creation-date').value ? new Date(document.getElementById('order-creation-date').value).toISOString() : new Date().toISOString(),
-        notes: document.getElementById('order-notes').value,
+        notes: finalNotes,
         total_amount: parseFloat(document.getElementById('supplier-order-total').textContent.replace(/[^\d.-]/g, ''))
     };
     
@@ -9602,6 +9711,8 @@ async function deleteSupplierOrder(orderId) {
                 .eq('order_id', orderId);
             
             if (error) throw error;
+            
+            logAction('delete', 'supplier_order', orderId, 'הזמנה', 'מחיקת הזמנת רכש');
             
             showAlert('ההזמנה נמחקה בהצלחה', 'success');
             await loadSupplierOrders();
@@ -9719,7 +9830,7 @@ async function exportSupplierOrderPDF() {
             <tr>
                 <td style="width: 50%; vertical-align: top; background: #f8f9fa; padding: 15px; border-radius: 8px;">
                     <h3 style="margin: 0 0 10px; color: #1e40af; font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">פרטי&nbsp;ספק</h3>
-                    <div style="font-weight: bold; font-size: 13px; word-wrap: break-word; word-break: break-word; overflow-wrap: anywhere; line-height: 1.4; padding: 2px;">${supplierName}</div>
+                    <div style="font-weight: bold; font-size: 13px; word-wrap: break-word; word-break: break-word; overflow-wrap: anywhere; line-height: 1.4; padding: 2px;" dir="auto">${supplierName}</div>
                 </td>
                 <td style="width: 50%; vertical-align: top; background: #f8f9fa; padding: 15px; border-radius: 8px;">
                      <h3 style="margin: 0 0 10px; color: #1e40af; font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">פרטי&nbsp;הזמנה</h3>

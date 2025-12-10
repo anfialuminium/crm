@@ -72,6 +72,23 @@
                         </div>
                     </div>
 
+                    <!-- Procurement Summary Section -->
+                    <h3 class="section-title" style="margin-top: 2rem; margin-bottom: 1rem; font-size: 1.2rem; color: var(--text-secondary);">רכש וספקים</h3>
+                    <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                         <div class="summary-card" style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);">
+                            <div class="summary-label">סה"כ הוצאות רכש</div>
+                            <div class="summary-value" id="report-total-expenses">₪0.00</div>
+                        </div>
+                        <div class="summary-card" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                            <div class="summary-label">הזמנות רכש</div>
+                            <div class="summary-value" id="report-total-supplier-orders">0</div>
+                        </div>
+                        <div class="summary-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <div class="summary-label">הזמנות רכש פתוחות</div>
+                            <div class="summary-value" id="report-open-supplier-orders">0</div>
+                        </div>
+                    </div>
+
                     <!-- Business Insights Section -->
                     <div id="business-insights" style="background: white; border-radius: 1rem; padding: 1.5rem; margin-top: 2rem; margin-bottom: 1rem; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
                         <h3 style="margin-bottom: 1rem; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
@@ -1133,11 +1150,11 @@
                 <div id="supplier-order-view-header" style="display: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
                     <div>
                         <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">ספק</label>
-                        <div id="view-order-supplier" style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 0.25rem;"></div>
+                        <div id="view-order-supplier" dir="auto" style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 0.25rem;"></div>
                     </div>
-                    <div>
+                    <div style="display: flex; flex-direction: column; align-items: start;">
                         <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">סטטוס</label>
-                        <div id="view-order-status" class="badge" style="font-size: 1rem; margin-top: 0.25rem; display: inline-block;"></div>
+                        <div id="view-order-status" class="badge" style="font-size: 1rem; margin-top: 0.25rem;"></div>
                     </div>
                     <div>
                         <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">תאריך ביצוע</label>
@@ -1198,23 +1215,23 @@
                  <div class="form-group" style="grid-column: 1 / -1;">
                     <label class="form-label">הערות</label>
                     
-                    <!-- View Mode: Read Only History -->
-                    <div id="order-notes-history" class="form-textarea" style="display:none; height: 150px; overflow-y: auto; background: #f9f9f9; white-space: pre-wrap; margin-bottom: 0.5rem; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.5;"></div>
+                    <!-- View Mode & Edit Mode: Read Only History (now used in both) -->
+                    <!-- View Mode & Edit Mode: Read Only History (now used in both) -->
+                    <div id="order-notes-history" class="form-textarea" style="display:none; max-height: 200px; min-height: 40px; overflow-y: auto; background: #f9f9f9; white-space: pre-wrap; margin-bottom: 0.25rem; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.2;"></div>
                     
-                    <!-- View Mode: Add Note -->
-                    <div id="order-add-note-controls" style="display:none; gap: 0.5rem; margin-top: 0.5rem;">
-                         <input type="text" id="new-order-note-input" class="form-input" placeholder="כתוב הערה שתישמר בנפרד..." style="flex: 1;">
-                         <button type="button" class="btn btn-secondary" onclick="addSupplierOrderNote()">➕ הוסף הערה</button>
+                    <!-- Edit Mode: Add New Note Controls -->
+                    <div id="order-add-note-controls" style="display:none; gap: 0.25rem; margin-top: 0.25rem;">
+                         <textarea id="new-order-note-input" class="form-textarea" rows="2" placeholder="כתוב הערה חדשה..." style="flex: 1; resize: vertical;"></textarea>
                     </div>
 
-                    <!-- Edit Mode: Full Editor -->
-                    <textarea id="order-notes" class="form-textarea" rows="4"></textarea>
+                    <!-- Hidden Raw Input for Storage & Form Submission -->
+                    <textarea id="order-notes" style="display:none;"></textarea>
                 </div>
                 
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">💾 שמור הזמנה</button>
                     <button type="button" id="btn-edit-order-details" class="btn btn-secondary" style="display: none;">✏️ ערוך פרטים</button>
-                    <button type="button" class="btn btn-action" onclick="exportSupplierOrderPDF()">📄 ייצא PDF</button>
+                    <button type="button" class="btn btn-secondary" onclick="exportSupplierOrderPDF()">📄 ייצא PDF</button>
                     <button type="button" class="btn btn-secondary" onclick="closeSupplierOrderModal()">ביטול</button>
                 </div>
             </form>
