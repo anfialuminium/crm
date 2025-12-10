@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="מערכת ניהול קשרי לקוחות">
+    <title>מערכת ניהול קשרי לקוחות</title>
+    <link rel="icon" type="image/png" href="images/analysis.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="responsive.css">
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>מערכת ניהול קשרי לקוחות</h1>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Navigation Tabs -->
+            <!-- Navigation Dropdown -->
+            <div class="nav-container" style="margin-bottom: 2rem;">
+                <label for="main-navigation" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary);">בחר אזור במערכת:</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button type="button" class="btn btn-secondary btn-icon" onclick="navigateSection(-1)" title="הקודם (דף ימינה)">➡️</button>
+                    <select id="main-navigation" class="form-select" style="flex: 1; font-size: 1.1rem; padding: 0.8rem; background-color: var(--bg-secondary); border: 2px solid var(--primary-color); cursor: pointer;">
+                        <option value="deals">➕ עסקה חדשה</option>
+                        <option value="thisweek">📅 השבוע</option>
+                        <option value="history">💼 עסקאות</option>
+                        <option value="activities">📝 פעילויות</option>
+                        <option value="customers">🏢 לקוחות</option>
+                        <option value="contacts">👤 אנשי קשר</option>
+                        <option value="suppliers">🏭 ספקים</option>
+                        <option value="supplier-orders">🚛 הזמנות רכש</option>
+                        <option value="products">📦 מוצרים</option>
+                        <option value="auditlog">📋 פעולות</option>
+                        <option value="reports">📊 דוחות</option>
+                        <option value="search">🔍 חיפוש</option>
+                    </select>
+                    <button type="button" class="btn btn-secondary btn-icon" onclick="navigateSection(1)" title="הבא (דף שמאלה)">⬅️</button>
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reports-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div class="action-header">
+                        <h2 class="section-title" style="margin-bottom: 0;">📊 דוחות ונתונים</h2>
+                        <button class="btn btn-success btn-compact" onclick="exportInteractiveReport()" title="ייצוא דוח אינטראקטיבי כ-HTML">
+                            📤 ייצא דוח (HTML)
+                        </button>
+                    </div>
+                    
+                    <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                        <!-- Summary Cards -->
+                        <div class="summary-card" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                            <div class="summary-label">סה"כ עסקאות (נסגר)</div>
+                            <div class="summary-value" id="report-total-sales">₪0.00</div>
+                        </div>
+                        <div class="summary-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                            <div class="summary-label">עסקאות שנסגרו</div>
+                            <div class="summary-value" id="report-deals-won">0</div>
+                        </div>
+                        <div class="summary-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <div class="summary-label">עסקאות בהמתנה</div>
+                            <div class="summary-value" id="report-deals-pending">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Business Insights Section -->
+                    <div id="business-insights" style="background: white; border-radius: 1rem; padding: 1.5rem; margin-top: 2rem; margin-bottom: 1rem; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                        <h3 style="margin-bottom: 1rem; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
+                            <span>💡</span> תובנות עסקיות
+                        </h3>
+                        <div id="insights-content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem; margin-top: 3rem;">
+                        <!-- Monthly Sales Chart -->
+                        <div style="background: white; padding: 1.5rem; border-radius: 1rem; box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
+                            <h3 style="margin-bottom: 1rem; color: var(--text-primary);">מכירות חודשיות (שנה נוכחית)</h3>
+                            <canvas id="salesChart"></canvas>
+                        </div>
+
+                        <!-- Deal Status Chart -->
+                        <div style="background: white; padding: 1.5rem; border-radius: 1rem; box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
+                            <h3 style="margin-bottom: 1rem; color: var(--text-primary);">סטטוס עסקאות</h3>
+                            <div style="height: 300px; display: flex; justify-content: center;">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Customer Types Chart -->
+                        <div style="background: white; padding: 1.5rem; border-radius: 1rem; box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
+                            <h3 style="margin-bottom: 1rem; color: var(--text-primary);">פילוח לקוחות</h3>
+                            <div style="height: 300px; display: flex; justify-content: center;">
+                                <canvas id="customersChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Top Products Chart -->
+                        <div style="background: white; padding: 1.5rem; border-radius: 1rem; box-shadow: var(--shadow-md); border: 1px solid var(--border-color);">
+                            <h3 style="margin-bottom: 1rem; color: var(--text-primary);">מוצרים מובילים</h3>
+                            <canvas id="productsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deals Tab -->
+            <div id="deals-tab" class="tab-content">
+                <div class="form-section">
+                    <h2 class="section-title">עסקה חדשה</h2>
+                    
+                    <!-- Customer Selection -->
+                    <div class="customer-selector">
+                        <div class="form-group" style="flex: 2;">
+                            <label class="form-label required">בחר לקוח</label>
+                            <div class="searchable-select" id="customer-search-container">
+                                <input type="text" id="customer-search-input" class="form-input" placeholder="חפש לקוח (שם העסק)" autocomplete="off">
+                                <div id="customer-search-results" class="search-results hidden"></div>
+                                <input type="hidden" id="customer-select">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="prepareNewCustomer()">
+                            ➕ לקוח חדש
+                        </button>
+                    </div>
+
+                    <!-- Deal Status -->
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label required">סטטוס עסקה</label>
+                            <select id="deal-status" class="form-select">
+                                <option value="טיוטה">טיוטה</option>
+                                <option value="חדש" selected>חדש</option>
+                                <option value="ממתין">ממתין</option>
+                                <option value="זכייה">נסגר</option>
+                                <option value="הפסד">בוטל</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">הערות כלליות</label>
+                            <input type="text" id="deal-notes" class="form-input" placeholder="הערות לעסקה...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deal Items -->
+                <div class="deal-items-container">
+                    <div class="deal-items-header">
+                        <h3>פריטים בעסקה</h3>
+                        <button type="button" class="btn btn-primary" onclick="addDealItem()">
+                            ➕ הוסף מוצר
+                        </button>
+                    </div>
+
+                    <table class="items-table" id="items-table">
+                        <thead>
+                            <tr>
+                                <th>מוצר</th>
+                                <th>כמות</th>
+                                <th>מחיר יחידה</th>
+                                <th>צבע</th>
+                                <th>מידה</th>
+                                <th>סה"כ</th>
+                                <th>פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="items-tbody">
+                            <!-- Items will be added here dynamically -->
+                        </tbody>
+                    </table>
+
+                    <div id="empty-state" class="text-center" style="padding: 3rem; color: var(--text-tertiary);">
+                        <p style="font-size: 1.2rem;">🛒 לא נוספו מוצרים עדיין</p>
+                        <p>לחץ על "הוסף מוצר" כדי להתחיל</p>
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div class="summary-card">
+                    <div class="summary-row">
+                        <span class="summary-label">סכום ביניים:</span>
+                        <span class="summary-value" id="subtotal">₪0.00</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">הנחה (%):</span>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <input type="number" id="discount-percentage" class="form-input" 
+                                   style="width: 100px; background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);"
+                                   value="0" min="0" max="100" step="0.5" onchange="calculateTotal()">
+                            <span class="summary-value" id="discount-amount">₪0.00</span>
+                        </div>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">סה"כ לתשלום:</span>
+                        <span class="summary-value summary-total" id="final-total">₪0.00</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-2 mt-4">
+                    <button type="button" class="btn btn-success" onclick="saveDeal()">
+                        💾 שמור עסקה
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveDeal()">
+                        📝 שמור טיוטה
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="saveAndExportDeal()">
+                        📤 שמור וייצא הצעת מחיר
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                        🔄 נקה טופס
+                    </button>
+                </div>
+            </div>
+
+            <!-- This Week Tab -->
+            <div id="thisweek-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div class="action-header">
+                        <h2 class="section-title" style="margin-bottom: 0;">📅 פעילויות השבוע</h2>
+                        <div class="action-buttons">
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
+                                <button class="btn btn-secondary btn-icon" onclick="changeWeek(-1)" title="שבוע קודם" style="width: 36px; height: 36px;">
+                                    ▶
+                                </button>
+                                <div id="thisweek-date-range" style="color: var(--text-secondary); font-size: 0.9rem; min-width: 130px; text-align: center;"></div>
+                                <button class="btn btn-secondary btn-icon" onclick="changeWeek(1)" title="שבוע הבא" style="width: 36px; height: 36px;">
+                                    ◀
+                                </button>
+                                <button class="btn btn-primary" onclick="goToCurrentWeek()" style="font-size: 0.85rem; padding: 0.3rem 0.6rem;">
+                                    היום
+                                </button>
+                            </div>
+                            
+                            <button class="btn btn-primary" onclick="openNewActivityModal()" style="font-size: 0.9rem; padding: 0.3rem 0.75rem;">
+                                ➕ פעילות חדשה
+                            </button>
+                            <button class="btn btn-success btn-compact" onclick="exportThisWeek()" title="ייצוא ל-Excel">
+                                📥 ייצא
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי סוג פעילות</label>
+                            <select id="filter-thisweek-type" class="form-select" onchange="loadThisWeek()">
+                                <option value="">הכל</option>
+                                <option value="שיחה">📞 שיחה</option>
+                                <option value="פגישה">📅 פגישה</option>
+                                <option value="מייל">📧 מייל</option>
+                                <option value="משימה">✅ משימה</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי יוצר</label>
+                            <select id="filter-thisweek-creator" class="form-select" onchange="loadThisWeek()">
+                                <option value="">הכל</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי סטטוס</label>
+                            <select id="filter-thisweek-status" class="form-select" onchange="loadThisWeek()">
+                                <option value="">הכל</option>
+                                <option value="pending" selected>ממתין לביצוע</option>
+                                <option value="completed">בוצע</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">חיפוש</label>
+                            <input type="text" id="filter-thisweek-search" class="form-input" 
+                                   placeholder="חיפוש לקוח או תיאור..." onkeyup="loadThisWeek()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">מיון</label>
+                            <select id="filter-thisweek-sort" class="form-select" onchange="loadThisWeek()">
+                                <option value="activity-date">לפי פעילות קרובה (יורד)</option>
+                                <option value="upcoming" selected>לפי פעילות קרובה (עולה)</option>
+                                <option value="customer">לפי לקוח</option>
+                                <option value="type">לפי סוג פעילות</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- This Week Content -->
+                    <div id="thisweek-list">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deals History Tab -->
+            <div id="history-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div class="action-header">
+                        <h2 class="section-title" style="margin-bottom: 0;">היסטוריית עסקאות</h2>
+                        <div class="action-buttons">
+                            <div style="display: flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                <button type="button" class="btn btn-secondary" onclick="toggleView('deals', 'cards')" id="deals-view-cards" style="border-radius: 0; border: none; padding: 0.4rem 0.75rem;" title="תצוגת כרטיסיות">
+                                    🃏
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="toggleView('deals', 'table')" id="deals-view-table" style="border-radius: 0; border: none; border-right: 1px solid var(--border-color); padding: 0.4rem 0.75rem; background: var(--text-primary); color: var(--bg-primary);" title="תצוגת טבלה">
+                                    📋
+                                </button>
+                            </div>
+                            <button class="btn btn-success btn-compact" onclick="exportDeals()" title="ייצוא ל-Excel">
+                                📥 ייצא
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי סטטוס</label>
+                            <select id="filter-status" class="form-select" onchange="loadDealsHistory()">
+                                <option value="">הכל</option>
+                                <option value="טיוטה">טיוטה</option>
+                                <option value="חדש">חדש</option>
+                                <option value="ממתין">ממתין</option>
+                                <option value="זכייה">זכייה</option>
+                                <option value="הפסד">בוטל</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">חיפוש לקוח</label>
+                            <input type="text" id="filter-customer" class="form-input" 
+                                   placeholder="הקלד שם לקוח..." onkeyup="loadDealsHistory()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">מיון</label>
+                            <select id="filter-sort" class="form-select" onchange="loadDealsHistory()">
+                                <option value="newest">החדשים ביותר</option>
+                                <option value="oldest">הישנים ביותר</option>
+                                <option value="highest">סכום גבוה לנמוך</option>
+                                <option value="lowest">סכום נמוך לגבוה</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Deals List -->
+                    <div id="deals-list">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activities Tab -->
+            <div id="activities-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div class="action-header">
+                        <h2 class="section-title" style="margin-bottom: 0;">פעילויות</h2>
+                        <div class="action-buttons">
+                            <div style="display: flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                <button type="button" class="btn btn-secondary" onclick="toggleView('activities', 'cards')" id="activities-view-cards" style="border-radius: 0; border: none; padding: 0.4rem 0.75rem;" title="תצוגת כרטיסיות">
+                                    🃏
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="toggleView('activities', 'table')" id="activities-view-table" style="border-radius: 0; border: none; border-right: 1px solid var(--border-color); padding: 0.4rem 0.75rem; background: var(--text-primary); color: var(--bg-primary);" title="תצוגת טבלה">
+                                    📋
+                                </button>
+                            </div>
+                            <button class="btn btn-success btn-compact" onclick="exportActivities()" title="ייצוא ל-Excel">
+                                📥 ייצא
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="openNewActivityModal()">
+                                ➕ פעילות חדשה
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי סוג</label>
+                            <select id="filter-activity-type" class="form-select" onchange="loadActivities()">
+                                <option value="">הכל</option>
+                                <option value="שיחה">📞 שיחה</option>
+                                <option value="פגישה">📅 פגישה</option>
+                                <option value="מייל">📧 מייל</option>
+                                <option value="משימה">✅ משימה</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי סטטוס</label>
+                            <select id="filter-activity-status" class="form-select" onchange="loadActivities()">
+                                <option value="">הכל</option>
+                                <option value="pending" selected>ממתין לביצוע</option>
+                                <option value="completed">בוצע</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">חיפוש</label>
+                            <input type="text" id="filter-activity-search" class="form-input" 
+                                   placeholder="חיפוש בתיאור..." onkeyup="loadActivities()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">יוצר הפעילות</label>
+                            <select id="filter-activity-creator" class="form-select" onchange="loadActivities()">
+                                <option value="">הכל</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">מיון</label>
+                            <select id="filter-activity-sort" class="form-select" onchange="loadActivities()">
+                                <option value="activity-date">לפי פעילות קרובה (יורד)</option>
+                                <option value="upcoming" selected>לפי פעילות קרובה (עולה)</option>
+                                <option value="newest">החדשים ביותר (נוצר)</option>
+                                <option value="oldest">הישנים ביותר (נוצר)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Activities List -->
+                    <div id="activities-list">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customers Tab -->
+            <div id="customers-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div class="action-header">
+                        <h2 class="section-title" style="margin-bottom: 0;">רשימת לקוחות</h2>
+                        <div class="action-buttons">
+                            <div style="display: flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                <button type="button" class="btn btn-secondary" onclick="toggleView('customers', 'cards')" id="customers-view-cards" style="border-radius: 0; border: none; padding: 0.4rem 0.75rem;" title="תצוגת כרטיסיות">
+                                    🃏
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="toggleView('customers', 'table')" id="customers-view-table" style="border-radius: 0; border: none; border-right: 1px solid var(--border-color); padding: 0.4rem 0.75rem; background: var(--text-primary); color: var(--bg-primary);" title="תצוגת טבלה">
+                                    📋
+                                </button>
+                            </div>
+                            <button class="btn btn-secondary btn-compact" onclick="document.getElementById('import-customers-file').click()" title="ייבוא מ-Excel">
+                                📤 ייבוא
+                            </button>
+                            <input type="file" id="import-customers-file" accept=".xlsx, .xls" style="display: none" onchange="handleImportFile(event, 'customers')">
+                            <button class="btn btn-success btn-compact" onclick="exportCustomers()" title="ייצוא ל-Excel">
+                                📥 ייצא
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="prepareNewCustomer()">
+                                ➕ הוסף לקוח חדש
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label class="form-label">חיפוש</label>
+                            <input type="text" id="filter-customer-list-search" class="form-input" 
+                                   placeholder="שם עסק, איש קשר, טלפון..." onkeyup="filterCustomers()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">סוג לקוח</label>
+                            <select id="filter-customer-type" class="form-select" onchange="filterCustomers()">
+                                <option value="">הכל</option>
+                                <option value="חנות">חנות</option>
+                                <option value="קבלן">קבלן</option>
+                                <option value="מחסן">מחסן</option>
+                                <option value="מפעל">מפעל</option>
+                                <option value="אחר">אחר</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">מקור</label>
+                            <input type="text" id="filter-customer-source" class="form-input" 
+                                   placeholder="סינון לפי מקור..." onkeyup="filterCustomers()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">עיר</label>
+                            <select id="filter-customer-city" class="form-select" onchange="filterCustomers()">
+                                <option value="">כל הערים</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">מיון</label>
+                            <select id="filter-customer-sort" class="form-select" onchange="filterCustomers()">
+                                <option value="name-asc">שם (א-ת)</option>
+                                <option value="name-desc">שם (ת-א)</option>
+                                <option value="city" selected>עיר (א-ת)</option>
+                                <option value="newest">החדשים ביותר</option>
+                                <option value="oldest">הישנים ביותר</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="customers-list">
+                        <!-- Customers will be loaded here -->
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Tab -->
+            <div id="products-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div class="action-header">
+                        <h2 class="section-title" style="margin-bottom: 0;">רשימת מוצרים</h2>
+                        <div class="action-buttons">
+                            <div style="display: flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                <button type="button" class="btn btn-secondary" onclick="toggleView('products', 'cards')" id="products-view-cards" style="border-radius: 0; border: none; padding: 0.4rem 0.75rem;" title="תצוגת כרטיסיות">
+                                    🃏
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="toggleView('products', 'table')" id="products-view-table" style="border-radius: 0; border: none; border-right: 1px solid var(--border-color); padding: 0.4rem 0.75rem; background: var(--text-primary); color: var(--bg-primary);" title="תצוגת טבלה">
+                                    📋
+                                </button>
+                            </div>
+                            <button class="btn btn-success btn-compact" onclick="exportProducts()" title="ייצוא ל-Excel">
+                                📥 ייצא
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="openProductModal()">
+                                ➕ הוסף מוצר חדש
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label class="form-label">חיפוש מוצר</label>
+                            <input type="text" id="filter-product-search" class="form-input" 
+                                   placeholder="הקלד שם מוצר או מק״ט..." onkeyup="filterProducts()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי קטגוריה</label>
+                            <select id="filter-product-category" class="form-select" onchange="filterProducts()">
+                                <option value="">כל הקטגוריות</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">מיון</label>
+                            <select id="filter-product-sort" class="form-select" onchange="filterProducts()">
+                                <option value="category">לפי קטגוריה</option>
+                                <option value="name-asc">שם (א-ת)</option>
+                                <option value="name-desc">שם (ת-א)</option>
+                                <option value="price-asc">מחיר - מהנמוך לגבוה</option>
+                                <option value="price-desc">מחיר - מהגבוה לנמוך</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="products-list">
+                        <!-- Products will be loaded here -->
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contacts Tab -->
+            <div id="contacts-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div class="action-header">
+                        <h2 class="section-title" style="margin-bottom: 0;">אנשי קשר</h2>
+                        <div class="action-buttons">
+                            <div style="display: flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                <button type="button" class="btn btn-secondary" onclick="toggleView('contacts', 'cards')" id="contacts-view-cards" style="border-radius: 0; border: none; padding: 0.4rem 0.75rem;" title="תצוגת כרטיסיות">
+                                    🃏
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="toggleView('contacts', 'table')" id="contacts-view-table" style="border-radius: 0; border: none; border-right: 1px solid var(--border-color); padding: 0.4rem 0.75rem; background: var(--text-primary); color: var(--bg-primary);" title="תצוגת טבלה">
+                                    📋
+                                </button>
+                            </div>
+                            <button class="btn btn-secondary btn-compact" onclick="document.getElementById('import-contacts-file').click()" title="ייבוא מ-Excel">
+                                📤 ייבוא
+                            </button>
+                            <input type="file" id="import-contacts-file" accept=".xlsx, .xls" style="display: none" onchange="handleImportFile(event, 'contacts')">
+                            <button class="btn btn-success btn-compact" onclick="exportContacts()" title="ייצוא ל-Excel">
+                                📥 ייצא
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="openContactModal()">
+                                ➕ איש קשר חדש
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label class="form-label">חיפוש</label>
+                            <input type="text" id="filter-contact-search" class="form-input" 
+                                   placeholder="הקלד שם, טלפון או אימייל..." onkeyup="filterContacts()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי לקוח</label>
+                            <select id="filter-contact-customer" class="form-select" onchange="filterContacts()">
+                                <option value="">כל הלקוחות</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">מיון</label>
+                            <select id="filter-contact-sort" class="form-select" onchange="filterContacts()">
+                                <option value="customer" selected>לפי לקוח</option>
+                                <option value="name-asc">שם (א-ת)</option>
+                                <option value="name-desc">שם (ת-א)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="contacts-list">
+                        <!-- Contacts will be loaded here -->
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Suppliers Tab -->
+            <div id="suppliers-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div class="action-header">
+                        <h2 class="section-title" style="margin-bottom: 0;">רשימת ספקים</h2>
+                        <div class="action-buttons">
+                            <button type="button" class="btn btn-primary" onclick="openSupplierModal()">
+                                ➕ הוסף ספק חדש
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label class="form-label">חיפוש</label>
+                            <input type="text" id="filter-supplier-search" class="form-input" 
+                                   placeholder="שם ספק, איש קשר, קטגוריה..." onkeyup="filterSuppliers()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">סינון לפי קטגוריה</label>
+                            <select id="filter-supplier-category" class="form-select" onchange="filterSuppliers()">
+                                <option value="">כל הקטגוריות</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="suppliers-list">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supplier Orders Tab -->
+            <div id="supplier-orders-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div class="action-header">
+                        <h2 class="section-title" style="margin-bottom: 0;">הזמנות רכש מספקים</h2>
+                        <div class="action-buttons">
+                             <button type="button" class="btn btn-primary" onclick="openSupplierOrderModal()">
+                                ➕ הזמנה חדשה
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                     <div class="form-grid" style="margin-bottom: 2rem;">
+                         <div class="form-group">
+                             <label class="form-label">סטטוס הזמנה</label>
+                             <select id="filter-supplier-order-status" class="form-select" onchange="loadSupplierOrders()">
+                                 <option value="">הכל</option>
+                                 <option value="חדש">חדש</option>
+                                 <option value="נשלח">נשלח</option>
+                                 <option value="התקבל">התקבל</option>
+                                 <option value="בוטל">בוטל</option>
+                             </select>
+                         </div>
+                         <div class="form-group">
+                             <label class="form-label">ספק</label>
+                             <select id="filter-supplier-order-supplier" class="form-select" onchange="loadSupplierOrders()">
+                                 <option value="">כל הספקים</option>
+                             </select>
+                         </div>
+                     </div>
+
+                    <div id="supplier-orders-list">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Audit Log Tab -->
+            <div id="auditlog-tab" class="tab-content hidden">
+                <div class="form-section">
+                    <div class="action-header">
+                        <h2 class="section-title" style="margin-bottom: 0;">📋 יומן פעולות</h2>
+                        <div class="action-buttons">
+                            <button class="btn btn-success btn-compact" onclick="exportAuditLog()" title="ייצוא ל-Excel">
+                                📥 ייצא
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filters -->
+                    <div class="form-grid" style="margin-bottom: 2rem;">
+                        <div class="form-group">
+                            <label class="form-label">סוג פעולה</label>
+                            <select id="filter-audit-action" class="form-select" onchange="loadAuditLog()">
+                                <option value="">הכל</option>
+                                <option value="create">יצירה</option>
+                                <option value="update">עדכון</option>
+                                <option value="delete">מחיקה</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">סוג ישות</label>
+                            <select id="filter-audit-entity" class="form-select" onchange="loadAuditLog()">
+                                <option value="">הכל</option>
+                                <option value="customer">לקוח</option>
+                                <option value="deal">עסקה</option>
+                                <option value="product">מוצר</option>
+                                <option value="activity">פעילות</option>
+                                <option value="contact">איש קשר</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">חיפוש</label>
+                            <input type="text" id="filter-audit-search" class="form-input" 
+                                   placeholder="חיפוש בתיאור או שם..." onkeyup="loadAuditLog()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">תאריך</label>
+                            <select id="filter-audit-date" class="form-select" onchange="loadAuditLog()">
+                                <option value="">הכל</option>
+                                <option value="today">היום</option>
+                                <option value="week">השבוע</option>
+                                <option value="month">החודש</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">בוצע ע"י</label>
+                            <select id="filter-audit-performer" class="form-select" onchange="loadAuditLog()">
+                                <option value="">הכל</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="auditlog-list">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Search Tab -->
+            <div id="search-tab" class="tab-content hidden">
+                 <div class="form-section">
+                    <h2 class="section-title">🔍 חיפוש במערכת</h2>
+                    
+                    <div style="margin-bottom: 2rem;">
+                         <div style="position: relative; width: 100%;">
+                             <input type="text" id="global-search-input" class="form-input" style="width: 100%; font-size: 1.2rem; padding: 1rem; padding-right: 3.5rem;" placeholder="הקלד לחיפוש... (שם עסק, איש קשר, טלפון, מוצר, הערה)" onkeyup="debounceSearch(event)">
+                             <span style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); font-size: 1.5rem; pointer-events: none;">🔍</span>
+                         </div>
+                         <div style="margin-top: 0.5rem; display: none; gap: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+                             <label><input type="checkbox" checked id="search-customers" onchange="performGlobalSearch()"> לקוחות</label>
+                             <label><input type="checkbox" checked id="search-contacts" onchange="performGlobalSearch()"> אנשי קשר</label>
+                             <label><input type="checkbox" checked id="search-deals" onchange="performGlobalSearch()"> עסקאות</label>
+                             <label><input type="checkbox" checked id="search-activities" onchange="performGlobalSearch()"> פעילויות</label>
+                             <label><input type="checkbox" checked id="search-products" onchange="performGlobalSearch()"> מוצרים</label>
+                         </div>
+                    </div>
+
+                    <div id="search-results-container">
+                        <div class="text-center" style="padding: 3rem; color: var(--text-tertiary);">
+                            <p style="font-size: 1.2rem;">התחל להקליד כדי לחפש</p>
+                        </div>
+                    </div>
+                 </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- New Customer Modal -->
+    <div id="customer-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>לקוח חדש</h2>
+                <button class="modal-close" onclick="closeCustomerModal()">✕</button>
+            </div>
+            
+            <form id="customer-form" onsubmit="saveCustomer(event)">
+                <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">פרטי העסק</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label required">שם העסק</label>
+                        <input type="text" id="new-business-name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">כתובת</label>
+                        <input type="text" id="new-city" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">סוג לקוח</label>
+                        <select id="new-customer-type" class="form-select">
+                            <option value="">-- בחר סוג --</option>
+                            <option value="חנות">חנות</option>
+                            <option value="קבלן">קבלן</option>
+                            <option value="מחסן">מחסן</option>
+                            <option value="מפעל">מפעל</option>
+                            <option value="אחר">אחר</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">מקור</label>
+                        <input type="text" id="new-source" class="form-input" placeholder="המלצה, אתר, תערוכה...">
+                    </div>
+                </div>
+                
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+                
+                <h4 style="margin-bottom: 1rem; color: var(--text-secondary);">👤 איש קשר ראשי <small style="font-weight: normal;">(ייווצר אוטומטית)</small></h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">שם איש קשר</label>
+                        <input type="text" id="new-contact-name" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">תפקיד</label>
+                        <input type="text" id="new-contact-role" class="form-input" placeholder="מנהל, רכש, מזכירה...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">טלפון</label>
+                        <input type="tel" id="new-phone" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">אימייל</label>
+                        <input type="email" id="new-email" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">הערות על הלקוח</label>
+                    <textarea id="new-notes" class="form-textarea"></textarea>
+                </div>
+
+                <!-- Deals Section -->
+                <div id="customer-deals-section" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem; display: none;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--text-secondary);">💼 עסקאות</h4>
+                    <div id="customer-deals-list" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 1rem; max-height: 200px; overflow-y: auto;">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+
+                <!-- Notes History Section -->
+                <div id="customer-history-section" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem; display: none;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--text-secondary);">📜 היסטוריית הערות ופעילויות</h4>
+                    <div id="customer-notes-history" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 1rem; max-height: 200px; overflow-y: auto;">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">💾 שמור לקוח</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCustomerModal()">ביטול</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Deal Details Modal -->
+    <div id="deal-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>פרטי עסקה</h2>
+                <button class="modal-close" onclick="closeDealModal()">✕</button>
+            </div>
+            
+            <div id="deal-details-content">
+                <!-- Deal details will be loaded here -->
+            </div>
+
+            <!-- Notes Section -->
+            <div class="notes-section" style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+                <h3 style="margin-bottom: 1rem;">📝 הערות ופעילות</h3>
+                
+                <!-- Add Note Form -->
+                <div class="add-note-form" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: stretch;">
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem; min-width: 250px;">
+                        <textarea id="new-note-text" class="form-textarea" placeholder="תיאור הפעילות..." style="min-height: 80px; resize: vertical;"></textarea>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <select id="activity-type" class="form-select" style="flex: 1;">
+                                <option value="הערה">📝 הערה</option>
+                                <option value="שיחה">📞 שיחה</option>
+                                <option value="פגישה">📅 פגישה</option>
+                                <option value="מייל">📧 מייל</option>
+                                <option value="משימה">✅ משימה</option>
+                            </select>
+                            <input type="datetime-local" id="activity-date" class="form-input" style="flex: 1;">
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; justify-content: space-between; min-width: 120px;">
+                        <input type="text" id="note-author" class="form-input" placeholder="שם הכותב">
+                        <button type="button" class="btn btn-primary" onclick="addDealNote()" style="height: 100%;">💾 הוסף</button>
+                    </div>
+                </div>
+
+                <!-- Notes List -->
+                <div id="deal-notes-list" class="notes-list" style="max-height: 300px; overflow-y: auto;">
+                        <div class="text-center" style="color: var(--text-tertiary);">טוען הערות...</div>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="justify-content: flex-start; gap: 1rem;">
+                <button type="button" class="btn btn-success" onclick="sendDealWhatsApp()" style="display: flex; align-items: center; gap: 0.5rem; background-color: #25D366; border: none; color: white;">
+                    <img src="images/whatsappwhite.png" alt="WhatsApp" style="width: 20px; height: 20px;"> שלח בווטסאפ
+                </button>
+                <button type="button" class="btn btn-primary" onclick="generateQuotePDF()">📄 ייצא הצעת מחיר PDF</button>
+                <button type="button" class="btn btn-secondary" onclick="closeDealModal()">סגור</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="product-modal-title">מוצר חדש</h2>
+                <button class="modal-close" onclick="closeProductModal()">✕</button>
+            </div>
+            
+            <form id="product-form" onsubmit="saveProduct(event)">
+                <input type="hidden" id="edit-product-id">
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label required">שם המוצר</label>
+                        <input type="text" id="product-name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">קטגוריה</label>
+                        <input type="text" id="product-category" class="form-input" 
+                               placeholder="פרופילים, אביזרים, רשתות...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">מק״ט</label>
+                        <input type="text" id="product-sku" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">מחיר (₪)</label>
+                        <input type="number" id="product-price" class="form-input" 
+                               step="0.01" min="0">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">תיאור</label>
+                    <textarea id="product-description" class="form-textarea" 
+                              placeholder="תיאור המוצר..."></textarea>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">קישור לתמונה</label>
+                        <input type="url" id="product-image" class="form-input" 
+                               placeholder="https://...">
+                    </div>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="product-requires-color" 
+                                   style="width: auto; cursor: pointer;">
+                            <span>המוצר דורש בחירת צבע</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" id="product-requires-size" 
+                                   style="width: auto; cursor: pointer;">
+                            <span>המוצר דורש בחירת מידה</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">💾 שמור מוצר</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeProductModal()">ביטול</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal active" style="z-index: 9999; background: var(--bg-primary);">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; margin-bottom: 2rem;">
+                <h2>התחברות למערכת</h2>
+            </div>
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group" style="margin-bottom: 2rem;">
+                    <label for="password" class="form-label" style="font-size: 1.1rem; margin-bottom: 1rem;">סיסמה</label>
+                    <input type="tel" id="password" class="form-input" 
+                           style="text-align: center; font-size: 2rem; letter-spacing: 0.5rem; padding: 1rem; border-radius: 12px;" 
+                           placeholder="••••" maxlength="10" required autofocus autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary" 
+                        style="width: 100%; justify-content: center; padding: 1rem; font-size: 1.2rem; border-radius: 12px;">
+                    הכנס למערכת
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="modal" style="z-index: 10000;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none; margin-bottom: 1rem;">
+                <h2 id="confirmation-title" style="margin: 0;">אשר פעולה</h2>
+            </div>
+            <div class="modal-body" style="margin-bottom: 2rem;">
+                <p id="confirmation-message" style="font-size: 1.1rem; color: var(--text-secondary);">האם אתה בטוח?</p>
+            </div>
+            <div class="modal-footer" style="justify-content: center; border-top: none; padding-top: 0;">
+                <button id="confirmation-confirm-btn" class="btn btn-danger">אישור</button>
+                <button id="confirmation-cancel-btn" class="btn btn-secondary" onclick="closeConfirmationModal()">ביטול</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supplier Modal -->
+    <div id="supplier-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="supplier-modal-title">ספק חדש</h2>
+                <button class="modal-close" onclick="closeSupplierModal()">✕</button>
+            </div>
+            
+            <form id="supplier-form" onsubmit="saveSupplier(event)">
+                <input type="hidden" id="edit-supplier-id">
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label required">שם הספק</label>
+                        <input type="text" id="supplier-name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">קטגוריה</label>
+                        <input type="text" id="supplier-category" class="form-input" placeholder="אלומיניום, פרזול, זכוכית...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">איש קשר</label>
+                        <input type="text" id="supplier-contact-name" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">טלפון</label>
+                        <input type="tel" id="supplier-phone" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">אימייל</label>
+                        <input type="email" id="supplier-email" class="form-input">
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">מיילים נוספים</label>
+                        <div id="supplier-additional-emails-container" style="margin-bottom: 0.5rem;"></div>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addSupplierEmailRow()">➕ הוסף מייל נוסף</button>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">אתר אינטרנט</label>
+                        <input type="text" id="supplier-website" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">כתובת</label>
+                        <input type="text" id="supplier-address" class="form-input">
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">הערות ופרטים נוספים</label>
+                        <textarea id="supplier-notes" class="form-textarea" rows="4"></textarea>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">💾 שמור ספק</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeSupplierModal()">ביטול</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Supplier Order Modal -->
+    <div id="supplier-order-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2 id="supplier-order-modal-title">הזמנת רכש חדשה</h2>
+                <button class="modal-close" onclick="closeSupplierOrderModal()">✕</button>
+            </div>
+            
+            <form id="supplier-order-form" onsubmit="saveSupplierOrder(event)">
+                <input type="hidden" id="edit-supplier-order-id">
+                
+                <!-- Edit Mode Header -->
+                <div id="supplier-order-edit-header" class="form-grid" style="grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label required">ספק</label>
+                        <select id="order-supplier-select" class="form-select" required>
+                            <option value="">-- בחר ספק --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">סטטוס</label>
+                        <select id="order-status" class="form-select">
+                            <option value="חדש">חדש</option>
+                            <option value="נשלח">נשלח</option>
+                            <option value="התקבל">התקבל</option>
+                            <option value="בוטל">בוטל</option>
+                            <option value="טיוטה">טיוטה</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">צפי הגעה</label>
+                        <input type="date" id="order-expected-date" class="form-input">
+                    </div>
+                </div>
+
+                <!-- Read Only Mode Header -->
+                <div id="supplier-order-view-header" style="display: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+                    <div>
+                        <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">ספק</label>
+                        <div id="view-order-supplier" style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 0.25rem;"></div>
+                    </div>
+                    <div>
+                        <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">סטטוס</label>
+                        <div id="view-order-status" class="badge" style="font-size: 1rem; margin-top: 0.25rem; display: inline-block;"></div>
+                    </div>
+                    <div>
+                        <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">צפי הגעה</label>
+                        <div id="view-order-date" style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 0.25rem;"></div>
+                    </div>
+                </div>
+
+                <div class="deal-items-container" style="margin-top: 1.5rem;">
+                    <div class="deal-items-header">
+                        <h3>פריטים להזמנה</h3>
+                        <button type="button" class="btn btn-primary" onclick="addSupplierOrderItem()">
+                            ➕ הוסף פריט
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                    <table class="items-table" style="min-width: 800px;">
+                        <colgroup>
+                            <col style="width: 25%;"> <!-- Description -->
+                            <col style="width: 15%;"> <!-- Color -->
+                            <col style="width: 15%;"> <!-- SKU -->
+                            <col style="width: 12%;"> <!-- Quantity -->
+                            <col style="width: 13%;"> <!-- Price -->
+                            <col style="width: 15%;"> <!-- Total -->
+                            <col style="width: 5%;">  <!-- Delete -->
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>תיאור / פריט</th>
+                                <th>צבע</th>
+                                <th>מק"ט (אופציונלי)</th>
+                                <th style="text-align: center;">כמות</th>
+                                <th style="text-align: center;">מחיר יח'</th>
+                                <th style="text-align: center;">סה"כ</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="supplier-order-items-tbody">
+                        </tbody>
+                    </table>
+                    </div>
+                     <div id="supplier-order-empty-state" class="text-center" style="padding: 2rem; color: var(--text-tertiary);">
+                        <p>לא נוספו פריטים להזמנה</p>
+                    </div>
+                </div>
+
+                <div class="summary-card">
+                     <div class="summary-row">
+                        <span class="summary-label">סה"כ:</span>
+                        <span class="summary-value" id="supplier-order-total">₪0.00</span>
+                    </div>
+                </div>
+                
+                 <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label">הערות</label>
+                    
+                    <!-- View Mode: Read Only History -->
+                    <div id="order-notes-history" class="form-textarea" style="display:none; height: 150px; overflow-y: auto; background: #f9f9f9; white-space: pre-wrap; margin-bottom: 0.5rem; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.5;"></div>
+                    
+                    <!-- View Mode: Add Note -->
+                    <div id="order-add-note-controls" style="display:none; gap: 0.5rem; margin-top: 0.5rem;">
+                         <input type="text" id="new-order-note-input" class="form-input" placeholder="כתוב הערה שתישמר בנפרד..." style="flex: 1;">
+                         <button type="button" class="btn btn-secondary" onclick="addSupplierOrderNote()">➕ הוסף הערה</button>
+                    </div>
+
+                    <!-- Edit Mode: Full Editor -->
+                    <textarea id="order-notes" class="form-textarea" rows="4"></textarea>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">💾 שמור הזמנה</button>
+                    <button type="button" id="btn-edit-order-details" class="btn btn-secondary" style="display: none;">✏️ ערוך פרטים</button>
+                    <button type="button" class="btn btn-action" onclick="exportSupplierOrderPDF()">📄 ייצא PDF</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeSupplierOrderModal()">ביטול</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Supplier Details Modal -->
+    <div id="supplier-details-modal" class="modal">
+         <div class="modal-content" style="max-width: 1200px; width: 95%;">
+            <div class="modal-header">
+                <h2>🏭 פרטי ספק</h2>
+                <button class="modal-close" onclick="closeSupplierDetailsModal()">✕</button>
+            </div>
+            <div id="supplier-details-content">
+                <div class="spinner"></div>
+            </div>
+         </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

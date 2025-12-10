@@ -1,0 +1,86 @@
+/* Table Responsiveness */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: var(--spacing-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: white;
+}
+
+/* Ensure table doesn't shrink too much inside the scrollable area */
+.items-table {
+    min-width: 800px; /* Ensure content is readable and triggers scroll */
+}
+
+/* Prevent text wrapping in critical columns on mobile */
+.items-table td, 
+.items-table th {
+    white-space: nowrap;
+}
+
+/* Allow wrapping for description or long text if specific class is added, otherwise keep nowrap for cleanliness in scrollable table */
+
+/* Fix Action Buttons in Table */
+.items-table .btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    /* Adjust Main Content Padding */
+    .main-content {
+        padding: var(--spacing-md);
+        width: 100%;
+        overflow-x: hidden; /* Prevent body scroll */
+    }
+    
+    .container {
+        padding: 0 var(--spacing-sm);
+        width: 100%;
+        overflow-x: hidden;
+    }
+    
+    /* Ensure modal fits */
+    .modal-content {
+        width: 95%;
+        margin: var(--spacing-sm) auto;
+        padding: var(--spacing-md);
+        max-height: 85vh; /* Ensure it fits within view */
+        overflow-y: auto; /* Enable scrolling */
+    }
+    
+    .modal-header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 10;
+        padding-bottom: 1rem; /* Visual separation */
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 1rem;
+    }
+    
+    /* Improve close button hit area */
+    .modal-close {
+        padding: 10px;
+        margin: -10px; /* Increase hit area without affecting layout */
+        font-size: 1.5rem;
+    }
+
+    /* Fix header font size */
+    .header h1 {
+        font-size: 1.5rem;
+    }
+    
+    /* Better pagination on mobile */
+    .pagination {
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+        justify-content: center;
+    }
+}

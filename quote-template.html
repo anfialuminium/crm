@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הצעת מחיר</title>
+    <link rel="icon" type="image/png" href="analysis.png">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Heebo', sans-serif;
+            direction: rtl;
+            padding: 2rem;
+            background: #f8f9fa;
+        }
+        
+        .quote-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 3rem;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .company-info h1 {
+            color: #2563eb;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .company-info p {
+            color: #64748b;
+            margin: 0.25rem 0;
+        }
+        
+        .quote-info {
+            text-align: left;
+            direction: ltr;
+        }
+        
+        .quote-info h2 {
+            color: #2563eb;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .quote-info p {
+            color: #64748b;
+            margin: 0.25rem 0;
+        }
+        
+        .customer-section {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        
+        .customer-section h3 {
+            color: #1e293b;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .customer-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        
+        .customer-details p {
+            color: #475569;
+        }
+        
+        .customer-details strong {
+            color: #1e293b;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+        
+        .items-table thead {
+            background: #2563eb;
+            color: white;
+        }
+        
+        .items-table th {
+            padding: 1rem;
+            text-align: right;
+            font-weight: 600;
+        }
+        
+        .items-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .items-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        
+        .summary {
+            margin-right: auto;
+            width: 300px;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .summary-row.total {
+            border-top: 2px solid #2563eb;
+            border-bottom: 2px solid #2563eb;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #2563eb;
+            margin-top: 0.5rem;
+        }
+        
+        .terms {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e2e8f0;
+        }
+        
+        .terms h3 {
+            color: #1e293b;
+            margin-bottom: 1rem;
+        }
+        
+        .terms ul {
+            list-style-position: inside;
+            color: #475569;
+            line-height: 1.8;
+        }
+        
+        .footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+            }
+            
+            .quote-container {
+                box-shadow: none;
+                padding: 1rem;
+            }
+            
+            .no-print {
+                display: none;
+            }
+            
+            /* Prevent page breaks inside sections */
+            .header,
+            .customer-section,
+            .items-table,
+            .items-table tr,
+            .summary,
+            .terms,
+            .footer {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            /* Keep each table row together */
+            .items-table tbody tr {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            
+            /* Ensure sections don't get orphaned */
+            .terms {
+                page-break-before: auto;
+            }
+        }
+        
+        .action-buttons {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 1rem;
+            z-index: 1000;
+        }
+
+        .print-button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .print-button:hover {
+            background: #1e40af;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+        }
+
+        .print-button.pdf-btn {
+            background: #ef4444;
+        }
+        
+        .print-button.pdf-btn:hover {
+            background: #dc2626;
+        }
+    </style>
+    <!-- PDF Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="action-buttons no-print">
+        <button class="print-button" onclick="window.print()">🖨️ הדפס</button>
+        <button class="print-button pdf-btn" onclick="saveAsPDF()">📥 שמור כ-PDF</button>
+    </div>
+    
+    <div class="quote-container" id="quote-content">
+        <div class="header">
+            <div class="company-info">
+                <img src="images/logo.png" alt="אנפי ייבוא ושיווק" style="height: 80px; margin-bottom: 1rem;">
+                <p>📍 תל אביב</p>
+                <p>📞 טלפון: 050-6946650</p>
+                <p>✉️ אימייל: anfi@bezeqint.net</p>
+            </div>
+            
+            <div class="quote-info">
+                <h2>הצעת מחיר</h2>
+                <p><strong>תאריך:</strong> <span id="quote-date"></span></p>
+                <p><strong>תוקף:</strong> 30 יום</p>
+            </div>
+        </div>
+        
+        <!-- Customer Information -->
+        <div class="customer-section">
+            <h3>פרטי לקוח</h3>
+            <div class="customer-details">
+                <p><strong>שם העסק:</strong> <span id="customer-business">חנות הפרזול המרכזית</span></p>
+                <p><strong>איש קשר:</strong> <span id="customer-contact">יוסי כהן</span></p>
+                <p><strong>טלפון:</strong> <span id="customer-phone">050-1234567</span></p>
+                <p><strong>כתובת:</strong> <span id="customer-city">תל אביב</span></p>
+            </div>
+        </div>
+        
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>תיאור המוצר</th>
+                    <th>כמות</th>
+                    <th>מחיר יחידה</th>
+                    <th>צבע</th>
+                    <th>מידה</th>
+                    <th>סה"כ</th>
+                </tr>
+            </thead>
+            <tbody id="items-tbody">
+                <!-- Sample items -->
+                <tr>
+                    <td>1</td>
+                    <td><strong>פרופיל אלומיניום 15</strong></td>
+                    <td>50</td>
+                    <td>₪45.00</td>
+                    <td>כסף</td>
+                    <td>-</td>
+                    <td>₪2,250.00</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td><strong>גלגל דלת הזזה 7000 פלסטיק</strong></td>
+                    <td>100</td>
+                    <td>₪12.00</td>
+                    <td>שחור</td>
+                    <td>-</td>
+                    <td>₪1,200.00</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td><strong>ידית אלומיניום</strong></td>
+                    <td>30</td>
+                    <td>₪35.00</td>
+                    <td>זהב</td>
+                    <td>גדול</td>
+                    <td>₪1,050.00</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td><strong>מברשת 7000</strong></td>
+                    <td>200</td>
+                    <td>₪15.50</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>₪3,100.00</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- Summary -->
+        <div class="summary">
+            <div class="summary-row">
+                <span>סכום ביניים:</span>
+                <span id="subtotal">₪7,600.00</span>
+            </div>
+            <div class="summary-row">
+                <span>מע"מ (18%):</span>
+                <span id="vat">₪1,368.00</span>
+            </div>
+            <div class="summary-row total">
+                <span>סה"כ לתשלום:</span>
+                <span id="total">₪8,968.00</span>
+            </div>
+        </div>
+        
+        <!-- Terms and Conditions -->
+        <div class="terms">
+            <h3>תנאים והערות</h3>
+            <ul>
+                <li>המחירים אינם כוללים מע"מ</li>
+                <li>תוקף ההצעה: 30 יום מתאריך ההנפקה</li>
+                <li>תנאי תשלום: שוטף + 120</li>
+                <li>משלוח: עד 7 ימי עסקים</li>
+            </ul>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>תודה על פנייתך! נשמח לעמוד לשירותך בכל שאלה.</p>
+        </div>
+    </div>
+    
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://abqracafkjerlcemqnva.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFicXJhY2Fma2plcmxjZW1xbnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3NDk1NTYsImV4cCI6MjA4MDMyNTU1Nn0.WejWdsYxqC7ESs3C8UkGhWUpnDJ7xD5j4-n9BKRE7rE';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function saveAsPDF() {
+            const element = document.getElementById('quote-content');
+            const buttons = document.querySelector('.action-buttons');
+            
+            // Temporary styles for PDF generation
+            buttons.style.display = 'none';
+            
+            try {
+                const canvas = await html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jspdf.jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                const imgWidth = 210;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                const customerName = document.getElementById('customer-business').textContent.trim() || 'לקוח';
+                const dateObj = new Date();
+                const dateStr = String(dateObj.getDate()).padStart(2, '0') + String(dateObj.getMonth() + 1).padStart(2, '0') + dateObj.getFullYear();
+                
+                pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+                pdf.save(`הצעת מחיר עבור ${customerName} ${dateStr}.pdf`);
+            } catch (error) {
+                console.error('PDF Generation Error:', error);
+                alert('שגיאה ביצירת PDF');
+            } finally {
+                buttons.style.display = 'flex';
+            }
+        }
+
+
+        // Set current date
+        document.getElementById('quote-date').textContent = new Date().toLocaleDateString('he-IL');
+        
+        // Function to populate quote from deal data
+        function populateQuote(dealData) {
+            // Update customer info
+            document.getElementById('customer-business').textContent = dealData.customer.business_name;
+            document.getElementById('customer-contact').textContent = dealData.customer.contact_name;
+            document.getElementById('customer-phone').textContent = dealData.customer.phone;
+            document.getElementById('customer-city').textContent = dealData.customer.city;
+            
+            // Update items
+            const tbody = document.getElementById('items-tbody');
+            tbody.innerHTML = '';
+            
+            dealData.items.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${item.product_name}</strong></td>
+                    <td>${item.quantity}</td>
+                    <td>₪${item.unit_price.toFixed(2)}</td>
+                    <td>${item.color || '-'}</td>
+                    <td>${item.size || '-'}</td>
+                    <td>₪${item.total_price.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Update summary
+            document.getElementById('subtotal').textContent = `₪${dealData.total_amount.toFixed(2)}`;
+            
+            // Calculate VAT
+            const finalAmount = dealData.final_amount; // After discount, before VAT
+            const vat = finalAmount * 0.18;
+            const total = finalAmount * 1.18;
+            
+            document.getElementById('vat').textContent = `₪${vat.toFixed(2)}`;
+            document.getElementById('total').textContent = `₪${total.toFixed(2)}`;
+        }
+
+        async function loadDealData(dealId) {
+             const { data: deal, error } = await supabase
+                .from('deals')
+                .select(`
+                    *,
+                    customers (
+                        business_name,
+                        contact_name,
+                        phone,
+                        email,
+                        city
+                    )
+                `)
+                .eq('deal_id', dealId)
+                .single();
+            
+            if (error) {
+                console.error(error);
+                alert('Error loading deal');
+                return;
+            }
+
+            const { data: items, error: itemsError } = await supabase
+                .from('deal_items')
+                .select(`
+                    *,
+                    products (
+                        product_name
+                    )
+                `)
+                .eq('deal_id', dealId);
+
+            if (itemsError) {
+                 console.error(itemsError);
+                 return;
+            }
+
+            // Transform to format expected by populateQuote
+            const formattedData = {
+                customer: {
+                    business_name: deal.customers.business_name,
+                    contact_name: deal.customers.contact_name || '-',
+                    phone: deal.customers.phone || '-',
+                    city: deal.customers.city || '-'
+                },
+                items: items.map(item => ({
+                    product_name: item.products.product_name,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    color: item.color,
+                    size: item.size,
+                    total_price: item.quantity * item.unit_price
+                })),
+                total_amount: deal.total_amount, // Uses total_amount or final_amount?
+                // Logic says: subtotal = total_amount usually (sum of items). 
+                // But if there is a discount, subtotal should display subtotal.
+                
+                // My logic in populateQuote:
+                // subtotal -> total_amount (which is SUM of items in DB?)
+                // Wait, DB stores total_amount as subtotal usually, and final_amount as post-discount.
+                // In app.js: 
+                // const subtotal = dealItems.reduce...
+                // total_amount = subtotal
+                
+                // So yes, total_amount IS subtotal.
+                
+                final_amount: deal.final_amount,
+                discount_percentage: deal.discount_percentage
+            };
+            
+            populateQuote(formattedData);
+        }
+        
+        // Load from URL parameters
+        const dealId = new URLSearchParams(window.location.search).get('dealId');
+        if (dealId) {
+            loadDealData(dealId);
+        }
+    </script>
+</body>
+</html>
