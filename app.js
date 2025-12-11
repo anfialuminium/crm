@@ -669,6 +669,7 @@ function createItemRow(item, index) {
             (product.category && product.category.includes('מברשות')) || 
             (product.product_name && product.product_name.includes('מברשת'))
         );
+        const isMesh = isMeshProduct(product);
 
         if (isBrush) {
              const sizeSelect = document.createElement('select');
@@ -695,6 +696,36 @@ function createItemRow(item, index) {
 
              sizeSelect.addEventListener('change', (e) => {
                  item.size = e.target.value;
+                 renderDealItems(); // Re-render to update total
+             });
+             sizeCell.appendChild(sizeSelect);
+        } else if (isMesh) {
+             const sizeSelect = document.createElement('select');
+             sizeSelect.className = 'form-select';
+             sizeSelect.style.width = '100px';
+             
+             // Sizes for meshes
+             const sizes = ['0.50', '0.60', '0.70', '0.80', '0.90', '1.00', '1.10', '1.20', '1.50', '1.80', '2.00', '2.50'];
+             
+             // Add default empty option if no size selected yet
+             if (!item.size) {
+                 const defaultOption = document.createElement('option');
+                 defaultOption.value = '';
+                 defaultOption.textContent = 'בחר';
+                 sizeSelect.appendChild(defaultOption);
+             }
+
+             sizes.forEach(size => {
+                 const option = document.createElement('option');
+                 option.value = size;
+                 option.textContent = size;
+                 if (item.size === size) option.selected = true;
+                 sizeSelect.appendChild(option);
+             });
+
+             sizeSelect.addEventListener('change', (e) => {
+                 item.size = e.target.value;
+                 renderDealItems(); // Re-render to update total
              });
              sizeCell.appendChild(sizeSelect);
         } else {
@@ -706,6 +737,17 @@ function createItemRow(item, index) {
             sizeInput.style.width = '100px';
             sizeInput.addEventListener('input', (e) => {
                 item.size = e.target.value;
+                // If it becomes a mesh product somehow (dynamic?), we should re-render?
+                // But generally text input means no special calculation unless we parse numbers from text.
+                // For now, only dropdown triggers the mesh logic confidently.
+                // But the helper `isMeshProduct` checks the PRODUCT, not the input type.
+                // So if user types "0.80" in text input for a Mesh (if logic fails to show dropdown), it should work.
+                // We should add `renderDealItems` on blur or change to update totals.
+                calculateTotal(); // Update global total at least
+            });
+            // Update row total on change?
+            sizeInput.addEventListener('change', () => {
+                 renderDealItems();
             });
             sizeCell.appendChild(sizeInput);
         }
@@ -717,7 +759,19 @@ function createItemRow(item, index) {
     
     // Total
     const totalCell = document.createElement('td');
-    const total = item.quantity * item.unit_price;
+    
+    // Calculate total with mesh logic
+    let quantityMultiplier = 1;
+    const product = products.find(p => p.product_id === item.product_id);
+    
+    if (product && isMeshProduct(product)) {
+        const sizeVal = parseFloat(item.size);
+        if (!isNaN(sizeVal) && sizeVal > 0) {
+            quantityMultiplier = sizeVal;
+        }
+    }
+    
+    const total = item.quantity * quantityMultiplier * item.unit_price;
     totalCell.textContent = `₪${total.toFixed(2)}`;
     totalCell.style.fontWeight = '600';
     
@@ -762,13 +816,34 @@ function updateEmptyState() {
     }
 }
 
+function isMeshProduct(product) {
+    if (!product) return false;
+    const name = (product.product_name || '').toLowerCase();
+    const category = (product.category || '').toLowerCase();
+    
+    // Exclude brushes (since 'מברשת' contains 'רשת')
+    if (name.includes('מברשת') || category.includes('מברשות')) return false;
+    
+    return name.includes('רשת') || category.includes('רשת');
+}
+
 // ============================================
 // Calculations
 // ============================================
 
 function calculateTotal() {
     const subtotal = dealItems.reduce((sum, item) => {
-        return sum + (item.quantity * item.unit_price);
+        const product = products.find(p => p.product_id === item.product_id);
+        let quantityMultiplier = 1;
+        
+        if (product && isMeshProduct(product)) {
+            const sizeVal = parseFloat(item.size);
+            if (!isNaN(sizeVal) && sizeVal > 0) {
+                quantityMultiplier = sizeVal;
+            }
+        }
+        
+        return sum + (item.quantity * quantityMultiplier * item.unit_price);
     }, 0);
     
     const discountPercentage = parseFloat(document.getElementById('discount-percentage').value) || 0;
