@@ -1338,7 +1338,7 @@ async function saveCustomer(event) {
         // Reload customers and select the new/updated one if on deals tab
         await loadCustomers();
         
-        const currentTab = document.querySelector('.nav-tab.active').dataset.tab;
+        const currentTab = document.querySelector('.nav-tab.active')?.dataset.tab;
         if (currentTab === 'customers') {
             displayCustomers();
         } else if (!customerId) {
@@ -3281,7 +3281,9 @@ function filterProducts(preservePage = false) {
             case 'price-desc':
                 return (b.price || 0) - (a.price || 0);
             case 'category':
-                return (a.category || 'ת').localeCompare(b.category || 'ת', 'he');
+                const catCompare = (a.category || 'ת').localeCompare(b.category || 'ת', 'he');
+                if (catCompare !== 0) return catCompare;
+                return (a.product_name || '').localeCompare(b.product_name || '', 'he');
             default:
                 return 0;
         }
