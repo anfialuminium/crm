@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחירון צ.ח.י אלוני</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 { margin: 0; color: #2c3e50; }
+        h2 { margin: 5px 0 0; font-size: 1.2em; color: #7f8c8d; }
+        .date { margin-top: 10px; font-size: 0.9em; color: #95a5a6; }
+
+        .catalog-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .category-section {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .category-title {
+            background-color: #34495e;
+            color: white;
+            padding: 10px 15px;
+            margin: 0;
+            font-size: 1.1em;
+        }
+
+        .product-row {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .product-row:last-child {
+            border-bottom: none;
+        }
+
+        /* Modal / Lightbox Styles */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            animation: zoom 0.3s;
+        }
+
+        @keyframes zoom {
+            from {transform:scale(0)} 
+            to {transform:scale(1)}
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .product-image {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background: #fff;
+            margin-left: 15px;
+            flex-shrink: 0;
+            cursor: zoom-in; /* Indicate clickable */
+            transition: transform 0.2s;
+        }
+
+        .product-image:hover {
+            transform: scale(1.05);
+        }
+
+        .product-info {
+            flex-grow: 1;
+        }
+
+        .product-name {
+            font-weight: 600;
+            font-size: 1em;
+            margin-bottom: 5px;
+        }
+
+        .price-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .currency {
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+
+        .price-display {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: #bdc3c7;
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .header, .category-section { box-shadow: none; border: 1px solid #ccc; }
+            .category-title { background-color: #eee; color: #000; border-bottom: 1px solid #ccc; }
+            .price-display { border: none; border-bottom: 1px solid #000; text-align: right; width: auto; }
+            .product-image { cursor: default; } /* No zoom on print */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>הצעת מחיר - אנפי</h1>
+        <h2>לכבוד: צ.ח.י אלוני, נס ציונה</h2>
+        <div class="date" id="date"></div>
+    </div>
+
+    <div id="catalog" class="catalog-container">
+        <div class="loading">טוען מוצרים מהמערכת...</div>
+    </div>
+
+    <!-- The Modal -->
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="modalImg">
+    </div>
+
+    <script>
+        // Set Date
+        document.getElementById('date').textContent = new Date().toLocaleDateString('he-IL');
+
+        const DATA_URL = "https://script.google.com/macros/s/AKfycbzFNKmuj8NJX3IL-rnyE5c1IzKHGp5PjdfqFAGic73EaXFx1ObAkExjd8o2IO-lD486/exec?action=getProducts";
+        
+        // Modal Logic
+        function openModal(src) {
+            const modal = document.getElementById("imageModal");
+            const modalImg = document.getElementById("modalImg");
+            modal.style.display = "flex";
+            modalImg.src = src;
+        }
+
+        function closeModal() {
+            document.getElementById("imageModal").style.display = "none";
+        }
+        
+        // Close on Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape") {
+                closeModal();
+            }
+        });
+
+        // Image Database - Linking names to images
+        const IMAGE_DB = {
+            "חצי ידית כבדה 4 ברגים": "https://anfialuminium.github.io/catalog/ידיות/hh6s.png",
+            "חצי ידית 6 ברגים": "https://anfialuminium.github.io/catalog/ידיות/hhh4s.png",
+            "חצי ידית משופרת אלמא ימין שמאל": "https://anfialuminium.github.io/catalog/ידיות/alma.png", // Assuming this matches "ידית 4 ברגים" or similar
+            "ידית 4 ברגים": "https://anfialuminium.github.io/catalog/ידיות/alma.png",
+            "ידית קיפ": "https://anfialuminium.github.io/catalog/ידיות/kh.png",
+            "ידית משיכה בודדת נירוסטה": "https://anfialuminium.github.io/catalog/ידיות/ידיות בר משיכה/snph.png",
+            "ידית משיכה בודדת שחור": "https://anfialuminium.github.io/catalog/ידיות/ידיות בר משיכה/sbph.png",
+            "ידית משיכה כפולה נירוסטה": "https://anfialuminium.github.io/catalog/ידיות/ידיות בר משיכה/dnph.png",
+            "ידית משיכה כפולה שחור": "https://anfialuminium.github.io/catalog/ידיות/ידיות בר משיכה/dbph.png",
+            "גלגל 7000 פלסטיק": "https://anfialuminium.github.io/catalog/גלגלים/7000ws.png",
+            "גלגל 7000 משקל כבד": "https://anfialuminium.github.io/catalog/גלגלים/7000wdw.png",
+            "גלגל 7000 מתכת בודד אפור": "https://anfialuminium.github.io/catalog/גלגלים/ssw.png",
+            "גלגל 7000 מתכת כפול אפור": "https://anfialuminium.github.io/catalog/גלגלים/sdw.png",
+            "גלגל 7300 פלסטיק": "https://anfialuminium.github.io/catalog/גלגלים/7300wsw.png",
+            "גלגל 7300 משקל כבד": "https://anfialuminium.github.io/catalog/גלגלים/bdw-wb.png",
+            "גלגל 9000 משקל כבד": "https://anfialuminium.github.io/catalog/גלגלים/wdw9000.png",
+            "גלגל פלסטיק לחלון הזזה": "https://anfialuminium.github.io/catalog/גלגלים/pwr.png",
+            "רשת פיברגלס": "https://anfialuminium.github.io/catalog/רשתות/רשת פיברגלס.png",
+            "רשת שקופה": "https://anfialuminium.github.io/catalog/רשתות/רשת שקופה.png",
+            "רשת גלילה": "https://anfialuminium.github.io/catalog/רשתות/רשת גלילה.png"
+        };
+
+        // Fuzzy match helper
+        function findImageForProduct(name) {
+            if (!name) return "";
+            name = name.trim();
+            if (IMAGE_DB[name]) return IMAGE_DB[name];
+            
+            // Try partial match
+            const keys = Object.keys(IMAGE_DB);
+            for (let k of keys) {
+                if (name.includes(k) || k.includes(name)) return IMAGE_DB[k];
+            }
+            return ""; 
+        }
+
+        async function loadCatalog() {
+            try {
+                const response = await fetch(DATA_URL);
+                const json = await response.json();
+                
+                const catalogEl = document.getElementById('catalog');
+                
+                if (json.error) {
+                    catalogEl.innerHTML = `<div style="color:red; text-align:center;">שגיאה: ${json.error}</div>`;
+                    return;
+                }
+
+                const rawData = json.data;
+                if (!rawData || rawData.length === 0) {
+                     catalogEl.innerHTML = '<div style="text-align:center;">הגיליון ריק.</div>';
+                     return;
+                }
+
+                // Detect Columns
+                const headers = rawData[0]; // First row
+                let nameIdx = -1;
+                let priceIdx = -1;
+
+                // Try to find by name
+                for (let i = 0; i < headers.length; i++) {
+                    const h = String(headers[i]).trim();
+                    if (h.includes("שם מוצר") || h.includes("Name")) nameIdx = i;
+                    if (h.includes("מחיר") || h.includes("Price")) priceIdx = i;
+                }
+
+                // Fallback Layout: A=Name, B=Price (Indices 0, 1)
+                // Or user requested B=Name, C=Price (Indices 1, 2)
+                if (nameIdx === -1) nameIdx = 0; 
+                if (priceIdx === -1) priceIdx = 1;
+
+                console.log(`Detected Columns - Name: ${nameIdx}, Price: ${priceIdx}`);
+
+                // Build Product List
+                // Skip header row usually, but check if row 0 looks like header
+                const startIndex = (String(headers[nameIdx]).includes("שם") || String(headers[nameIdx]).includes("Name")) ? 1 : 0;
+                
+                const products = [];
+                for (let i = startIndex; i < rawData.length; i++) {
+                    const row = rawData[i];
+                    const name = row[nameIdx];
+                    if (!name) continue; // Skip empty names
+
+                    products.push({
+                        name: name,
+                        price: row[priceIdx],
+                        image: findImageForProduct(name)
+                    });
+                }
+
+                // Render
+                catalogEl.innerHTML = '';
+                if (products.length === 0) {
+                     catalogEl.innerHTML = '<div style="text-align:center;">לא נמצאו מוצרים תקינים בגיליון.</div>';
+                     return;
+                }
+
+                const section = document.createElement('div');
+                section.className = 'category-section'; // Single list for now
+                
+                products.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'product-row';
+                    
+                    const imgUrl = item.image;
+                    const imgHTML = imgUrl 
+                        ? `<img src="${imgUrl}" class="product-image" alt="${item.name}" onclick="openModal('${imgUrl}')">` 
+                        : `<div class="product-image" style="display:flex;align-items:center;justify-content:center;color:#ccc;font-size:10px;cursor:default;">אין תמונה</div>`;
+
+                    row.innerHTML = `
+                        ${imgHTML}
+                        <div class="product-info">
+                            <div class="product-name">${item.name}</div>
+                        </div>
+                        <div class="price-wrapper">
+                            <span class="currency">₪</span>
+                            <span class="price-display">${item.price !== undefined && item.price !== "" ? item.price : '-'}</span>
+                        </div>
+                    `;
+                    section.appendChild(row);
+                });
+                catalogEl.appendChild(section);
+
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('catalog').innerHTML = `<div style="text-align:center; color:red;">שגיאה בטעינת הנתונים.<br>נא לוודא שביצעת 'פריסה מחדש' (Deploy New) בקוד הגוגל.</div>`;
+            }
+        }
+
+        loadCatalog();
+    </script>
+</body>
+</html>

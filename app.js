@@ -6539,21 +6539,28 @@ async function sendDealWhatsApp(specificDealId = null, btnElement = null) {
             if (btnElement) {
                 const originalContent = btnElement.innerHTML;
                 const originalWidth = btnElement.style.width;
+                const originalColor = btnElement.style.color;
+                const originalBg = btnElement.style.backgroundColor;
+                const originalBorder = btnElement.style.borderColor;
                 
                 btnElement.innerHTML = 'חסר טלפון';
                 btnElement.style.width = 'auto';
                 btnElement.style.minWidth = '80px';
                 btnElement.style.fontSize = '0.8rem';
-                btnElement.style.backgroundColor = '#ef4444'; // Red for error
+                btnElement.style.background = '#ef4444';
+                btnElement.style.color = '#ffffff';
                 btnElement.style.borderColor = '#ef4444';
+                btnElement.style.fontWeight = 'bold';
                 
                 setTimeout(() => {
                     btnElement.innerHTML = originalContent;
                     btnElement.style.width = originalWidth;
                     btnElement.style.minWidth = '';
                     btnElement.style.fontSize = '';
-                    btnElement.style.backgroundColor = '#25D366';
-                    btnElement.style.borderColor = '#25D366';
+                    btnElement.style.backgroundColor = originalBg;
+                    btnElement.style.borderColor = originalBorder;
+                    btnElement.style.color = originalColor;
+                    btnElement.style.fontWeight = '';
                 }, 3000);
             } else {
                 showAlert('לא קיים מספר טלפון לאיש הקשר', 'warning');
@@ -9566,12 +9573,13 @@ function enableInlineEdit(index) {
     const content = noteParts.slice(1).join('\n'); // Everything else is content
     
     // Replace block content with editor
+    block.style.padding = '2px';
     block.innerHTML = `
-        <div style="font-size: 0.85rem; color: #666; margin-bottom: 0px; direction: rtl; text-align: right; padding: 0 7px;">${header}</div>
-        <textarea id="note-edit-area-${index}" class="form-textarea" style="width: 100%; height: 38px; min-height: 38px !important; padding: 2px 5px; margin-bottom: 1px; line-height: 1.1; resize: vertical;" rows="1">${content}</textarea>
-        <div style="display: flex; gap: 5px; justify-content: flex-end; margin-top: 1px;">
-            <button type="button" class="btn btn-sm btn-primary" onclick="saveInlineNote(${index})">שמור</button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="cancelInlineEdit()">ביטול</button>
+        <div style="font-size: 0.8rem; color: #666; margin-bottom: 1px; direction: rtl; text-align: right; line-height: 1.2;">${header}</div>
+        <textarea id="note-edit-area-${index}" class="form-textarea" style="width: 100%; min-height: 100px; margin: 2px 0; padding: 6px; resize: vertical; box-sizing: border-box; line-height: 1.3;" rows="4">${content}</textarea>
+        <div style="display: flex; gap: 5px; justify-content: flex-end; padding-left: 2px;">
+            <button type="button" class="btn btn-sm btn-primary" onclick="saveInlineNote(${index})" style="padding: 2px 8px;">שמור</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="cancelInlineEdit()" style="padding: 2px 8px;">ביטול</button>
         </div>
     `;
 }
