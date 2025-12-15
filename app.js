@@ -3711,7 +3711,7 @@ async function loadDealsHistory(preservePage = false) {
                                         <button class="btn btn-sm btn-primary btn-icon" onclick="viewDealDetails('${deal.deal_id}')" title="פרטים">👁️</button>
                                         <button class="btn btn-sm btn-secondary btn-icon" onclick="editDeal('${deal.deal_id}')" title="ערוך">✏️</button>
                                         <button class="btn btn-sm btn-secondary btn-icon" onclick="generateQuotePDF('${deal.deal_id}')" title="ייצוא הצעת מחיר (PDF)">📄</button>
-                                        <button class="btn btn-sm btn-success btn-icon" onclick="sendDealWhatsApp('${deal.deal_id}')" title="שלח בווטסאפ" style="border: 1px solid #25D366; background-color: #25D366; display: inline-flex; align-items: center; justify-content: center;">
+                                        <button class="btn btn-sm btn-success btn-icon" onclick="sendDealWhatsApp('${deal.deal_id}', this)" title="שלח בווטסאפ" style="border: 1px solid #25D366; background-color: #25D366; display: inline-flex; align-items: center; justify-content: center;">
                                             <img src="images/whatsappwhite.png" alt="WhatsApp" style="width: 16px; height: 16px;">
                                         </button>
                                         <button class="btn btn-sm btn-danger btn-icon" onclick="deleteDeal('${deal.deal_id}')" title="מחק">🗑️</button>
@@ -6488,7 +6488,21 @@ async function generateQuotePDF(specificDealId = null) {
         const cleanDate = `${d}${m}${y}`;
         
         const fileName = `הצעת מחיר עבור ${deal.customers.business_name} ${cleanDate}.pdf`;
-        pdf.save(fileName);
+        
+        // Open PDF in new window
+        const blob = pdf.output('blob');
+        const blobUrl = URL.createObjectURL(blob);
+        const newWindow = window.open(blobUrl, '_blank');
+        
+        if (!newWindow) {
+            // Fallback if popup blocked
+            pdf.save(fileName);
+            showAlert('החלון החוסם מנע את פתיחת ה-PDF. הקובץ הורד למחשב.', 'warning');
+        } else {
+             // Optional: Revoke URL after some time to free memory, but might be too early if user hasn't loaded it?
+             // Usually browsers handle it fine or we keep it until unload.
+             setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        }
         
         // Clean up
         document.body.removeChild(quoteContainer);
@@ -6501,7 +6515,7 @@ async function generateQuotePDF(specificDealId = null) {
     }
 }
 
-async function sendDealWhatsApp(specificDealId = null) {
+async function sendDealWhatsApp(specificDealId = null, btnElement = null) {
     const dealId = specificDealId || document.getElementById('deal-modal').dataset.currentDealId;
     if (!dealId) {
         showAlert('לא נמצאה עסקה פעילה', 'error');
@@ -6518,34 +6532,36 @@ async function sendDealWhatsApp(specificDealId = null) {
 
         if (dealError) throw dealError;
 
-        const { data: items, error: itemsError } = await supabase
-            .from('deal_items')
-            .select(`*, products(product_name)`)
-            .eq('deal_id', dealId);
-
-        if (itemsError) throw itemsError;
-
-        // Construct Message
-        const fullName = deal.customers.contact_name || deal.customers.business_name || '';
-        const firstName = fullName.split(' ')[0];
-        let message = `היי ${firstName}, הצעת מחיר עבור:\n`;
-        
-        items.forEach(item => {
-            message += `${item.products.product_name}. כמות: ${item.quantity}. מחיר ליחידה: ${item.unit_price}₪.\n`;
-        });
-
-        // Calculate total with VAT
-        const totalWithVat = (deal.final_amount || 0) * 1.18;
-        message += `סה״כ לתשלום (כולל מע״מ): ${totalWithVat.toLocaleString('he-IL', { maximumFractionDigits: 2 })}₪.`;
-
         // Encode and Open
         const phone = deal.customers.phone ? deal.customers.phone.replace(/\D/g, '').replace(/^0/, '972') : '';
         
-        // If phone is empty, just open WhatsApp with text (user can pick contact)
-        const url = phone 
-            ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-            : `https://wa.me/?text=${encodeURIComponent(message)}`;
-            
+        if (!phone) {
+            if (btnElement) {
+                const originalContent = btnElement.innerHTML;
+                const originalWidth = btnElement.style.width;
+                
+                btnElement.innerHTML = 'חסר טלפון';
+                btnElement.style.width = 'auto';
+                btnElement.style.minWidth = '80px';
+                btnElement.style.fontSize = '0.8rem';
+                btnElement.style.backgroundColor = '#ef4444'; // Red for error
+                btnElement.style.borderColor = '#ef4444';
+                
+                setTimeout(() => {
+                    btnElement.innerHTML = originalContent;
+                    btnElement.style.width = originalWidth;
+                    btnElement.style.minWidth = '';
+                    btnElement.style.fontSize = '';
+                    btnElement.style.backgroundColor = '#25D366';
+                    btnElement.style.borderColor = '#25D366';
+                }, 3000);
+            } else {
+                showAlert('לא קיים מספר טלפון לאיש הקשר', 'warning');
+            }
+            return;
+        }
+
+        const url = `https://wa.me/${phone}`;
         window.open(url, '_blank');
 
     } catch (err) {
