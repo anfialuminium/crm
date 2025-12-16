@@ -215,7 +215,29 @@
             }
         }
 
+        .print-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 20px;
+        }
+
+        .print-btn:hover {
+            background-color: #2980b9;
+        }
+
         @media print {
+            .print-btn, .no-print { display: none !important; }
+            
             @page { 
                 margin: 1.5cm; 
                 size: A4 portrait; 
@@ -330,7 +352,9 @@
                 <img src="logo.png" alt="לוגו אנפי יבוא ושיווק">
             </div>
             <div class="company-info">
-
+                <button onclick="window.print()" class="print-btn">
+                    הדפס הצעת מחיר 🖨️
+                </button>
                 <p>תאריך: 16/12/2025</p>
             </div>
         </header>
