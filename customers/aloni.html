@@ -3,347 +3,452 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מחירון צ.ח.י אלוני</title>
+    <title>הצעת מחיר - אנפי יבוא ושיווק</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f0f2f5;
             margin: 0;
             padding: 20px;
-            background-color: #f9f9f9;
             color: #333;
+            line-height: 1.6;
         }
 
-        .header {
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border-radius: 8px;
+            min-height: 100vh;
+        }
+
+        /* Header Styling */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .logo-container img {
+            max-height: 70px;
+            width: auto;
+        }
+
+        .company-info h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: #2c3e50;
+            font-weight: 700;
+        }
+
+        .company-info p {
+            margin: 5px 0 0;
+            color: #7f8c8d;
+            font-size: 0.95rem;
+        }
+
+        .quote-title {
             text-align: center;
-            margin-bottom: 30px;
-            background: #fff;
+            margin-bottom: 40px;
+        }
+
+        .quote-title h2 {
+            font-size: 2rem;
+            margin: 0;
+            color: #2c3e50;
+            display: inline-block;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+        /* Client Details */
+        .client-details {
+            background-color: #f8f9fa;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+            border-right: 5px solid #2c3e50;
         }
 
-        h1 { margin: 0; color: #2c3e50; }
-        h2 { margin: 5px 0 0; font-size: 1.2em; color: #7f8c8d; }
-        .date { margin-top: 10px; font-size: 0.9em; color: #95a5a6; }
-
-        .catalog-container {
-            max-width: 800px;
-            margin: 0 auto;
+        .client-details p {
+            margin: 8px 0;
+            font-size: 1.05rem;
         }
 
-        .category-section {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-
-        .category-title {
-            background-color: #34495e;
-            color: white;
-            padding: 10px 15px;
-            margin: 0;
-            font-size: 1.1em;
-        }
-
-        .product-row {
+        /* Tables Styling */
+        .section-title {
+            background-color: #2c3e50;
+            color: #fff;
+            padding: 12px 20px;
+            font-size: 1.1rem;
+            margin-top: 40px;
+            border-radius: 8px 8px 0 0;
             display: flex;
+            justify-content: space-between;
             align-items: center;
+        }
+
+        .section-title .unit-badge {
+            background-color: #e74c3c;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .section-title .unit-badge.unit {
+            background-color: #27ae60;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: white;
+        }
+
+        th, td {
             padding: 15px;
+            text-align: right;
             border-bottom: 1px solid #eee;
         }
 
-        .product-row:last-child {
-            border-bottom: none;
-        }
-
-        /* Modal / Lightbox Styles */
-        .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 1000; 
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto; 
-            background-color: rgba(0,0,0,0.8);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            margin: auto;
-            display: block;
-            max-width: 90%;
-            max-height: 90%;
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            animation: zoom 0.3s;
-        }
-
-        @keyframes zoom {
-            from {transform:scale(0)} 
-            to {transform:scale(1)}
-        }
-
-        .close {
-            position: absolute;
-            top: 15px;
-            right: 35px;
-            color: #f1f1f1;
-            font-size: 40px;
-            font-weight: bold;
-            transition: 0.3s;
-            cursor: pointer;
-        }
-
-        .close:hover,
-        .close:focus {
-            color: #bbb;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .product-image {
-            width: 60px;
-            height: 60px;
-            object-fit: contain;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            background: #fff;
-            margin-left: 15px;
-            flex-shrink: 0;
-            cursor: zoom-in; /* Indicate clickable */
-            transition: transform 0.2s;
-        }
-
-        .product-image:hover {
-            transform: scale(1.05);
-        }
-
-        .product-info {
-            flex-grow: 1;
-        }
-
-        .product-name {
+        th {
+            background-color: #ecf0f1;
             font-weight: 600;
-            font-size: 1em;
-            margin-bottom: 5px;
-        }
-
-        .price-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .currency {
-            font-weight: bold;
-            color: #7f8c8d;
-        }
-
-        .price-display {
-            font-size: 1.1em;
-            font-weight: bold;
             color: #2c3e50;
-            min-width: 60px;
-            text-align: center;
+            font-size: 0.95rem;
+            white-space: nowrap;
         }
 
-        .loading {
+        tr:last-child td { border-bottom: none; }
+        
+        tr:hover { background-color: #f8fbfd; }
+
+        .price-col {
+            font-weight: 700;
+            color: #2c3e50;
+            width: 15%;
+            font-size: 1.05rem;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 60px;
             text-align: center;
-            padding: 50px;
-            font-size: 1.2em;
-            color: #bdc3c7;
+            font-size: 0.9rem;
+            color: #95a5a6;
+            border-top: 1px solid #eee;
+            padding-top: 30px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 20px; margin: 0; }
+            
+            header { 
+                flex-direction: column; 
+                text-align: center; 
+                gap: 15px;
+            }
+            .company-info { text-align: center; }
+            .card-info h1 { font-size: 1.5rem; }
+
+            /* Responsive Tables (Card View) */
+            table, thead, tbody, th, td, tr { 
+                display: block; 
+            }
+            
+            thead tr { 
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            
+            tr { 
+                margin-bottom: 20px; 
+                border: 1px solid #e1e8ed;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            }
+            
+            td { 
+                border-bottom: 1px solid #eee; 
+                position: relative;
+                padding-right: 45%; 
+                text-align: left;
+                min-height: 25px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+            
+            td:last-child { border-bottom: none; background-color: #fcfcfc; font-size: 1.2rem; }
+            
+            td::before { 
+                position: absolute;
+                right: 15px;
+                width: 40%; 
+                white-space: nowrap;
+                font-weight: 600;
+                color: #7f8c8d;
+                content: attr(data-label);
+                text-align: right;
+            }
+
+            .section-title {
+                flex-direction: column;
+                gap: 5px;
+                text-align: center;
+                font-size: 1rem;
+            }
         }
 
         @media print {
-            body { background: white; padding: 0; }
-            .header, .category-section { box-shadow: none; border: 1px solid #ccc; }
-            .category-title { background-color: #eee; color: #000; border-bottom: 1px solid #ccc; }
-            .price-display { border: none; border-bottom: 1px solid #000; text-align: right; width: auto; }
-            .product-image { cursor: default; } /* No zoom on print */
+            @page { 
+                margin: 1.5cm; 
+                size: A4 portrait; 
+            }
+            
+            body { 
+                background-color: #fff; 
+                padding: 0; 
+                margin: 0; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact;
+                font-size: 12pt;
+            }
+
+            .container { 
+                box-shadow: none; 
+                width: 100%; 
+                max-width: 100%; 
+                margin: 0; 
+                padding: 0;
+                border: none; 
+                min-height: auto;
+            }
+            
+            /* Ensure colors print */
+            .section-title { 
+                background-color: #2c3e50 !important; 
+                color: #fff !important; 
+                box-shadow: none;
+                border: 1px solid #2c3e50;
+                page-break-after: avoid;
+            }
+            
+            th { 
+                background-color: #ecf0f1 !important; 
+                color: #000 !important;
+                border-bottom: 2px solid #333;
+            }
+
+            .unit-badge { color: #fff !important; }
+
+            /* Table Page Breaks */
+            table { 
+                page-break-inside: auto; 
+                width: 100%; 
+                border: none;
+            }
+            
+            tr { 
+                page-break-inside: avoid; 
+                break-inside: avoid; 
+            }
+            
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+
+            /* Restore desktop layout if printing from mobile view defaults */
+            table, thead, tbody, th, td, tr { display: inherit; }
+            table { display: table; }
+            thead { display: table-header-group; }
+            tbody { display: table-row-group; }
+            tr { display: table-row; }
+            td, th { display: table-cell; }
+            
+            td { 
+                padding: 6px 10px; 
+                text-align: right; 
+                border-bottom: 1px solid #ccc; 
+            }
+            
+            td::before { content: none !important; } /* Hide mobile labels */
+
+            /* Category Block Wrapper for Print */
+            .category-block {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                display: block;
+            }
+
+            /* Link cleanup */
+            a { text-decoration: none; color: #000; }
+            
+            /* Footer */
+            footer { 
+                margin-top: 30px; 
+                border-top: 1px solid #333; 
+                page-break-inside: avoid;
+            }
         }
     </style>
+<script>
+    // Auto-generate data-labels for mobile view
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('table').forEach(table => {
+            const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                tr.querySelectorAll('td').forEach((td, index) => {
+                    if (headers[index]) {
+                        td.setAttribute('data-label', headers[index]);
+                    }
+                });
+            });
+        });
+    });
+</script>
 </head>
 <body>
 
-    <div class="header">
-        <h1>הצעת מחיר - אנפי</h1>
-        <h2>לכבוד: צ.ח.י אלוני, נס ציונה</h2>
-        <div class="date" id="date"></div>
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <img src="logo.png" alt="לוגו אנפי יבוא ושיווק">
+            </div>
+            <div class="company-info">
+                <h1>אנפי יבוא ושיווק בע״מ</h1>
+                <p>תאריך: 16/12/2025</p>
+            </div>
+        </header>
+
+        <div class="category-block">
+            <div class="section-title">
+                <span>מברשות איטום וסנפיר</span>
+                <span class="unit-badge">מחיר למטר</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>תיאור המוצר</th>
+                        <th>מידה / דגם</th>
+                        <th>כמות בקרטון (מטר)</th>
+                        <th class="price-col">מחיר למטר</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>מברשת צר נמוך</td><td>5.50 - 4.7</td><td>4 × 375</td><td class="price-col">₪0.14</td></tr>
+                    <tr><td>מברשת צר גבוה - 12</td><td>12 - 4.7</td><td>4 × 250</td><td class="price-col">₪0.25</td></tr>
+                    <tr><td>מברשת צר גבוה - 15</td><td>15 - 4.7</td><td>4 × 200</td><td class="price-col">₪0.40</td></tr>
+                    <tr><td>מברשת צר גבוה - 20</td><td>20.0 - 4.7</td><td>4 × 150</td><td class="price-col">₪0.60</td></tr>
+                    <tr><td>מברשת רחב נמוך</td><td>5.00 - 6.7</td><td>4 × 375</td><td class="price-col">₪0.14</td></tr>
+                    <tr><td>מברשת רחב גבוה - 12</td><td>12 - 6.7</td><td>4 × 200</td><td class="price-col">₪0.25</td></tr>
+                    <tr><td>מברשת רחב גבוה - 15</td><td>15 - 6.7</td><td>4 × 150</td><td class="price-col">₪0.40</td></tr>
+                    <tr><td>מברשת רחב גבוה - 20</td><td>20.0 - 6.7</td><td>4 × 100</td><td class="price-col">₪0.60</td></tr>
+                    <tr><td>מברשת סנפיר שווה (7300)</td><td>4.7 - 6.00</td><td>4 × 450</td><td class="price-col">₪0.27</td></tr>
+                    <tr><td>מברשת סנפיר גבוה (7000)</td><td>5.50 + 2 - 6.7</td><td>4 × 350</td><td class="price-col">₪0.21</td></tr>
+                    <tr><td>מברשת סנפיר גבוה (7300)</td><td>5.50 + 2 - 4.7</td><td>4 × 400</td><td class="price-col">₪0.21</td></tr>
+                    <tr><td>מברשת סנפיר שווה (1700)</td><td>5.5 - 4.7</td><td>4 × 500</td><td class="price-col">₪0.21</td></tr>
+                    <tr><td>מברשת סנפיר שווה (7600)</td><td>6.50 - 6.7</td><td>4 × 350</td><td class="price-col">₪0.30</td></tr>
+                    <tr><td>מברשת סנפיר שווה (2200)</td><td>9.0 - 6.7</td><td>4 × 275</td><td class="price-col">₪0.55</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="category-block">
+            <div class="section-title">
+                <span>מברשות הדבקה</span>
+                <span class="unit-badge unit">מחיר ליחידה/גליל</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>תיאור המוצר</th>
+                        <th>מידה</th>
+                        <th>אריזה</th>
+                        <th class="price-col">מחיר יח'</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>מברשת הדבקה D.P</td><td>15.00 - 4.5</td><td>4 × 25</td><td class="price-col">₪25.00</td></tr>
+                    <tr><td>מברשת הדבקה 12mm (גלילים)</td><td>6.7 - 12</td><td>4 × 200</td><td class="price-col">₪2.00</td></tr>
+                    <tr><td>מברשת הדבקה (קופסה 5 מ')</td><td>7 - 12</td><td>100 יח'</td><td class="price-col">₪12.00</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="category-block">
+            <div class="section-title">
+                <span>ידיות ופרזול</span>
+                <span class="unit-badge unit">מחיר ליחידה</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>תיאור המוצר</th>
+                        <th>מפרט / צבע</th>
+                        <th class="price-col">מחיר יח'</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>חצי ידית כבדה</td><td>4 ברגים</td><td class="price-col">₪9.70</td></tr>
+                    <tr><td>חצי ידית</td><td>6 ברגים</td><td class="price-col">₪8.80</td></tr>
+                    <tr><td>חצי ידית משופרת (אלמא)</td><td>ימין ושמאל</td><td class="price-col">₪33.00</td></tr>
+                    <tr><td>ידית קיפ</td><td>-</td><td class="price-col">₪8.80</td></tr>
+                    <tr><td>ידית משיכה בודדת</td><td>נירוסטה</td><td class="price-col">₪70.00</td></tr>
+                    <tr><td>ידית משיכה בודדת</td><td>שחור</td><td class="price-col">₪95.00</td></tr>
+                    <tr><td>ידית משיכה כפולה</td><td>נירוסטה</td><td class="price-col">₪121.00</td></tr>
+                    <tr><td>ידית משיכה כפולה</td><td>שחור</td><td class="price-col">₪171.00</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="category-block">
+            <div class="section-title">
+                <span>גלגלים ואביזרים</span>
+                <span class="unit-badge unit">מחיר ליחידה</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>תיאור המוצר</th>
+                        <th>מפרט</th>
+                        <th class="price-col">מחיר יח'</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>גלגל 7000 פלסטיק</td><td>בודד מתכוונן</td><td class="price-col">₪12.00</td></tr>
+                    <tr><td>גלגל 7000 פלסטיק כפול</td><td>משקל כבד</td><td class="price-col">₪22.00</td></tr>
+                    <tr><td>גלגל 7000 מתכת</td><td>בודד מתכוונן</td><td class="price-col">₪12.00</td></tr>
+                    <tr><td>גלגל 7000 מתכת</td><td>כפול מתכוונן</td><td class="price-col">₪16.00</td></tr>
+                    <tr><td>גלגל 7300 פלסטיק</td><td>בודד מתכוונן</td><td class="price-col">₪18.00</td></tr>
+                    <tr><td>גלגל 7300 כפול</td><td>משקל כבד</td><td class="price-col">₪28.00</td></tr>
+                    <tr><td>גלגל 9000 כפול</td><td>משקל כבד</td><td class="price-col">₪70.00</td></tr>
+                    <tr><td>גלגל פלסטיק</td><td>לרשת קלה</td><td class="price-col">₪1.50</td></tr>
+                    <tr><td>פינה 7300</td><td>-</td><td class="price-col">₪1.50</td></tr>
+                    <tr><td>פינה 4300</td><td>-</td><td class="price-col">₪1.70</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <p>המחירים אינם כוללים מע"מ | תוקף ההצעה: 30 יום</p>
+            <p>אנפי יבוא ושיווק בע״מ</p>
+        </footer>
     </div>
 
-    <div id="catalog" class="catalog-container">
-        <div class="loading">טוען מוצרים מהמערכת...</div>
-    </div>
-
-    <!-- The Modal -->
-    <div id="imageModal" class="modal" onclick="closeModal()">
-        <span class="close">&times;</span>
-        <img class="modal-content" id="modalImg">
-    </div>
-
-    <script>
-        // Set Date
-        document.getElementById('date').textContent = new Date().toLocaleDateString('he-IL');
-
-        const DATA_URL = "https://script.google.com/macros/s/AKfycbzFNKmuj8NJX3IL-rnyE5c1IzKHGp5PjdfqFAGic73EaXFx1ObAkExjd8o2IO-lD486/exec?action=getProducts";
-        
-        // Modal Logic
-        function openModal(src) {
-            const modal = document.getElementById("imageModal");
-            const modalImg = document.getElementById("modalImg");
-            modal.style.display = "flex";
-            modalImg.src = src;
-        }
-
-        function closeModal() {
-            document.getElementById("imageModal").style.display = "none";
-        }
-        
-        // Close on Escape key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === "Escape") {
-                closeModal();
-            }
-        });
-
-        // Image Database - Linking names to images
-        const IMAGE_DB = {
-            "חצי ידית כבדה 4 ברגים": "https://anfialuminium.github.io/catalog/ידיות/hh6s.png",
-            "חצי ידית 6 ברגים": "https://anfialuminium.github.io/catalog/ידיות/hhh4s.png",
-            "חצי ידית משופרת אלמא ימין שמאל": "https://anfialuminium.github.io/catalog/ידיות/alma.png", // Assuming this matches "ידית 4 ברגים" or similar
-            "ידית 4 ברגים": "https://anfialuminium.github.io/catalog/ידיות/alma.png",
-            "ידית קיפ": "https://anfialuminium.github.io/catalog/ידיות/kh.png",
-            "ידית משיכה בודדת נירוסטה": "https://anfialuminium.github.io/catalog/ידיות/ידיות בר משיכה/snph.png",
-            "ידית משיכה בודדת שחור": "https://anfialuminium.github.io/catalog/ידיות/ידיות בר משיכה/sbph.png",
-            "ידית משיכה כפולה נירוסטה": "https://anfialuminium.github.io/catalog/ידיות/ידיות בר משיכה/dnph.png",
-            "ידית משיכה כפולה שחור": "https://anfialuminium.github.io/catalog/ידיות/ידיות בר משיכה/dbph.png",
-            "גלגל 7000 פלסטיק": "https://anfialuminium.github.io/catalog/גלגלים/7000ws.png",
-            "גלגל 7000 משקל כבד": "https://anfialuminium.github.io/catalog/גלגלים/7000wdw.png",
-            "גלגל 7000 מתכת בודד אפור": "https://anfialuminium.github.io/catalog/גלגלים/ssw.png",
-            "גלגל 7000 מתכת כפול אפור": "https://anfialuminium.github.io/catalog/גלגלים/sdw.png",
-            "גלגל 7300 פלסטיק": "https://anfialuminium.github.io/catalog/גלגלים/7300wsw.png",
-            "גלגל 7300 משקל כבד": "https://anfialuminium.github.io/catalog/גלגלים/bdw-wb.png",
-            "גלגל 9000 משקל כבד": "https://anfialuminium.github.io/catalog/גלגלים/wdw9000.png",
-            "גלגל פלסטיק לחלון הזזה": "https://anfialuminium.github.io/catalog/גלגלים/pwr.png",
-            "רשת פיברגלס": "https://anfialuminium.github.io/catalog/רשתות/רשת פיברגלס.png",
-            "רשת שקופה": "https://anfialuminium.github.io/catalog/רשתות/רשת שקופה.png",
-            "רשת גלילה": "https://anfialuminium.github.io/catalog/רשתות/רשת גלילה.png"
-        };
-
-        // Fuzzy match helper
-        function findImageForProduct(name) {
-            if (!name) return "";
-            name = name.trim();
-            if (IMAGE_DB[name]) return IMAGE_DB[name];
-            
-            // Try partial match
-            const keys = Object.keys(IMAGE_DB);
-            for (let k of keys) {
-                if (name.includes(k) || k.includes(name)) return IMAGE_DB[k];
-            }
-            return ""; 
-        }
-
-        async function loadCatalog() {
-            try {
-                const response = await fetch(DATA_URL);
-                const json = await response.json();
-                
-                const catalogEl = document.getElementById('catalog');
-                
-                if (json.error) {
-                    catalogEl.innerHTML = `<div style="color:red; text-align:center;">שגיאה: ${json.error}</div>`;
-                    return;
-                }
-
-                const rawData = json.data;
-                if (!rawData || rawData.length === 0) {
-                     catalogEl.innerHTML = '<div style="text-align:center;">הגיליון ריק.</div>';
-                     return;
-                }
-
-                // Detect Columns
-                const headers = rawData[0]; // First row
-                let nameIdx = -1;
-                let priceIdx = -1;
-
-                // Try to find by name
-                for (let i = 0; i < headers.length; i++) {
-                    const h = String(headers[i]).trim();
-                    if (h.includes("שם מוצר") || h.includes("Name")) nameIdx = i;
-                    if (h.includes("מחיר") || h.includes("Price")) priceIdx = i;
-                }
-
-                // Fallback Layout: A=Name, B=Price (Indices 0, 1)
-                // Or user requested B=Name, C=Price (Indices 1, 2)
-                if (nameIdx === -1) nameIdx = 0; 
-                if (priceIdx === -1) priceIdx = 1;
-
-                console.log(`Detected Columns - Name: ${nameIdx}, Price: ${priceIdx}`);
-
-                // Build Product List
-                // Skip header row usually, but check if row 0 looks like header
-                const startIndex = (String(headers[nameIdx]).includes("שם") || String(headers[nameIdx]).includes("Name")) ? 1 : 0;
-                
-                const products = [];
-                for (let i = startIndex; i < rawData.length; i++) {
-                    const row = rawData[i];
-                    const name = row[nameIdx];
-                    if (!name) continue; // Skip empty names
-
-                    products.push({
-                        name: name,
-                        price: row[priceIdx],
-                        image: findImageForProduct(name)
-                    });
-                }
-
-                // Render
-                catalogEl.innerHTML = '';
-                if (products.length === 0) {
-                     catalogEl.innerHTML = '<div style="text-align:center;">לא נמצאו מוצרים תקינים בגיליון.</div>';
-                     return;
-                }
-
-                const section = document.createElement('div');
-                section.className = 'category-section'; // Single list for now
-                
-                products.forEach(item => {
-                    const row = document.createElement('div');
-                    row.className = 'product-row';
-                    
-                    const imgUrl = item.image;
-                    const imgHTML = imgUrl 
-                        ? `<img src="${imgUrl}" class="product-image" alt="${item.name}" onclick="openModal('${imgUrl}')">` 
-                        : `<div class="product-image" style="display:flex;align-items:center;justify-content:center;color:#ccc;font-size:10px;cursor:default;">אין תמונה</div>`;
-
-                    row.innerHTML = `
-                        ${imgHTML}
-                        <div class="product-info">
-                            <div class="product-name">${item.name}</div>
-                        </div>
-                        <div class="price-wrapper">
-                            <span class="currency">₪</span>
-                            <span class="price-display">${item.price !== undefined && item.price !== "" ? item.price : '-'}</span>
-                        </div>
-                    `;
-                    section.appendChild(row);
-                });
-                catalogEl.appendChild(section);
-
-
-            } catch (err) {
-                console.error(err);
-                document.getElementById('catalog').innerHTML = `<div style="text-align:center; color:red;">שגיאה בטעינת הנתונים.<br>נא לוודא שביצעת 'פריסה מחדש' (Deploy New) בקוד הגוגל.</div>`;
-            }
-        }
-
-        loadCatalog();
-    </script>
 </body>
 </html>
