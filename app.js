@@ -1919,7 +1919,7 @@ async function viewCustomerDetails(customerId) {
                 ` : ''}
 
                 <div class="form-grid">
-                    ${(!customer.primary_contact || customer.contact_name) ? `
+                    ${(!customer.primary_contact && customer.contact_name) ? `
                     <div class="deal-card-info">
                         <span class="deal-card-label">איש קשר (עסק):</span>
                         <span class="deal-card-value">
@@ -1928,7 +1928,7 @@ async function viewCustomerDetails(customerId) {
                     </div>
                     ` : ''}
 
-                    ${(!customer.primary_contact || customer.phone) ? `
+                    ${(!customer.primary_contact || (customer.phone && customer.phone !== customer.primary_contact.phone)) ? `
                     <div class="deal-card-info">
                         <span class="deal-card-label">טלפון (עסק):</span>
                         <span class="deal-card-value">
@@ -1944,7 +1944,7 @@ async function viewCustomerDetails(customerId) {
                     </div>
                     ` : ''}
 
-                    ${(!customer.primary_contact || customer.email) ? `
+                    ${(!customer.primary_contact || (customer.email && customer.email !== customer.primary_contact.email)) ? `
                     <div class="deal-card-info">
                         <span class="deal-card-label">אימייל (עסק):</span>
                         <span class="deal-card-value">
