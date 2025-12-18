@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הצעת מחיר - אנפי יבוא ושיווק</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border-radius: 8px;
+            min-height: 100vh;
+        }
+
+        /* Header Styling */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .logo-container img {
+            max-height: 70px;
+            width: auto;
+        }
+
+        .company-info h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: #2c3e50;
+            font-weight: 700;
+        }
+
+        .company-info p {
+            margin: 5px 0 0;
+            color: #7f8c8d;
+            font-size: 0.95rem;
+        }
+
+        .quote-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .quote-title h2 {
+            font-size: 2rem;
+            margin: 0;
+            color: #2c3e50;
+            display: inline-block;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+        /* Client Details */
+        .client-details {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            border-right: 5px solid #2c3e50;
+        }
+
+        .client-details p {
+            margin: 8px 0;
+            font-size: 1.05rem;
+        }
+
+        /* Tables Styling */
+        .section-title {
+            background-color: #2c3e50;
+            color: #fff;
+            padding: 12px 20px;
+            font-size: 1.1rem;
+            margin-top: 40px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-title .unit-badge {
+            background-color: #e74c3c;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .section-title .unit-badge.unit {
+            background-color: #27ae60;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: white;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #ecf0f1;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        
+        tr:hover { background-color: #f8fbfd; }
+
+        .price-col {
+            font-weight: 700;
+            color: #2c3e50;
+            width: 15%;
+            font-size: 1.05rem;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 60px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #95a5a6;
+            border-top: 1px solid #eee;
+            padding-top: 30px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 20px; margin: 0; }
+            
+            header { 
+                flex-direction: column; 
+                text-align: center; 
+                gap: 15px;
+            }
+            .company-info { text-align: center; }
+            .card-info h1 { font-size: 1.5rem; }
+
+            /* Responsive Tables (Card View) */
+            table, thead, tbody, th, td, tr { 
+                display: block; 
+            }
+            
+            thead tr { 
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            
+            tr { 
+                margin-bottom: 20px; 
+                border: 1px solid #e1e8ed;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            }
+            
+            td { 
+                border-bottom: 1px solid #eee; 
+                position: relative;
+                padding-right: 45%; 
+                text-align: left;
+                min-height: 25px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+            
+            td:last-child { border-bottom: none; background-color: #fcfcfc; font-size: 1.2rem; }
+            
+            td::before { 
+                position: absolute;
+                right: 15px;
+                width: 40%; 
+                white-space: nowrap;
+                font-weight: 600;
+                color: #7f8c8d;
+                content: attr(data-label);
+                text-align: right;
+            }
+
+            .section-title {
+                flex-direction: column;
+                gap: 5px;
+                text-align: center;
+                font-size: 1rem;
+            }
+        }
+
+        .print-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: 20px;
+        }
+
+        .print-btn:hover {
+            background-color: #2980b9;
+        }
+
+        @media print {
+            .print-btn, .no-print { display: none !important; }
+            
+            @page { 
+                margin: 1.5cm; 
+                size: A4 portrait; 
+            }
+            
+            body { 
+                background-color: #fff; 
+                padding: 0; 
+                margin: 0; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact;
+                font-size: 12pt;
+            }
+
+            .container { 
+                box-shadow: none; 
+                width: 100%; 
+                max-width: 100%; 
+                margin: 0; 
+                padding: 0;
+                border: none; 
+                min-height: auto;
+            }
+            
+            /* Ensure colors print */
+            .section-title { 
+                background-color: #2c3e50 !important; 
+                color: #fff !important; 
+                box-shadow: none;
+                border: 1px solid #2c3e50;
+                page-break-after: avoid;
+            }
+            
+            th { 
+                background-color: #ecf0f1 !important; 
+                color: #000 !important;
+                border-bottom: 2px solid #333;
+            }
+
+            .unit-badge { color: #fff !important; }
+
+            /* Table Page Breaks */
+            table { 
+                page-break-inside: auto; 
+                width: 100%; 
+                border: none;
+            }
+            
+            tr { 
+                page-break-inside: avoid; 
+                break-inside: avoid; 
+            }
+            
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+
+            /* Restore desktop layout if printing from mobile view defaults */
+            table, thead, tbody, th, td, tr { display: inherit; }
+            table { display: table; }
+            thead { display: table-header-group; }
+            tbody { display: table-row-group; }
+            tr { display: table-row; }
+            td, th { display: table-cell; }
+            
+            td { 
+                padding: 6px 10px; 
+                text-align: right; 
+                border-bottom: 1px solid #ccc; 
+            }
+            
+            td::before { content: none !important; } /* Hide mobile labels */
+
+            /* Category Block Wrapper for Print */
+            .category-block {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                display: block;
+            }
+
+            /* Link cleanup */
+            a { text-decoration: none; color: #000; }
+            
+            /* Footer */
+            footer { 
+                margin-top: 30px; 
+                border-top: 1px solid #333; 
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+<script>
+    // Auto-generate data-labels for mobile view
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('table').forEach(table => {
+            const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent);
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                tr.querySelectorAll('td').forEach((td, index) => {
+                    if (headers[index]) {
+                        td.setAttribute('data-label', headers[index]);
+                    }
+                });
+            });
+        });
+    });
+</script>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <img src="logo.png" alt="לוגו אנפי יבוא ושיווק">
+            </div>
+            <div class="company-info">
+                <button onclick="window.print()" class="print-btn">
+                    הדפס הצעת מחיר 🖨️
+                </button>
+                <p>תאריך: 16/12/2025</p>
+            </div>
+        </header>
+
+        <div class="category-block">
+            <div class="section-title">
+                <span>מברשות איטום וסנפיר</span>
+                <span class="unit-badge">מחיר למטר</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>תיאור המוצר</th>
+                        <th>מידה</th>
+                        <th>כמות בקרטון</th>
+                        <th class="price-col">מחיר</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>מברשת צר נמוך</td><td>5.50 - 4.7</td><td>4 × 375</td><td class="price-col">₪0.14</td></tr>
+                    <tr><td>מברשת צר גבוה - 12</td><td>12 - 4.7</td><td>4 × 250</td><td class="price-col">₪0.25</td></tr>
+                    <tr><td>מברשת צר גבוה - 15</td><td>15 - 4.7</td><td>4 × 200</td><td class="price-col">₪0.40</td></tr>
+                    <tr><td>מברשת צר גבוה - 20</td><td>20.0 - 4.7</td><td>4 × 150</td><td class="price-col">₪0.60</td></tr>
+                    <tr><td>מברשת רחב נמוך</td><td>5.00 - 6.7</td><td>4 × 375</td><td class="price-col">₪0.14</td></tr>
+                    <tr><td>מברשת רחב גבוה - 12</td><td>12 - 6.7</td><td>4 × 200</td><td class="price-col">₪0.25</td></tr>
+                    <tr><td>מברשת רחב גבוה - 15</td><td>15 - 6.7</td><td>4 × 150</td><td class="price-col">₪0.40</td></tr>
+                    <tr><td>מברשת רחב גבוה - 20</td><td>20.0 - 6.7</td><td>4 × 100</td><td class="price-col">₪0.60</td></tr>
+                    <tr><td>מברשת סנפיר שווה (7300)</td><td>4.7 - 6.00</td><td>4 × 450</td><td class="price-col">₪0.27</td></tr>
+                    <tr><td>מברשת סנפיר גבוה (7000)</td><td>5.50 + 2 - 6.7</td><td>4 × 350</td><td class="price-col">₪0.21</td></tr>
+                    <tr><td>מברשת סנפיר גבוה (7300)</td><td>5.50 + 2 - 4.7</td><td>4 × 400</td><td class="price-col">₪0.21</td></tr>
+                    <tr><td>מברשת סנפיר שווה (1700)</td><td>5.5 - 4.7</td><td>4 × 500</td><td class="price-col">₪0.21</td></tr>
+                    <tr><td>מברשת סנפיר שווה (7600)</td><td>6.50 - 6.7</td><td>4 × 350</td><td class="price-col">₪0.30</td></tr>
+                    <tr><td>מברשת סנפיר שווה (2200)</td><td>9.0 - 6.7</td><td>4 × 275</td><td class="price-col">₪0.55</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="category-block">
+            <div class="section-title">
+                <span>מברשות הדבקה</span>
+                <span class="unit-badge">מחיר למטר</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>תיאור המוצר</th>
+                        <th>מידה</th>
+                        <th>אריזה</th>
+                        <th class="price-col">מחיר</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>מברשת הדבקה D.P</td><td>15.00 - 4.5</td><td>4 × 25</td><td class="price-col">₪25.00</td></tr>
+                    <tr><td>מברשת הדבקה 12mm (גלילים)</td><td>12 - 6.7</td><td>4 × 200</td><td class="price-col">₪2.00</td></tr>
+                    <tr><td>מברשת הדבקה (קופסה 5 מ')</td><td>12 - 7</td><td>100 יח'</td><td class="price-col">₪12.00</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="category-block">
+            <div class="section-title">
+                <span>רשתות</span>
+                <span class="unit-badge">מחיר למטר</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>תיאור המוצר</th>
+                        <th class="price-col">מחיר</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>רשת פיברגלס</td><td class="price-col">₪2.50</td></tr>
+                    <tr><td>רשת שקופה</td><td class="price-col">₪2.80</td></tr>
+                    <tr><td>רשת גלילה (עם רשת שקופה)</td><td class="price-col">₪154.00</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="category-block">
+            <div class="section-title">
+                <span>ידיות ופרזול</span>
+                <span class="unit-badge unit">מחיר ליחידה</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>תיאור המוצר</th>
+                        <th>מפרט / צבע</th>
+                        <th class="price-col">מחיר</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>חצי ידית כבדה</td><td>4 ברגים</td><td class="price-col">₪9.70</td></tr>
+                    <tr><td>חצי ידית</td><td>6 ברגים</td><td class="price-col">₪8.80</td></tr>
+                    <tr><td>חצי ידית משופרת (אלמא)</td><td>ימין ושמאל</td><td class="price-col">₪33.00</td></tr>
+                    <tr><td>ידית קיפ</td><td>-</td><td class="price-col">₪8.80</td></tr>
+                    <tr><td>ידית משיכה בודדת</td><td>נירוסטה</td><td class="price-col">₪70.00</td></tr>
+                    <tr><td>ידית משיכה בודדת</td><td>שחור</td><td class="price-col">₪95.00</td></tr>
+                    <tr><td>ידית משיכה כפולה</td><td>נירוסטה</td><td class="price-col">₪121.00</td></tr>
+                    <tr><td>ידית משיכה כפולה</td><td>שחור</td><td class="price-col">₪171.00</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="category-block">
+            <div class="section-title">
+                <span>גלגלים ואביזרים</span>
+                <span class="unit-badge unit">מחיר ליחידה</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>תיאור המוצר</th>
+                        <th>מפרט</th>
+                        <th class="price-col">מחיר</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>גלגל 7000 פלסטיק</td><td>בודד מתכוונן</td><td class="price-col">₪12.00</td></tr>
+                    <tr><td>גלגל 7000 פלסטיק</td><td>כפול משקל כבד</td><td class="price-col">₪22.00</td></tr>
+                    <tr><td>גלגל 7000 מתכת</td><td>בודד מתכוונן</td><td class="price-col">₪12.00</td></tr>
+                    <tr><td>גלגל 7000 מתכת</td><td>כפול מתכוונן</td><td class="price-col">₪16.00</td></tr>
+                    <tr><td>גלגל 7300 פלסטיק</td><td>בודד מתכוונן</td><td class="price-col">₪18.00</td></tr>
+                    <tr><td>גלגל 7300</td><td>כפול משקל כבד</td><td class="price-col">₪28.00</td></tr>
+                    <tr><td>גלגל 9000</td><td>כפול משקל כבד</td><td class="price-col">₪70.00</td></tr>
+                    <tr><td>גלגל פלסטיק</td><td>לרשת קלה</td><td class="price-col">₪1.50</td></tr>
+                    <tr><td>פינה 7300</td><td>-</td><td class="price-col">₪1.50</td></tr>
+                    <tr><td>פינה 4300</td><td>-</td><td class="price-col">₪1.70</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+
+
+        <footer>
+            <p>המחירים אינם כוללים מע"מ</p>
+            <p>אנפי יבוא ושיווק בע״מ</p>
+        </footer>
+    </div>
+
+</body>
+</html>
