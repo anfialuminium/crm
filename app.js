@@ -7,7 +7,7 @@ const SUPABASE_URL = 'https://abqracafkjerlcemqnva.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFicXJhY2Fma2plcmxjZW1xbnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3NDk1NTYsImV4cCI6MjA4MDMyNTU1Nn0.WejWdsYxqC7ESs3C8UkGhWUpnDJ7xD5j4-n9BKRE7rE';
 
 // Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Login Logic
 function handleLogin(event) {
@@ -204,7 +204,7 @@ async function checkSchemaCapabilities() {
     
     // Check contact_id in activities
     try {
-        const { error } = await supabase.from('activities').select('contact_id').limit(0);
+        const { error } = await supabaseClient.from('activities').select('contact_id').limit(0);
         if (!error) {
             window.crmCapabilities.contactInActivity = true;
             console.log('✅ Capability detected: Activities support contact linking');
@@ -215,7 +215,7 @@ async function checkSchemaCapabilities() {
 
     // Check edited_at in activities
     try {
-        const { error } = await supabase.from('activities').select('edited_at').limit(0);
+        const { error } = await supabaseClient.from('activities').select('edited_at').limit(0);
         if (!error) {
             window.crmCapabilities.editTracking = true;
             console.log('✅ Capability detected: Activities support edit tracking');
@@ -309,7 +309,7 @@ function navigateSection(direction) {
 
 async function loadProducts() {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('products')
             .select('*')
             .eq('active', true)
@@ -344,7 +344,7 @@ async function loadCustomers() {
         let data, error;
         
         try {
-            const result = await supabase
+            const result = await supabaseClient
                 .from('customers')
                 .select(`
                     *,
@@ -369,7 +369,7 @@ async function loadCustomers() {
         } catch (joinError) {
             // Fallback: load without primary contact join
             console.log('ℹ️ Loading customers without contacts join (contacts table may not exist yet)');
-            const result = await supabase
+            const result = await supabaseClient
                 .from('customers')
                 .select('*')
                 .eq('active', true)
@@ -906,7 +906,7 @@ async function saveDeal(status = null) {
         
         if (editDealId) {
             // Get old items BEFORE deleting them for audit log
-            const { data: oldItems } = await supabase
+            const { data: oldItems } = await supabaseClient
                 .from('deal_items')
                 .select(`
                     *,
@@ -915,14 +915,14 @@ async function saveDeal(status = null) {
                 .eq('deal_id', editDealId);
             
             // Get old deal data for comparison
-            const { data: oldDealData } = await supabase
+            const { data: oldDealData } = await supabaseClient
                 .from('deals')
                 .select('*')
                 .eq('deal_id', editDealId)
                 .single();
             
             // Update existing deal
-            const { data: updatedDeal, error: dealError } = await supabase
+            const { data: updatedDeal, error: dealError } = await supabaseClient
                 .from('deals')
                 .update({
                     customer_id: customerId,
@@ -946,7 +946,7 @@ async function saveDeal(status = null) {
             }
             
             // Delete existing items
-            const { error: deleteError } = await supabase
+            const { error: deleteError } = await supabaseClient
                 .from('deal_items')
                 .delete()
                 .eq('deal_id', editDealId);
@@ -963,7 +963,7 @@ async function saveDeal(status = null) {
                 size: item.size || null
             }));
             
-            const { error: itemsError } = await supabase
+            const { error: itemsError } = await supabaseClient
                 .from('deal_items')
                 .insert(itemsToInsert);
             
@@ -1095,7 +1095,7 @@ async function saveDeal(status = null) {
             
         } else {
             // Insert new deal
-            const { data: dealData, error: dealError } = await supabase
+            const { data: dealData, error: dealError } = await supabaseClient
                 .from('deals')
                 .insert({
                     customer_id: customerId,
@@ -1122,7 +1122,7 @@ async function saveDeal(status = null) {
                 size: item.size || null
             }));
             
-            const { error: itemsError } = await supabase
+            const { error: itemsError } = await supabaseClient
                 .from('deal_items')
                 .insert(itemsToInsert);
             
@@ -1254,7 +1254,7 @@ async function saveCustomer(event) {
         let result;
         if (customerId) {
             // Update existing customer
-            result = await supabase
+            result = await supabaseClient
                 .from('customers')
                 .update(customerData)
                 .eq('customer_id', customerId)
@@ -1262,7 +1262,7 @@ async function saveCustomer(event) {
                 .single();
         } else {
             // Create new customer
-            result = await supabase
+            result = await supabaseClient
                 .from('customers')
                 .insert(customerData)
                 .select()
@@ -1287,7 +1287,7 @@ async function saveCustomer(event) {
             if (customerId && existingContactId) {
                 // Update existing primary contact
                 console.log('Updating existing contact:', existingContactId);
-                const { error: updateContactError } = await supabase
+                const { error: updateContactError } = await supabaseClient
                     .from('contacts')
                     .update(contactData)
                     .eq('contact_id', existingContactId);
@@ -1302,7 +1302,7 @@ async function saveCustomer(event) {
                 console.log('Creating new contact for:', savedCustomer.business_name);
                 contactData.created_by = localStorage.getItem('crm_username') || 'משתמש מערכת';
                 
-                const { data: newContact, error: contactError } = await supabase
+                const { data: newContact, error: contactError } = await supabaseClient
                     .from('contacts')
                     .insert(contactData)
                     .select()
@@ -1313,7 +1313,7 @@ async function saveCustomer(event) {
                     showAlert('הלקוח נשמר אך הייתה שגיאה ביצירת איש הקשר: ' + contactError.message, 'warning');
                 } else if (newContact) {
                     // Set as primary contact
-                    await supabase
+                    await supabaseClient
                         .from('customers')
                         .update({ primary_contact_id: newContact.contact_id })
                         .eq('customer_id', savedCustomer.customer_id);
@@ -1671,7 +1671,7 @@ async function loadCustomerNotesHistory(customerId, containerId = 'customer-note
     
     try {
         // Fetch activities for this customer
-        const { data: activities, error } = await supabase
+        const { data: activities, error } = await supabaseClient
             .from('activities')
             .select('*')
             .eq('customer_id', customerId)
@@ -1739,7 +1739,7 @@ async function loadCustomerNotesHistory(customerId, containerId = 'customer-note
 function deleteCustomer(customerId) {
     showConfirmModal('מחיקת לקוח', 'האם אתה בטוח שברצונך למחוק לקוח זה? פעולה זו תמחק גם את כל העסקאות הקשורות אליו.', async () => {
         try {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('customers')
                 .delete()
                 .eq('customer_id', customerId);
@@ -1773,7 +1773,7 @@ async function switchToEditCustomer(customerId) {
     
     if (!customer) {
         try {
-            const { data } = await supabase.from('customers').select('*').eq('customer_id', customerId).single();
+            const { data } = await supabaseClient.from('customers').select('*').eq('customer_id', customerId).single();
             customer = data;
         } catch (e) {
             console.error('Error fetching customer for edit:', e);
@@ -1814,7 +1814,7 @@ async function viewCustomerDetails(customerId) {
     
     // Load customer details
     try {
-        const { data: customer, error } = await supabase
+        const { data: customer, error } = await supabaseClient
             .from('customers')
             .select('*')
             .eq('customer_id', customerId)
@@ -1992,7 +1992,7 @@ async function loadCustomerContacts(customerId, primaryContactId) {
     container.innerHTML = '<div class="spinner"></div>';
     
     try {
-        const { data: customerContacts, error } = await supabase
+        const { data: customerContacts, error } = await supabaseClient
             .from('contacts')
             .select('*')
             .eq('customer_id', customerId)
@@ -2057,7 +2057,7 @@ async function savePrimaryContact(customerId) {
     const contactId = document.getElementById('customer-primary-contact').value || null;
     
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('customers')
             .update({ primary_contact_id: contactId })
             .eq('customer_id', customerId);
@@ -2084,7 +2084,7 @@ async function loadCustomerNotes(customerId) {
     container.innerHTML = '<div class="spinner"></div>';
     
     try {
-        const { data: notes, error } = await supabase
+        const { data: notes, error } = await supabaseClient
             .from('activities')
             .select('*')
             .eq('customer_id', customerId)
@@ -2161,7 +2161,7 @@ async function addCustomerNote(event, customerId) {
     const author = localStorage.getItem('crm_username') || 'משתמש מערכת';
     
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('activities')
             .insert({
                 customer_id: customerId,
@@ -2216,7 +2216,7 @@ async function saveCustomerNoteEdit(activityId) {
     const editor = localStorage.getItem('crm_username') || 'משתמש מערכת';
     
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('activities')
             .update({
                 description: newText,
@@ -2248,7 +2248,7 @@ async function saveCustomerNoteEdit(activityId) {
 function deleteCustomerNote(activityId) {
     showConfirmModal('מחיקת הערה', 'האם אתה בטוח שברצונך למחוק הערה זו?', async () => {
         try {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('activities')
                 .delete()
                 .eq('activity_id', activityId);
@@ -2279,7 +2279,7 @@ function deleteCustomerNote(activityId) {
 async function loadContacts() {
     try {
         // First, try simple query to load contacts
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('contacts')
             .select('*')
             .order('contact_name', { ascending: true });
@@ -2323,7 +2323,7 @@ async function displayContacts() {
     if (contacts.length === 0) {
         // Check if we got an error or just no data
         try {
-            const { error } = await supabase.from('contacts').select('contact_id').limit(1);
+            const { error } = await supabaseClient.from('contacts').select('contact_id').limit(1);
             if (error && (error.message?.includes('does not exist') || error.code === '42P01')) {
                 container.innerHTML = `
                     <div class="text-center" style="padding: 2rem; color: var(--text-tertiary);">
@@ -2794,7 +2794,7 @@ async function saveContact(event) {
     try {
         if (contactId) {
             // Update
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('contacts')
                 .update(contactData)
                 .eq('contact_id', contactId);
@@ -2804,7 +2804,7 @@ async function saveContact(event) {
         } else {
             // Insert
             contactData.created_by = author;
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('contacts')
                 .insert(contactData);
             
@@ -2831,7 +2831,7 @@ async function switchToEditContact(contactId) {
     if (!contact) {
         // Fetch if not found in memory
         try {
-            const { data } = await supabase.from('contacts').select('*').eq('contact_id', contactId).single();
+            const { data } = await supabaseClient.from('contacts').select('*').eq('contact_id', contactId).single();
             contact = data;
         } catch (e) {
             console.error('Error fetching contact for edit:', e);
@@ -2875,7 +2875,7 @@ async function viewContactDetails(contactId) {
     modal.classList.add('active');
     
     try {
-        const { data: contact, error } = await supabase
+        const { data: contact, error } = await supabaseClient
             .from('contacts')
             .select('*')
             .eq('contact_id', contactId)
@@ -2885,7 +2885,7 @@ async function viewContactDetails(contactId) {
         
         // Fetch customer details manually to avoid "multiple relationships" ambiguous error
         if (contact.customer_id) {
-            const { data: customerData } = await supabase
+            const { data: customerData } = await supabaseClient
                 .from('customers')
                 .select('business_name, city, customer_id')
                 .eq('customer_id', contact.customer_id)
@@ -3040,7 +3040,7 @@ async function addContactNote(contactId) {
     
     try {
         // Fetch current notes first to append
-        const { data: currentContact, error: fetchError } = await supabase
+        const { data: currentContact, error: fetchError } = await supabaseClient
             .from('contacts')
             .select('notes')
             .eq('contact_id', contactId)
@@ -3054,7 +3054,7 @@ async function addContactNote(contactId) {
         const noteEntry = `[${timestamp} - ${author}]\n${newNote}\n`;
         const updatedNotes = (currentContact.notes || '') + (currentContact.notes ? '\n' : '') + noteEntry;
         
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseClient
             .from('contacts')
             .update({ notes: updatedNotes })
             .eq('contact_id', contactId);
@@ -3128,7 +3128,7 @@ async function deleteContactNote(contactId, index) {
     if (!confirm('האם אתה בטוח שברצונך למחוק הערה זו?')) return;
     
     try {
-        const { data: contact } = await supabase.from('contacts').select('notes').eq('contact_id', contactId).single();
+        const { data: contact } = await supabaseClient.from('contacts').select('notes').eq('contact_id', contactId).single();
         let notes = parseContactNotes(contact.notes);
         
         // Remove at index
@@ -3138,7 +3138,7 @@ async function deleteContactNote(contactId, index) {
         
         const newNotesStr = stringifyContactNotes(notes);
         
-        await supabase.from('contacts').update({ notes: newNotesStr }).eq('contact_id', contactId);
+        await supabaseClient.from('contacts').update({ notes: newNotesStr }).eq('contact_id', contactId);
         
         // Update cache
         const contactIndex = contacts.findIndex(c => c.contact_id === contactId);
@@ -3174,7 +3174,7 @@ async function saveContactNoteEdit(contactId, index) {
     try {
         const newContent = document.getElementById(`edit-contact-note-input-${index}`).value;
         
-        const { data: contact } = await supabase.from('contacts').select('notes').eq('contact_id', contactId).single();
+        const { data: contact } = await supabaseClient.from('contacts').select('notes').eq('contact_id', contactId).single();
         let notes = parseContactNotes(contact.notes);
         
         if (notes[index]) {
@@ -3183,7 +3183,7 @@ async function saveContactNoteEdit(contactId, index) {
         
         const newNotesStr = stringifyContactNotes(notes);
         
-        await supabase.from('contacts').update({ notes: newNotesStr }).eq('contact_id', contactId);
+        await supabaseClient.from('contacts').update({ notes: newNotesStr }).eq('contact_id', contactId);
         
         // Update cache
         const contactIndex = contacts.findIndex(c => c.contact_id === contactId);
@@ -3200,7 +3200,7 @@ async function saveContactNoteEdit(contactId, index) {
 function deleteContact(contactId) {
     showConfirmModal('מחיקת איש קשר', 'האם אתה בטוח שברצונך למחוק איש קשר זה?', async () => {
         try {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('contacts')
                 .delete()
                 .eq('contact_id', contactId);
@@ -3510,7 +3510,7 @@ async function saveProduct(event) {
         let result;
         if (productId) {
             // Update existing product
-            result = await supabase
+            result = await supabaseClient
                 .from('products')
                 .update(productData)
                 .eq('product_id', productId)
@@ -3518,7 +3518,7 @@ async function saveProduct(event) {
                 .single();
         } else {
             // Create new product
-            result = await supabase
+            result = await supabaseClient
                 .from('products')
                 .insert(productData)
                 .select()
@@ -3556,7 +3556,7 @@ async function saveProduct(event) {
 function deleteProduct(productId) {
     showConfirmModal('מחיקת מוצר', 'האם אתה בטוח שברצונך למחוק מוצר זה? פעולה זו אינה ניתנת לביטול.', async () => {
         try {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('products')
                 .delete()
                 .eq('product_id', productId);
@@ -3594,7 +3594,7 @@ async function loadDealsHistory(preservePage = false) {
         const sortFilter = document.getElementById('filter-sort')?.value || 'newest';
         
         // Build query
-        let query = supabase
+        let query = supabaseClient
             .from('deals')
             .select(`
                 *,
@@ -3824,7 +3824,7 @@ function createDealCard(deal) {
 async function viewDealDetails(dealId) {
     try {
         // Fetch deal with all related data
-        const { data: deal, error: dealError } = await supabase
+        const { data: deal, error: dealError } = await supabaseClient
             .from('deals')
             .select(`
                 *,
@@ -3842,7 +3842,7 @@ async function viewDealDetails(dealId) {
         if (dealError) throw dealError;
         
         // Fetch deal items
-        const { data: items, error: itemsError } = await supabase
+        const { data: items, error: itemsError } = await supabaseClient
             .from('deal_items')
             .select(`
                 *,
@@ -4047,7 +4047,7 @@ async function loadDealNotes(dealId) {
     container.innerHTML = '<div class="text-center" style="color: var(--text-tertiary);">טוען פעילויות...</div>';
     
     try {
-        const { data: notes, error } = await supabase
+        const { data: notes, error } = await supabaseClient
             .from('activities')
             .select('*')
             .eq('deal_id', dealId)
@@ -4115,7 +4115,7 @@ async function addDealNote() {
         // Save author name for future use
         localStorage.setItem('crm_username', author);
 
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('activities')
             .insert({
                 deal_id: dealId,
@@ -4142,7 +4142,7 @@ async function addDealNote() {
 function deleteNote(activityId) {
     showConfirmModal('מחיקת הערה', 'האם אתה בטוח שברצונך למחוק את ההערה?', async () => {
         try {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('activities')
                 .delete()
                 .eq('activity_id', activityId);
@@ -4161,7 +4161,7 @@ function deleteNote(activityId) {
 // Edit a note/activity - opens a modal to edit all properties
 async function editNote(activityId) {
     // Fetch current note
-    const { data: note, error } = await supabase
+    const { data: note, error } = await supabaseClient
         .from('activities')
         .select('*')
         .eq('activity_id', activityId)
@@ -4187,7 +4187,7 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
     container.innerHTML = '<div class="text-center" style="font-size: 0.8rem; color: var(--text-tertiary);">טוען...</div>';
     
     try {
-        const { data: notes, error } = await supabase
+        const { data: notes, error } = await supabaseClient
             .from('activity_notes')
             .select('*')
             .eq('activity_id', activityId)
@@ -4262,7 +4262,7 @@ async function saveActivityNoteEdit(noteId, activityId) {
             return;
         }
         
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('activity_notes')
             .update({ content: newContent })
             .eq('id', noteId);
@@ -4329,7 +4329,7 @@ async function addActivityNoteFromView(activityId) {
 
 async function insertActivityNoteToDb(activityId, content) {
     const performedBy = localStorage.getItem('crm_username') || 'משתמש מערכת';
-    const { error } = await supabase.from('activity_notes').insert({
+    const { error } = await supabaseClient.from('activity_notes').insert({
         activity_id: activityId, content, created_by: performedBy
     });
     if (error) throw error;
@@ -4338,7 +4338,7 @@ async function insertActivityNoteToDb(activityId, content) {
 async function deleteActivityNote(noteId, activityId) {
     showConfirmModal('מחיקת הערה', 'האם למחוק את ההערה?', async () => {
         try {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('activity_notes')
                 .delete()
                 .eq('id', noteId);
@@ -4371,7 +4371,7 @@ async function loadCustomerContactsForActivity(customerId, selectId, preselectId
     select.disabled = false;
     
     try {
-        const { data: contacts, error } = await supabase
+        const { data: contacts, error } = await supabaseClient
             .from('contacts')
             .select('*')
             .eq('customer_id', customerId)
@@ -4548,7 +4548,7 @@ async function populateEditActivityDeals(currentDealId, filterCustomerId = null)
     // If NOT present, maybe show all? Or clear?
     
     try {
-        let query = supabase
+        let query = supabaseClient
             .from('deals')
             .select('deal_id, customers(business_name), created_at')
             .order('created_at', { ascending: false })
@@ -4682,7 +4682,7 @@ async function saveActivityEdit(event) {
         if (dealId) {
             updateData.deal_id = dealId;
             // Get customer_id from deal
-            const { data: deal } = await supabase
+            const { data: deal } = await supabaseClient
                 .from('deals')
                 .select('customer_id')
                 .eq('deal_id', dealId)
@@ -4696,7 +4696,7 @@ async function saveActivityEdit(event) {
         }
         
         // Attempt 1: Full update (including contact_id and edit tracking)
-        const { error: firstAttemptError } = await supabase
+        const { error: firstAttemptError } = await supabaseClient
             .from('activities')
             .update(updateData)
             .eq('activity_id', activityId);
@@ -4708,7 +4708,7 @@ async function saveActivityEdit(event) {
             const fallbackData1 = { ...updateData };
             delete fallbackData1.contact_id;
             
-            const { error: secondAttemptError } = await supabase
+            const { error: secondAttemptError } = await supabaseClient
                 .from('activities')
                 .update(fallbackData1)
                 .eq('activity_id', activityId);
@@ -4721,7 +4721,7 @@ async function saveActivityEdit(event) {
                 delete fallbackData2.edited_at;
                 delete fallbackData2.edited_by;
                 
-                const { error: thirdAttemptError } = await supabase
+                const { error: thirdAttemptError } = await supabaseClient
                     .from('activities')
                     .update(fallbackData2)
                     .eq('activity_id', activityId);
@@ -4910,7 +4910,7 @@ async function populateNewActivityDeals() {
     select.innerHTML = '<option value="">-- ללא עסקה --</option>';
     
     try {
-        const { data: deals, error } = await supabase
+        const { data: deals, error } = await supabaseClient
             .from('deals')
             .select('deal_id, customers(business_name), created_at')
             .order('created_at', { ascending: false })
@@ -4979,7 +4979,7 @@ async function saveNewActivity(event) {
         if (dealId) {
             activityData.deal_id = dealId;
             // Get customer_id from deal
-            const { data: deal } = await supabase
+            const { data: deal } = await supabaseClient
                 .from('deals')
                 .select('customer_id')
                 .eq('deal_id', dealId)
@@ -4992,7 +4992,7 @@ async function saveNewActivity(event) {
             activityData.customer_id = customerId;
         }
         
-        const { data: newActivity, error } = await supabase
+        const { data: newActivity, error } = await supabaseClient
             .from('activities')
             .insert(activityData)
             .select()
@@ -5029,7 +5029,7 @@ function closeDealModal() {
 // Update payment terms for a deal
 async function updateDealPaymentTerms(dealId, paymentTerms) {
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('deals')
             .update({ payment_terms: paymentTerms })
             .eq('deal_id', dealId);
@@ -5048,7 +5048,7 @@ function deleteDeal(dealId) {
     showConfirmModal('מחיקת עסקה', 'האם אתה בטוח שברצונך למחוק עסקה זו? פעולה זו אינה ניתנת לביטול.', async () => {
         try {
             // Delete deal items first (cascade should handle this, but being explicit)
-            const { error: itemsError } = await supabase
+            const { error: itemsError } = await supabaseClient
                 .from('deal_items')
                 .delete()
                 .eq('deal_id', dealId);
@@ -5056,7 +5056,7 @@ function deleteDeal(dealId) {
             if (itemsError) throw itemsError;
             
             // Delete deal
-            const { error: dealError } = await supabase
+            const { error: dealError } = await supabaseClient
                 .from('deals')
                 .delete()
                 .eq('deal_id', dealId);
@@ -5078,7 +5078,7 @@ function deleteDeal(dealId) {
 async function editDeal(dealId) {
     try {
         // Fetch deal with all related data
-        const { data: deal, error: dealError } = await supabase
+        const { data: deal, error: dealError } = await supabaseClient
             .from('deals')
             .select(`
                 *,
@@ -5093,7 +5093,7 @@ async function editDeal(dealId) {
         if (dealError) throw dealError;
         
         // Fetch deal items
-        const { data: items, error: itemsError } = await supabase
+        const { data: items, error: itemsError } = await supabaseClient
             .from('deal_items')
             .select(`
                 *,
@@ -5178,7 +5178,7 @@ async function editDeal(dealId) {
 function deleteActivity(activityId) {
     showConfirmModal('מחיקת פעילות', 'האם אתה בטוח שברצונך למחוק פעילות זו? פעולה זו אינה ניתנת לביטול.', async () => {
         try {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('activities')
                 .delete()
                 .eq('activity_id', activityId);
@@ -5283,7 +5283,7 @@ async function loadThisWeek() {
         // Populate creator filter if needed
         const creatorSelect = document.getElementById('filter-thisweek-creator');
         if (creatorSelect && creatorSelect.options.length <= 1) {
-            const { data: creatorsData } = await supabase
+            const { data: creatorsData } = await supabaseClient
                 .from('activities')
                 .select('created_by');
                 
@@ -5312,7 +5312,7 @@ async function loadThisWeek() {
         const sortFilter = document.getElementById('filter-thisweek-sort')?.value || 'upcoming';
         
         // Build query for activities in this week
-        let query = supabase
+        let query = supabaseClient
             .from('activities')
             .select(`
                 *,
@@ -5583,7 +5583,7 @@ async function loadThisWeek() {
 
 async function markActivityComplete(activityId) {
     try {
-        const { data: updatedActivity, error } = await supabase
+        const { data: updatedActivity, error } = await supabaseClient
             .from('activities')
             .update({ 
                 completed: true,
@@ -5612,7 +5612,7 @@ async function markActivityComplete(activityId) {
 async function editActivity(activityId) {
     try {
         // Load activity from database
-        const { data: activity, error } = await supabase
+        const { data: activity, error } = await supabaseClient
             .from('activities')
             .select('*')
             .eq('activity_id', activityId)
@@ -5637,7 +5637,7 @@ async function editActivity(activityId) {
 async function viewActivityDetails(activityId) {
     try {
         // Load activity details with relations
-        const { data: activity, error } = await supabase
+        const { data: activity, error } = await supabaseClient
             .from('activities')
             .select(`
                 *,
@@ -5674,7 +5674,7 @@ async function viewActivityDetails(activityId) {
         // Manually fetch linked contact if exists (to avoid 400 error on join)
         let linkedContact = null;
         if (activity.contact_id) {
-            const { data: contactData } = await supabase
+            const { data: contactData } = await supabaseClient
                 .from('contacts')
                 .select('contact_id, contact_name, phone, email, role')
                 .eq('contact_id', activity.contact_id)
@@ -5865,7 +5865,7 @@ async function loadActivities(preservePage = false) {
         const sortFilter = document.getElementById('filter-activity-sort')?.value || 'upcoming';
         
         // Build query - exclude "הערה" type
-        let query = supabase
+        let query = supabaseClient
             .from('activities')
             .select(`
                 *,
@@ -6220,7 +6220,7 @@ async function toggleActivityCompletion(activityId, completed) {
             updateData.completed_at = null;
         }
         
-        const { data: updatedActivity, error } = await supabase
+        const { data: updatedActivity, error } = await supabaseClient
             .from('activities')
             .update(updateData)
             .eq('activity_id', activityId)
@@ -6263,7 +6263,7 @@ async function generateQuotePDF(specificDealId = null) {
         showAlert('מייצר הצעת מחיר...', 'info');
         
         // Fetch full deal data
-        const { data: deal, error: dealError } = await supabase
+        const { data: deal, error: dealError } = await supabaseClient
             .from('deals')
             .select(`
                 *,
@@ -6281,7 +6281,7 @@ async function generateQuotePDF(specificDealId = null) {
         if (dealError) throw dealError;
         
         // Fetch deal items
-        const { data: items, error: itemsError } = await supabase
+        const { data: items, error: itemsError } = await supabaseClient
             .from('deal_items')
             .select(`
                 *,
@@ -6524,7 +6524,7 @@ async function sendDealWhatsApp(specificDealId = null, btnElement = null) {
 
     try {
         // Fetch deal and items
-        const { data: deal, error: dealError } = await supabase
+        const { data: deal, error: dealError } = await supabaseClient
             .from('deals')
             .select(`*, customers(business_name, contact_name, phone)`)
             .eq('deal_id', dealId)
@@ -6629,7 +6629,7 @@ window.CRM = {
     products,
     customers,
     dealItems,
-    supabase,
+    supabaseClient,
     loadProducts,
     loadCustomers,
     saveDeal,
@@ -6644,7 +6644,7 @@ async function logAction(actionType, entityType, entityId, entityName, descripti
     try {
         const performedBy = localStorage.getItem('crm_username') || 'משתמש מערכת';
         
-        await supabase
+        await supabaseClient
             .from('audit_log')
             .insert({
                 action_type: actionType,
@@ -6748,7 +6748,7 @@ async function processImportCustomers(rows) {
     
     // Get existing customers to check for updates vs inserts
     // We match by 'business_name'
-    const { data: existingCustomers } = await supabase.from('customers').select('customer_id, business_name');
+    const { data: existingCustomers } = await supabaseClient.from('customers').select('customer_id, business_name');
     const existingMap = new Map((existingCustomers || []).map(c => [c.business_name.trim(), c.customer_id]));
     
     for (const rawRow of rows) {
@@ -6792,11 +6792,11 @@ async function processImportCustomers(rows) {
         
         if (existingId) {
             // Update
-            const { error } = await supabase.from('customers').update(customerData).eq('customer_id', existingId);
+            const { error } = await supabaseClient.from('customers').update(customerData).eq('customer_id', existingId);
             if (!error) updatedRequest++;
         } else {
             // Insert
-            const { data, error } = await supabase.from('customers').insert(customerData).select('customer_id').single();
+            const { data, error } = await supabaseClient.from('customers').insert(customerData).select('customer_id').single();
             if (!error && data) {
                 createdRequest++;
                 currentCustomerId = data.customer_id;
@@ -6806,7 +6806,7 @@ async function processImportCustomers(rows) {
         // Handle Automatic Contact Creation/Update from Customer Row
         if (currentCustomerId && customerData.contact_name) {
             // Check if this contact already exists for this customer
-            const { data: existingContact, error: fetchError } = await supabase
+            const { data: existingContact, error: fetchError } = await supabaseClient
                 .from('contacts')
                 .select('contact_id')
                 .eq('customer_id', currentCustomerId)
@@ -6831,12 +6831,12 @@ async function processImportCustomers(rows) {
 
             if (existingContact) {
                 // Update existing contact details
-                const { error } = await supabase.from('contacts').update(contactData).eq('contact_id', existingContact.contact_id);
+                const { error } = await supabaseClient.from('contacts').update(contactData).eq('contact_id', existingContact.contact_id);
                 if (!error) contactsUpdated++;
                 else console.error('Error updating contact:', error);
             } else {
                 // Create new contact
-                const { error } = await supabase.from('contacts').insert(contactData);
+                const { error } = await supabaseClient.from('contacts').insert(contactData);
                 if (!error) {
                     contactsCreated++;
                 }
@@ -6864,14 +6864,14 @@ async function processImportContacts(rows) {
     let skipped = 0;
     
     // We need customers to link
-    const { data: customersList } = await supabase.from('customers').select('customer_id, business_name');
+    const { data: customersList } = await supabaseClient.from('customers').select('customer_id, business_name');
     // Normalize names for matching
     const customerMap = new Map((customersList || []).map(c => [c.business_name.trim(), c.customer_id]));
     
     // Existing contacts to check for updates
     // Matching logic for contacts is harder. Name + Customer? Or just Name?
     // Let's match by Name.
-    const { data: existingContacts } = await supabase.from('contacts').select('contact_id, contact_name, customer_id');
+    const { data: existingContacts } = await supabaseClient.from('contacts').select('contact_id, contact_name, customer_id');
     
     for (const rawRow of rows) {
         // Normalize keys
@@ -6926,11 +6926,11 @@ async function processImportContacts(rows) {
         }
         
         if (existingId) {
-             await supabase.from('contacts').update(contactData).eq('contact_id', existingId);
+             await supabaseClient.from('contacts').update(contactData).eq('contact_id', existingId);
              updatedRequest++;
         } else {
              // Create new
-             await supabase.from('contacts').insert(contactData);
+             await supabaseClient.from('contacts').insert(contactData);
              createdRequest++;
         }
     }
@@ -6953,7 +6953,7 @@ async function loadAuditLog() {
         const performerFilter = document.getElementById('filter-audit-performer')?.value || '';
         
         // Build query
-        let query = supabase
+        let query = supabaseClient
             .from('audit_log')
             .select('*')
             .order('created_at', { ascending: false });
@@ -7188,14 +7188,14 @@ async function loadReports() {
         showAlert('טוען נתונים לדוחות...', 'info');
 
         // Fetch all deals
-        const { data: deals, error: dealsError } = await supabase
+        const { data: deals, error: dealsError } = await supabaseClient
             .from('deals')
             .select('*');
             
         if (dealsError) throw dealsError;
         
         // Fetch deal items (simplified query)
-        const { data: dealItems, error: itemsError } = await supabase
+        const { data: dealItems, error: itemsError } = await supabaseClient
             .from('deal_items')
             .select(`
                 deal_id,
@@ -7215,7 +7215,7 @@ async function loadReports() {
         const totalSales = wonDeals.reduce((sum, deal) => sum + (deal.final_amount || 0), 0);
         
         // Fetch Supplier Orders for Procurement Report
-        const { data: supplierOrdersData, error: supplierOrdersError } = await supabase
+        const { data: supplierOrdersData, error: supplierOrdersError } = await supabaseClient
             .from('supplier_orders')
             .select('total_amount, order_status'); // Select only needed fields
 
@@ -7513,7 +7513,7 @@ async function exportThisWeek() {
     const creatorFilter = document.getElementById('filter-thisweek-creator')?.value || '';
     const { startOfWeek, endOfWeek } = getWeekDates(currentWeekOffset);
     
-    let query = supabase
+    let query = supabaseClient
         .from('activities')
         .select(`
             *,
@@ -7566,7 +7566,7 @@ async function exportThisWeek() {
 async function exportDeals() {
     const statusFilter = document.getElementById('filter-status')?.value || '';
     
-    let query = supabase
+    let query = supabaseClient
         .from('deals')
         .select(`
             *,
@@ -7618,7 +7618,7 @@ async function exportActivities() {
     const creatorFilter = document.getElementById('filter-activity-creator')?.value || '';
     const searchFilter = document.getElementById('filter-activity-search')?.value.toLowerCase() || '';
 
-    let query = supabase
+    let query = supabaseClient
         .from('activities')
         .select(`
             *,
@@ -7786,7 +7786,7 @@ async function exportAuditLog() {
     const performerFilter = document.getElementById('filter-audit-performer')?.value || '';
     const dateFilter = document.getElementById('filter-audit-date')?.value || '';
 
-    let query = supabase
+    let query = supabaseClient
         .from('audit_log')
         .select('*')
         .order('created_at', { ascending: false })
@@ -7875,7 +7875,7 @@ async function loadCustomerDeals(customerId, containerId = 'view-customer-deals-
     container.innerHTML = '<div class="spinner"></div>';
     
     try {
-        const { data: deals, error } = await supabase
+        const { data: deals, error } = await supabaseClient
             .from('deals')
             .select('*, customers(business_name)')
             .eq('customer_id', customerId)
@@ -8255,7 +8255,7 @@ async function performGlobalSearch() {
 
     // 1. Search Customers (Server - DB ILIKE)
     if (includeCustomers) {
-        const custPromise = supabase
+        const custPromise = supabaseClient
             .from('customers')
             .select('*')
             .or(`business_name.ilike.%${query}%,contact_name.ilike.%${query}%,phone.ilike.%${query}%,city.ilike.%${query}%,email.ilike.%${query}%`)
@@ -8268,7 +8268,7 @@ async function performGlobalSearch() {
 
     // 1.5 Search Contacts
     if (includeContacts) {
-        const contPromise = supabase
+        const contPromise = supabaseClient
             .from('contacts')
             .select('*, customers(business_name)')
             .or(`contact_name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%,role.ilike.%${query}%`)
@@ -8280,7 +8280,7 @@ async function performGlobalSearch() {
             .catch(async (err) => {
                 console.warn('Contact search with join failed, trying simple search:', err);
                 // Fallback: Simple search without join (in case FK is missing)
-                const { data: contacts } = await supabase
+                const { data: contacts } = await supabaseClient
                     .from('contacts')
                     .select('*')
                     .or(`contact_name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
@@ -8291,7 +8291,7 @@ async function performGlobalSearch() {
                     const customerIds = [...new Set(contacts.map(c => c.customer_id).filter(id => id))];
                     
                     if (customerIds.length > 0) {
-                        const { data: customers } = await supabase
+                        const { data: customers } = await supabaseClient
                             .from('customers')
                             .select('customer_id, business_name')
                             .in('customer_id', customerIds);
@@ -8316,7 +8316,7 @@ async function performGlobalSearch() {
 
     // 2. Search Products (Server - DB ILIKE)
     if (includeProducts) {
-       const prodPromise = supabase
+       const prodPromise = supabaseClient
             .from('products')
             .select('*')
             .or(`product_name.ilike.%${query}%,sku.ilike.%${query}%,description.ilike.%${query}%`)
@@ -8330,7 +8330,7 @@ async function performGlobalSearch() {
     // 3. Search Deals (Server - DB ILIKE with Inner Join)
     // Searches for deals where deal_status matches OR customer business_name matches
     if (includeDeals) {
-        const dealPromise = supabase
+        const dealPromise = supabaseClient
             .from('deals')
             .select('deal_id, deal_status, created_at, final_amount, customer_id, customers!inner(business_name)')
             .or(`deal_status.ilike.%${query}%,customers.business_name.ilike.%${query}%`)
@@ -8345,7 +8345,7 @@ async function performGlobalSearch() {
     // 4. Search Activities (Server - DB ILIKE)
     // Searches description (notes) and type
     if (includeActivities) {
-        const actPromise = supabase
+        const actPromise = supabaseClient
             .from('activities')
             .select('*, customers(business_name), deals(deal_id)')
             .or(`description.ilike.%${query}%,activity_type.ilike.%${query}%`)
@@ -8542,7 +8542,7 @@ function highlight(text, query) {
 
 async function loadSuppliers() {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('suppliers')
             .select('*')
             .eq('active', true)
@@ -8831,9 +8831,9 @@ async function saveSupplier(event) {
         let result;
         // 1. Try saving with extended data first (Best Case: DB updated)
         if (supplierId) {
-             result = await supabase.from('suppliers').update(extendedData).eq('supplier_id', supplierId);
+             result = await supabaseClient.from('suppliers').update(extendedData).eq('supplier_id', supplierId);
         } else {
-             result = await supabase.from('suppliers').insert([extendedData]);
+             result = await supabaseClient.from('suppliers').insert([extendedData]);
         }
         
         // 2. Fallback: Store extra data in notes if columns missing
@@ -8851,9 +8851,9 @@ async function saveSupplier(event) {
                  basicDataWithWorkaround.notes = basicData.notes + '<<<EXTRA_DATA>>>' + JSON.stringify(extraDataPayload);
                  
                  if (supplierId) {
-                     result = await supabase.from('suppliers').update(basicDataWithWorkaround).eq('supplier_id', supplierId);
+                     result = await supabaseClient.from('suppliers').update(basicDataWithWorkaround).eq('supplier_id', supplierId);
                  } else {
-                     result = await supabase.from('suppliers').insert([basicDataWithWorkaround]);
+                     result = await supabaseClient.from('suppliers').insert([basicDataWithWorkaround]);
                  }
                  
                  if (result.error) throw result.error;
@@ -8895,7 +8895,7 @@ async function viewSupplierDetails(id) {
         
         // If not found (rare), fetch
         if (!s) {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
             .from('suppliers')
             .select('*')
             .eq('supplier_id', id)
@@ -8906,7 +8906,7 @@ async function viewSupplierDetails(id) {
         }
 
         // Fetch recent orders
-        const { data: orders } = await supabase
+        const { data: orders } = await supabaseClient
             .from('supplier_orders')
             .select('*')
             .eq('supplier_id', id)
@@ -8987,7 +8987,7 @@ async function loadSupplierOrders() {
     
     try {
         // Build query
-        let query = supabase
+        let query = supabaseClient
             .from('supplier_orders')
             .select('*, suppliers(supplier_name, contact_name)')
             .order('created_at', { ascending: false });
@@ -9197,7 +9197,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
     if (orderId) {
         try {
             // Fetch order
-            const { data: order, error } = await supabase
+            const { data: order, error } = await supabaseClient
                 .from('supplier_orders')
                 .select('*')
                 .eq('order_id', orderId)
@@ -9233,7 +9233,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             }
             
             // Fetch items
-            const { data: items } = await supabase
+            const { data: items } = await supabaseClient
                 .from('supplier_order_items')
                 .select('*')
                 .eq('order_id', orderId);
@@ -9427,7 +9427,7 @@ async function addNewProductPrompt(index) {
     if (formValues) {
         try {
             // Save to database
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('products')
                 .insert([{
                     product_name: formValues.name,
@@ -9654,7 +9654,7 @@ async function saveNoteChange(content, action, index = null) {
     
     // Save to DB
     try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('supplier_orders')
             .update({ notes: updatedFullText })
             .eq('order_id', orderId);
@@ -9716,15 +9716,15 @@ async function saveSupplierOrder(event) {
         
         if (orderId) {
             // Update Order
-            const { error } = await supabase.from('supplier_orders').update(orderData).eq('order_id', orderId);
+            const { error } = await supabaseClient.from('supplier_orders').update(orderData).eq('order_id', orderId);
             if (error) throw error;
             
             // Delete existing items (simple replace strategy)
-            await supabase.from('supplier_order_items').delete().eq('order_id', orderId);
+            await supabaseClient.from('supplier_order_items').delete().eq('order_id', orderId);
         } else {
             // Create Order
             orderData.created_by = author;
-            const { data, error } = await supabase.from('supplier_orders').insert(orderData).select().single();
+            const { data, error } = await supabaseClient.from('supplier_orders').insert(orderData).select().single();
             if (error) throw error;
             savedOrderId = data.order_id;
         }
@@ -9748,7 +9748,7 @@ async function saveSupplierOrder(event) {
                 };
             });
             
-            const { error: itemsError } = await supabase.from('supplier_order_items').insert(itemsToInsert);
+            const { error: itemsError } = await supabaseClient.from('supplier_order_items').insert(itemsToInsert);
             if (itemsError) throw itemsError;
         }
         
@@ -9776,7 +9776,7 @@ async function deleteSupplier(supplierId) {
 
     if (result.isConfirmed) {
         try {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('suppliers')
                 .delete()
                 .eq('supplier_id', supplierId);
@@ -9806,7 +9806,7 @@ async function deleteSupplierOrder(orderId) {
     });
     if (result.isConfirmed) {
         try {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from('supplier_orders')
                 .delete()
                 .eq('order_id', orderId);
@@ -9862,7 +9862,7 @@ async function exportSupplierOrderPDF() {
     let creationDate = new Date().toLocaleDateString('he-IL'); // Fallback
 
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('supplier_orders')
             .select('order_number, created_at')
             .eq('order_id', orderId)
