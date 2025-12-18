@@ -1757,3 +1757,55 @@ a[href^="tel:"] {
 div.swal2-container {
     z-index: 20000 !important;
 }
+
+/* Mention Autocomplete Styles */
+.mention-suggestions {
+    position: absolute;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10000;
+    min-width: 250px;
+    display: none;
+}
+
+.mention-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mention-item:last-child {
+    border-bottom: none;
+}
+
+.mention-item:hover {
+    background-color: #f8fafc;
+}
+
+.mention-item .mention-main {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.mention-item .mention-sub {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.mention-item .mention-type {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-left: 5px;
+}
+
+.mention-type.deal { background: #dbeafe; color: #1e40af; }
+.mention-type.order { background: #fce7f3; color: #9d174d; }

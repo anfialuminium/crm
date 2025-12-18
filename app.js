@@ -625,7 +625,15 @@ function createItemRow(item, index) {
              colorSelect.className = 'form-select';
              colorSelect.style.width = '100px';
              
-             const colors = ['שחור', 'לבן'];
+             const standardColors = ['שחור', 'לבן'];
+             const colors = [...standardColors];
+             
+             // If item has a custom color not in standard list, include it
+             if (item.color && !standardColors.includes(item.color)) {
+                 colors.push(item.color);
+             }
+             
+             colors.push('אחר...');
              
              if (!item.color) {
                  const defaultOption = document.createElement('option');
@@ -639,11 +647,27 @@ function createItemRow(item, index) {
                  option.value = color;
                  option.textContent = color;
                  if (item.color === color) option.selected = true;
+                 if (color === 'אחר...') {
+                     option.style.fontWeight = 'bold';
+                     option.style.color = 'var(--primary-color)';
+                 }
                  colorSelect.appendChild(option);
              });
 
              colorSelect.addEventListener('change', (e) => {
-                 item.color = e.target.value;
+                 if (e.target.value === 'אחר...') {
+                     const customColor = prompt('הזן צבע חדש:');
+                     if (customColor && customColor.trim()) {
+                         item.color = customColor.trim();
+                         // We need to re-render to show the new custom color in the dropdown
+                         renderDealItems();
+                     } else {
+                         // Reset to previous value if cancelled
+                         e.target.value = item.color || '';
+                     }
+                 } else {
+                     item.color = e.target.value;
+                 }
              });
              colorCell.appendChild(colorSelect);
         } else {
@@ -1208,6 +1232,7 @@ function prepareNewCustomer() {
 }
 
 function openNewCustomerModal() {
+    setupMentionAutocomplete('new-notes');
     document.getElementById('customer-modal').classList.add('active');
 }
 
@@ -1723,7 +1748,7 @@ async function loadCustomerNotesHistory(customerId, containerId = 'customer-note
                              <button onclick="deleteActivity('${activity.activity_id}')" type="button" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0 4px;" title="מחק">🗑️</button>
                         </div>
                     </div>
-                    <div style="color: var(--text-primary); white-space: pre-wrap;">${activity.description || '-'}</div>
+                    <div style="color: var(--text-primary); white-space: pre-wrap;">${formatActivityText(activity.description || '-')}</div>
                     <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-tertiary);">
                         <span>
                             ${activityDate && type !== 'הערה' ? `<strong>מועד הפעילות:</strong> ${activityDate}` : ''}
@@ -1820,7 +1845,16 @@ async function viewCustomerDetails(customerId) {
     try {
         const { data: customer, error } = await supabaseClient
             .from('customers')
-            .select('*')
+            .select(`
+                *,
+                primary_contact:contacts!customers_primary_contact_id_fkey (
+                    contact_id,
+                    contact_name,
+                    phone,
+                    email,
+                    role
+                )
+            `)
             .eq('customer_id', customerId)
             .single();
         
@@ -1845,18 +1879,58 @@ async function viewCustomerDetails(customerId) {
                     </div>
                     <button class="btn btn-sm btn-secondary" onclick="switchToEditCustomer('${customer.customer_id}')">✏️ ערוך פרטים</button>
                 </div>
+
+                ${customer.primary_contact ? `
+                <div style="background: var(--bg-secondary); border: 1px solid var(--primary-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                         <h4 style="margin: 0; color: var(--primary-color); font-size: 1rem;">⭐ איש קשר מוביל</h4>
+                         <button class="btn btn-sm btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;" onclick="viewContactDetails('${customer.primary_contact.contact_id}'); closeCustomerDetailsModal();">פרטים מלאים ➡️</button>
+                    </div>
+                    <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div class="deal-card-info">
+                            <span class="deal-card-label">שם:</span>
+                            <span class="deal-card-value font-medium">${customer.primary_contact.contact_name}</span>
+                        </div>
+                        <div class="deal-card-info">
+                            <span class="deal-card-label">תפקיד:</span>
+                            <span class="deal-card-value">${customer.primary_contact.role || '-'}</span>
+                        </div>
+                        <div class="deal-card-info">
+                            <span class="deal-card-label">טלפון:</span>
+                            <span class="deal-card-value">
+                                 ${customer.primary_contact.phone ? `
+                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                         <a href="tel:${customer.primary_contact.phone}">${customer.primary_contact.phone}</a>
+                                          <a href="https://wa.me/${customer.primary_contact.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="ווטסאפ">
+                                            <img src="images/whatsapp.png" style="width: 16px;">
+                                        </a>
+                                     </div>
+                                 ` : '-'}
+                            </span>
+                        </div>
+                        <div class="deal-card-info">
+                            <span class="deal-card-label">אימייל:</span>
+                            <span class="deal-card-value">
+                                 ${customer.primary_contact.email ? `<a href="mailto:${customer.primary_contact.email}">${customer.primary_contact.email}</a>` : '-'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
                 <div class="form-grid">
+                    ${(!customer.primary_contact || customer.contact_name) ? `
                     <div class="deal-card-info">
-                        <span class="deal-card-label">איש קשר:</span>
+                        <span class="deal-card-label">איש קשר (עסק):</span>
                         <span class="deal-card-value">
-                            ${customer.primary_contact_id 
-                                ? `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500;" onclick="window.returnToCustomerId = '${customer.customer_id}'; viewContactDetails('${customer.primary_contact_id}'); closeCustomerDetailsModal();">${customer.contact_name || '-'}</span>` 
-                                : (customer.contact_name || '-')
-                            }
+                            ${customer.contact_name || '-'}
                         </span>
                     </div>
+                    ` : ''}
+
+                    ${(!customer.primary_contact || customer.phone) ? `
                     <div class="deal-card-info">
-                        <span class="deal-card-label">טלפון:</span>
+                        <span class="deal-card-label">טלפון (עסק):</span>
                         <span class="deal-card-value">
                             ${customer.phone ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -1864,15 +1938,15 @@ async function viewCustomerDetails(customerId) {
                                     <a href="tel:${customer.phone}" title="התקשר">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
-                                    <a href="https://wa.me/${customer.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
-                                        <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
-                                    </a>
                                 </div>
                             ` : '-'}
                         </span>
                     </div>
+                    ` : ''}
+
+                    ${(!customer.primary_contact || customer.email) ? `
                     <div class="deal-card-info">
-                        <span class="deal-card-label">אימייל:</span>
+                        <span class="deal-card-label">אימייל (עסק):</span>
                         <span class="deal-card-value">
                             ${customer.email ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -1882,6 +1956,8 @@ async function viewCustomerDetails(customerId) {
                             ` : '-'}
                         </span>
                     </div>
+                    ` : ''}
+
                     <div class="deal-card-info">
                         <span class="deal-card-label">כתובת:</span>
                         <span class="deal-card-value">${customer.city || '-'}</span>
@@ -1905,7 +1981,7 @@ async function viewCustomerDetails(customerId) {
             
             <!-- Primary Contact Section -->
             <div style="margin-bottom: 1.5rem;">
-                <h4 style="margin-bottom: 1rem;">⭐ איש קשר מוביל</h4>
+                <h4 style="margin-bottom: 1rem;">⭐ בחירת איש קשר מוביל</h4>
                 <div style="display: flex; gap: 1rem; align-items: center;">
                     <select id="customer-primary-contact" class="form-select" style="flex: 1;">
                         <option value="">-- ללא איש קשר מוביל --</option>
@@ -1957,6 +2033,8 @@ async function viewCustomerDetails(customerId) {
         // Load notes
         // Load history instead of just notes
         loadCustomerNotesHistory(customerId, 'view-customer-notes-history');
+
+        setupMentionAutocomplete('customer-new-note');
         
     } catch (error) {
         console.error('❌ Error loading customer details:', error);
@@ -3715,7 +3793,7 @@ async function loadDealsHistory(preservePage = false) {
                                         <button class="btn btn-sm btn-primary btn-icon" onclick="viewDealDetails('${deal.deal_id}')" title="פרטים">👁️</button>
                                         <button class="btn btn-sm btn-secondary btn-icon" onclick="editDeal('${deal.deal_id}')" title="ערוך">✏️</button>
                                         <button class="btn btn-sm btn-secondary btn-icon" onclick="generateQuotePDF('${deal.deal_id}')" title="ייצוא הצעת מחיר (PDF)">📄</button>
-                                        <button class="btn btn-sm btn-success btn-icon" onclick="sendDealWhatsApp('${deal.deal_id}', this)" title="שלח בווטסאפ" style="border: 1px solid #25D366; background-color: #25D366; display: inline-flex; align-items: center; justify-content: center;">
+                                        <button class="btn btn-sm btn-success btn-icon" onclick="sendDealWhatsApp('${deal.deal_id}', this)" title="שלח ווטסאפ" style="border: 1px solid #25D366; background-color: #25D366; display: inline-flex; align-items: center; justify-content: center;">
                                             <img src="images/whatsappwhite.png" alt="WhatsApp" style="width: 16px; height: 16px;">
                                         </button>
                                         <button class="btn btn-sm btn-danger btn-icon" onclick="deleteDeal('${deal.deal_id}')" title="מחק">🗑️</button>
@@ -4038,6 +4116,8 @@ async function viewDealDetails(dealId) {
         
         document.getElementById('activity-date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
         
+        setupMentionAutocomplete('new-note-text');
+
         modal.classList.add('active');
         
     } catch (error) {
@@ -4090,7 +4170,7 @@ async function loadDealNotes(dealId) {
                     </div>
                     <div class="note-content">
                         ${activityDate ? `<div style="margin-bottom: 5px; color: var(--primary-color); font-weight: 500;">📅 תאריך יעד/פעילות: ${activityDate}</div>` : ''}
-                        <strong>${note.activity_type}:</strong> ${note.description}
+                        <strong>${note.activity_type}:</strong> ${formatActivityText(note.description)}
                     </div>
                     ${editedInfo}
                 </div>`;
@@ -4205,7 +4285,11 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
         }
         
         container.innerHTML = notes.map(note => {
-            const formattedContent = linkify(note.content);
+            // First format mentions, then simple URL linking if needed
+            // Since formatActivityText returns HTML with <a> tags, we should be careful.
+            // Let's rely on formatActivityText for mentions. If linkify exists, we might lose mentions if it escapes HTML.
+            // Assuming formatActivityText is safe for now.
+            const formattedContent = formatActivityText(note.content);
             const isEditing = container.dataset.editingId == note.id;
             
             if (isEditing) {
@@ -4537,6 +4621,9 @@ function showEditActivityModal(activity) {
         if (dealsList) dealsList.innerHTML = '<p style="text-align:center; color: var(--text-tertiary); padding: 1rem;">אין לקוח מקושר לפעילות זו</p>';
     }
     
+    // Initialize Mention Autocomplete
+    setupMentionAutocomplete('edit-activity-description');
+
     modal.classList.add('active');
 }
 
@@ -4905,6 +4992,9 @@ function openNewActivityModal(prefillData = null) {
              if (customerSelect) customerSelect.value = prefillData.customer_id;
         }
     }
+
+    // Initialize Mention Autocomplete
+    setupMentionAutocomplete('new-activity-description');
 
     modal.classList.add('active');
 }
@@ -5493,7 +5583,7 @@ async function loadThisWeek() {
                         
                         ${activity.description ? `
                             <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9rem;">
-                                ${activity.description}
+                                ${formatActivityText(activity.description)}
                             </div>
                         ` : ''}
                         
@@ -5783,7 +5873,7 @@ async function viewActivityDetails(activityId) {
                 
                 <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px;">
                     <label style="font-weight: 600; display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">תיאור הפעילות:</label>
-                    <div style="white-space: pre-wrap;">${activity.description || '-'}</div>
+                    <div style="white-space: pre-wrap;">${formatActivityText(activity.description || '-')}</div>
                 </div>
                 
                 <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
@@ -5805,6 +5895,9 @@ async function viewActivityDetails(activityId) {
         
         // Load notes
         loadActivityNotes(activityId, 'view-activity-notes-list');
+
+        // Setup Autocomplete for new note
+        setupMentionAutocomplete('view-activity-new-note');
         
     } catch (error) {
         console.error('❌ Error viewing activity details:', error);
@@ -6052,7 +6145,7 @@ async function loadActivities(preservePage = false) {
                                             ? '<span class="badge badge-won" style="font-size: 0.7rem;">בוצע</span>'
                                             : '<span class="badge badge-pending" style="font-size: 0.7rem;">ממתין</span>'}
                                     </td>
-                                    <td style="${textStyle}">${activity.description || '-'}</td>
+                                    <td style="${textStyle}">${formatActivityText(activity.description || '-')}</td>
                                     <td>
                                         ${customerId 
                                             ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customerId}')" style="font-weight: 500;">${businessName}</a>`
@@ -6164,7 +6257,7 @@ async function loadActivities(preservePage = false) {
                     </div>
                     <div class="deal-card-body" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">
                         <div style="margin-bottom: 0.4rem; ${activity.completed ? 'text-decoration: line-through; opacity: 0.7;' : ''}">
-                            <strong>תיאור:</strong> ${activity.description || '-'}
+                            <strong>תיאור:</strong> ${formatActivityText(activity.description || '-')}
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 1rem; font-size: 0.8rem; color: var(--text-secondary);">
                             ${activityDate ? `<div><strong>תאריך:</strong> <span style="color: var(--primary-color);">${activityDate}</span></div>` : ''}
@@ -9330,6 +9423,13 @@ function renderSupplierOrderItems() {
             });
             productOptions += '<option value="__NEW__" style="font-weight: bold; color: var(--primary-color);">➕ הוסף מוצר חדש...</option>';
 
+            // Build color options
+            const stdColors = ['שחור', 'לבן', 'ברונזה', 'כסף', 'טבעי', 'שמפניה'];
+            let colorOptions = `<option value="" ${!item.color ? 'selected' : ''}>בחר...</option>`;
+            stdColors.forEach(c => colorOptions += `<option value="${c}" ${item.color === c ? 'selected' : ''}>${c}</option>`);
+            if (item.color && !stdColors.includes(item.color)) colorOptions += `<option value="${item.color}" selected>${item.color}</option>`;
+            colorOptions += `<option value="__OTHER__" style="font-weight: bold; color: var(--primary-color);">➕ צבע חדש...</option>`;
+
             if (isSupplierOrderReadOnly) {
                 // Read Only View - Plain Text
                 tr.innerHTML = `
@@ -9351,13 +9451,7 @@ function renderSupplierOrderItems() {
                     </td>
                     <td>
                         <select class="form-select table-input" onchange="updateOrderItem(${index}, 'color', this.value)" style="width: 100%">
-                            <option value="" ${!item.color ? 'selected' : ''}>בחר...</option>
-                            <option value="שחור" ${item.color === 'שחור' ? 'selected' : ''}>שחור</option>
-                            <option value="לבן" ${item.color === 'לבן' ? 'selected' : ''}>לבן</option>
-                            <option value="ברונזה" ${item.color === 'ברונזה' ? 'selected' : ''}>ברונזה</option>
-                            <option value="כסף" ${item.color === 'כסף' ? 'selected' : ''}>כסף</option>
-                            <option value="טבעי" ${item.color === 'טבעי' ? 'selected' : ''}>טבעי</option>
-                            <option value="שמפניה" ${item.color === 'שמפניה' ? 'selected' : ''}>שמפניה</option>
+                            ${colorOptions}
                         </select>
                     </td>
                     <td><input type="text" class="form-input table-input" value="${item.sku || ''}" onchange="updateOrderItem(${index}, 'sku', this.value)" placeholder="מק״ט" style="width: 100%"></td>
@@ -9672,7 +9766,16 @@ async function saveNoteChange(content, action, index = null) {
 }
 
 function updateOrderItem(index, field, value) {
-    currentOrderItems[index][field] = value;
+    if (field === 'color' && value === '__OTHER__') {
+        const custom = prompt('הזן צבע חדש:');
+        if (custom && custom.trim()) {
+            currentOrderItems[index][field] = custom.trim();
+        } else {
+            // Do not update if cancelled
+        }
+    } else {
+        currentOrderItems[index][field] = value;
+    }
     renderSupplierOrderItems(); // Re-render to update totals
 }
 
@@ -10008,5 +10111,283 @@ async function exportSupplierOrderPDF() {
         });
     } else {
         showAlert('ספריית ה-PDF לא נטענה כראוי. אנא רענן את העמוד ונסה שוב.', 'error');
+    }
+}
+
+// ============================================
+// Mention Autocomplete System
+// ============================================
+
+let mentionSuggestionsContainer = null;
+let currentMentionTextarea = null;
+let mentionDebounceTimer = null;
+let mentionCursorPosition = 0;
+
+function setupMentionAutocomplete(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+
+    textarea.addEventListener('input', handleMentionInput);
+    textarea.addEventListener('click', () => hideMentionSuggestions());
+    textarea.addEventListener('blur', () => setTimeout(hideMentionSuggestions, 200)); // Delay to allow click
+}
+
+function handleMentionInput(e) {
+    const textarea = e.target;
+    currentMentionTextarea = textarea;
+    const value = textarea.value;
+    const cursor = textarea.selectionStart;
+    mentionCursorPosition = cursor;
+
+    // Look for @ symbol before cursor
+    // We want the last @ that is not followed by a space (unless it's part of the search query?)
+    // Simple logic: Look backwards from cursor to find @
+    const textBeforeCursor = value.substring(0, cursor);
+    const lastAt = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAt !== -1) {
+        // Check if @ is at start or preceded by space
+        const charBeforeAt = lastAt > 0 ? textBeforeCursor[lastAt - 1] : ' ';
+        if (/\s/.test(charBeforeAt)) {
+            const query = textBeforeCursor.substring(lastAt + 1);
+            // Verify query doesn't contain newlines
+            if (!query.includes('\n')) {
+                 // Trigger search
+                 if (mentionDebounceTimer) clearTimeout(mentionDebounceTimer);
+                 mentionDebounceTimer = setTimeout(() => searchMentions(query), 300);
+                 return;
+            }
+        }
+    }
+    
+    hideMentionSuggestions();
+}
+
+async function searchMentions(query) {
+    if (!currentMentionTextarea) return;
+
+    // Prepare container
+    if (!mentionSuggestionsContainer) {
+        mentionSuggestionsContainer = document.createElement('div');
+        mentionSuggestionsContainer.className = 'mention-suggestions';
+        document.body.appendChild(mentionSuggestionsContainer);
+    }
+
+    // Determine position (Approximation: bottom of textarea)
+    const rect = currentMentionTextarea.getBoundingClientRect();
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    
+    // Position below the textarea
+    mentionSuggestionsContainer.style.top = (rect.bottom + scrollTop) + 'px';
+    mentionSuggestionsContainer.style.left = rect.left + 'px';
+    mentionSuggestionsContainer.style.width = rect.width + 'px';
+    
+    // Fetch Data
+    try {
+        // Search Deals
+        const dealsPromise = supabaseClient
+            .from('deals')
+            .select('deal_id, deal_status, customers(business_name)')
+            .or(`deal_id.textSearch.${query},deal_status.ilike.%${query}%`) // Basic search, might be limited
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        // Search Supplier Orders
+        const ordersPromise = supabaseClient
+            .from('supplier_orders')
+            .select('order_id, order_number, suppliers(supplier_name)')
+             .or(`order_number.ilike.%${query}%`)
+            .order('created_at', { ascending: false })
+            .limit(5);
+            
+        // Note: For richer search (search business name via relation) Supabase postgrest is trickier.
+        // We will do a broader search if query is empty or short, or do client side filtering if we have cache?
+        // Let's do a tailored query.
+        
+        let deals = [];
+        let orders = [];
+        let contacts = [];
+        
+        // Fetch recent deals/orders if query is empty/short to show suggestions
+        // Better: Search Deals join customers
+        const { data: dealsData } = await supabaseClient
+            .from('deals')
+            .select('deal_id, customers!inner(business_name)')
+            .ilike('customers.business_name', `%${query}%`)
+            .limit(5);
+            
+        // Also search by Deal ID directly?
+        // Merging results is complex in one query.
+        
+        // Simulating search for both Deal Name (Customer) and Order (Supplier)
+        // This is a bit heavy, let's optimize:
+        // Load recent active deals and recent active orders (limit 50) and filter in JS
+        
+        const { data: allDeals } = await supabaseClient
+            .from('deals')
+            .select('deal_id, deal_status, created_at, customers(business_name)')
+            .order('created_at', { ascending: false })
+            .limit(20);
+            
+        const { data: allOrders } = await supabaseClient
+            .from('supplier_orders')
+            .select('order_id, order_number, created_at, suppliers(supplier_name)')
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+        let allContacts = [];
+        try {
+            const { data, error } = await supabaseClient
+                .from('contacts')
+                .select('contact_id, contact_name, role, customers(business_name)')
+                .ilike('contact_name', `%${query}%`)
+                .limit(5);
+            if (error) throw error;
+            allContacts = data;
+        } catch (contactError) {
+            console.error('Error searching contacts:', contactError);
+            // Fallback: Try without relation if relation failed
+            try {
+                 const { data, error } = await supabaseClient
+                    .from('contacts')
+                    .select('contact_id, contact_name, role')
+                    .ilike('contact_name', `%${query}%`)
+                    .limit(5);
+                 if (!error) allContacts = data;
+            } catch(e) {}
+        }
+            
+        const qLower = query.toLowerCase();
+        
+        deals = (allDeals || []).filter(d => 
+            (d.customers?.business_name || '').toLowerCase().includes(qLower) || 
+            String(d.deal_id).includes(qLower)
+        ).slice(0, 5);
+        
+        orders = (allOrders || []).filter(o => 
+            (o.suppliers?.supplier_name || '').toLowerCase().includes(qLower) || 
+            String(o.order_number || o.order_id).toLowerCase().includes(qLower)
+        ).slice(0, 5);
+
+        contacts = (allContacts || []);
+        
+        renderMentionSuggestions(deals, orders, contacts, query);
+        
+    } catch (e) {
+        console.error('Mention search error:', e);
+    }
+}
+
+function renderMentionSuggestions(deals, orders, contacts, query) {
+    if (!mentionSuggestionsContainer) return;
+    
+    // Check if contacts is array (it might be undefined if called from old code, but we updated caller)
+    // Safe check
+    const contactsList = Array.isArray(contacts) ? contacts : [];
+
+    if (deals.length === 0 && orders.length === 0 && contactsList.length === 0) {
+        hideMentionSuggestions();
+        return;
+    }
+    
+    let html = '';
+    
+    deals.forEach(deal => {
+        const date = deal.created_at ? new Date(deal.created_at).toLocaleDateString('he-IL') : '';
+        const businessName = deal.customers?.business_name || 'לקוח';
+        const dealDisplayName = `הצעת מחיר עבור ${businessName} ${date}`;
+        
+        html += `
+            <div class="mention-item" onclick="insertMention('Deal', '${deal.deal_id}', '${dealDisplayName}')">
+                <div class="mention-main">${businessName} <span class="mention-type deal">עסקה</span></div>
+                <div class="mention-sub" style="font-size: 0.8rem; color: #64748b;">${dealDisplayName}</div>
+            </div>
+        `;
+    });
+    
+    orders.forEach(order => {
+        const orderNum = order.order_number || order.order_id.slice(0,8);
+        html += `
+            <div class="mention-item" onclick="insertMention('Order', '${order.order_id}', 'הזמנה: ${order.suppliers?.supplier_name || 'ללא שם'}')">
+                <div class="mention-main">${order.suppliers?.supplier_name || 'ספק'} <span class="mention-type order">רכש</span></div>
+                <div class="mention-sub">#${orderNum}</div>
+            </div>
+        `;
+    });
+
+    contactsList.forEach(contact => {
+        const customerName = contact.customers?.business_name || '';
+        const role = contact.role ? `(${contact.role})` : '';
+        html += `
+            <div class="mention-item" onclick="insertMention('Contact', '${contact.contact_id}', '${contact.contact_name}')">
+                <div class="mention-main">${contact.contact_name} ${role} <span class="mention-type contact" style="background: #d1fae5; color: #065f46;">איש קשר</span></div>
+                <div class="mention-sub">${customerName}</div>
+            </div>
+        `;
+    });
+    
+    mentionSuggestionsContainer.innerHTML = html;
+    mentionSuggestionsContainer.style.display = 'block';
+}
+
+function insertMention(type, id, label) {
+    if (!currentMentionTextarea) return;
+    
+    const value = currentMentionTextarea.value;
+    const textBefore = value.substring(0, mentionCursorPosition);
+    const lastAt = textBefore.lastIndexOf('@');
+    const textAfter = value.substring(mentionCursorPosition);
+    
+    // Construct mentions tag: @[Type:ID|Label]
+    const tag = `@[${type}:${id}|${label}] `;
+    
+    currentMentionTextarea.value = value.substring(0, lastAt) + tag + textAfter;
+    
+    hideMentionSuggestions();
+    currentMentionTextarea.focus();
+}
+
+function hideMentionSuggestions() {
+    if (mentionSuggestionsContainer) {
+        mentionSuggestionsContainer.style.display = 'none';
+    }
+}
+
+function formatActivityText(text) {
+    if (!text) return '';
+    
+    // First, linkify URLs (simple regex)
+    // Avoid replacing URLs that might be inside the mention format if that ever happens (unlikely for now)
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    text = text.replace(urlRegex, (url) => {
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${url}</a>`;
+    });
+
+    return text.replace(/@\[(Deal|Order|Contact):([^\|]+)\|([^\]]+)\]/g, (match, type, id, label) => {
+        let onclick = '';
+        let color = '';
+        
+        if (type === 'Deal') {
+            onclick = `viewDealDetails('${id}')`;
+            color = '#1e40af'; // Blue-ish
+        } else if (type === 'Order') {
+            onclick = `viewSupplierOrder('${id}')`;
+            color = '#9d174d'; // Pink-ish
+        } else if (type === 'Contact') {
+            onclick = `viewContactDetails('${id}')`;
+            color = '#065f46'; // Green-ish
+        }
+        
+        return `<a href="javascript:void(0)" onclick="${onclick}" style="color: ${color}; font-weight: 500; text-decoration: underline; background: #f1f5f9; padding: 0 4px; border-radius: 4px;">${label}</a>`;
+    });
+}
+
+
+// Helper for Autocomplete Links
+function viewSupplierOrder(orderId) {
+    if (typeof openSupplierOrderModal === 'function') {
+        openSupplierOrderModal(orderId, true);
+    } else {
+        console.error('openSupplierOrderModal not found');
     }
 }
