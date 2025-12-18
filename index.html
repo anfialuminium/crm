@@ -26,6 +26,19 @@
         <!-- Main Content -->
         <main class="main-content">
             <!-- Navigation Tabs -->
+            <!-- Quick Navigation -->
+            <div id="quick-nav-area" style="margin-bottom: 1.5rem; max-width: 500px; margin-left: auto; margin-right: auto; padding-bottom: 1.5rem; border-bottom: 1px dashed var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <label style="font-weight: 500; color: var(--text-secondary); font-size: 0.95rem;">ניווט מהיר (3 מועדפים):</label>
+                    <button type="button" onclick="configureQuickNav()" style="font-size: 0.85rem; color: var(--primary-color); cursor: pointer; background: none; border: none; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 4px;">
+                        <span>⚙️</span> הגדר
+                    </button>
+                </div>
+                <div id="quick-nav-buttons" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                    <!-- Buttons injected by JS -->
+                </div>
+            </div>
+
             <!-- Navigation Dropdown -->
             <div class="nav-container" style="margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
                 <label for="main-navigation" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary);">בחר אזור במערכת:</label>

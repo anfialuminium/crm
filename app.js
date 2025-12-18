@@ -10239,7 +10239,7 @@ async function searchMentions(query) {
         try {
             const { data, error } = await supabaseClient
                 .from('contacts')
-                .select('contact_id, contact_name, role, customers(business_name)')
+                .select('contact_id, contact_name, role, customer_id, customers(business_name)')
                 .ilike('contact_name', `%${query}%`)
                 .limit(5);
             if (error) throw error;
@@ -10250,11 +10250,37 @@ async function searchMentions(query) {
             try {
                  const { data, error } = await supabaseClient
                     .from('contacts')
-                    .select('contact_id, contact_name, role')
+                    .select('contact_id, contact_name, role, customer_id')
                     .ilike('contact_name', `%${query}%`)
                     .limit(5);
                  if (!error) allContacts = data;
             } catch(e) {}
+        }
+
+        // Post-processing: Ensure customer names are present
+        // This handles cases where the join failed or we used the fallback
+        const contactsMissingCustomer = allContacts.filter(c => !c.customers?.business_name && c.customer_id);
+        if (contactsMissingCustomer.length > 0) {
+            try {
+                const custIds = [...new Set(contactsMissingCustomer.map(c => c.customer_id))];
+                const { data: customersData } = await supabaseClient
+                    .from('customers')
+                    .select('customer_id, business_name')
+                    .in('customer_id', custIds);
+                
+                if (customersData) {
+                    const custMap = {};
+                    customersData.forEach(c => custMap[c.customer_id] = c.business_name);
+                    
+                    allContacts.forEach(c => {
+                        if ((!c.customers || !c.customers.business_name) && c.customer_id && custMap[c.customer_id]) {
+                            c.customers = { business_name: custMap[c.customer_id] };
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Error fetching missing customer names:', err);
+            }
         }
             
         const qLower = query.toLowerCase();
@@ -10316,7 +10342,14 @@ function renderMentionSuggestions(deals, orders, contacts, query) {
     });
 
     contactsList.forEach(contact => {
-        const customerName = contact.customers?.business_name || '';
+        let customerName = '';
+        if (contact.customers) {
+            if (Array.isArray(contact.customers) && contact.customers.length > 0) {
+                 customerName = contact.customers[0].business_name;
+            } else if (contact.customers.business_name) {
+                 customerName = contact.customers.business_name;
+            }
+        }
         const role = contact.role ? `(${contact.role})` : '';
         html += `
             <div class="mention-item" onclick="insertMention('Contact', '${contact.contact_id}', '${contact.contact_name}')">
@@ -10391,3 +10424,131 @@ function viewSupplierOrder(orderId) {
         console.error('openSupplierOrderModal not found');
     }
 }
+
+// ============================================
+// Quick Navigation Logic
+// ============================================
+
+const NAV_SECTIONS = [
+    { id: 'deals', name: '➕ עסקה חדשה', icon: '➕' },
+    { id: 'thisweek', name: '📅 השבוע', icon: '📅' },
+    { id: 'history', name: '💼 עסקאות', icon: '💼' },
+    { id: 'activities', name: '📝 פעילויות', icon: '📝' },
+    { id: 'customers', name: '🏢 לקוחות', icon: '🏢' },
+    { id: 'contacts', name: '👤 אנשי קשר', icon: '👤' },
+    { id: 'suppliers', name: '🏭 ספקים', icon: '🏭' },
+    { id: 'supplier-orders', name: '🚛 הזמנות רכש', icon: '🚛' },
+    { id: 'products', name: '📦 מוצרים', icon: '📦' },
+    { id: 'auditlog', name: '📋 פעולות', icon: '📋' },
+    { id: 'reports', name: '📊 דוחות', icon: '📊' },
+    { id: 'search', name: '🔍 חיפוש', icon: '🔍' }
+];
+
+function initQuickNav() {
+    renderQuickNav();
+}
+
+function renderQuickNav() {
+    const container = document.getElementById('quick-nav-buttons');
+    if (!container) return;
+    
+    // Default preferences
+    const defaultPrefs = ['deals', 'customers', 'thisweek'];
+    let prefs = defaultPrefs;
+    
+    try {
+        const saved = localStorage.getItem('quick_nav_prefs');
+        if (saved) prefs = JSON.parse(saved);
+        // Validate prefs exist in current sections
+        prefs = prefs.filter(id => NAV_SECTIONS.some(s => s.id === id));
+        if (prefs.length < 3) {
+             // Fill missing with defaults if invalid
+             const uniqueDefaults = defaultPrefs.filter(d => !prefs.includes(d));
+             prefs = [...prefs, ...uniqueDefaults].slice(0, 3);
+        }
+    } catch(e) {
+        console.error('Error loading nav prefs', e);
+        prefs = defaultPrefs;
+    }
+    
+    let html = '';
+    prefs.forEach(prefId => {
+        const section = NAV_SECTIONS.find(s => s.id === prefId);
+        if (section) {
+            // Strip emoji for clean button text if desired, or keep it. Keeping it matches dropdown.
+            html += `
+                <button type="button" class="btn btn-secondary" onclick="quickNavigate('${section.id}')" style="justify-content: center; padding: 0.75rem; font-weight: 500; border-radius: 8px; box-shadow: var(--shadow-sm); transition: all 0.2s;">
+                    ${section.name}
+                </button>
+            `;
+        }
+    });
+    
+    container.innerHTML = html;
+}
+
+function quickNavigate(sectionId) {
+    const navSelect = document.getElementById('main-navigation');
+    if (navSelect) {
+        navSelect.value = sectionId;
+        navSelect.dispatchEvent(new Event('change'));
+    }
+}
+
+async function configureQuickNav() {
+    // Current prefs
+    let prefs = ['deals', 'customers', 'thisweek']; // fallback
+    try {
+        const saved = localStorage.getItem('quick_nav_prefs');
+        if (saved) prefs = JSON.parse(saved);
+    } catch(e) {}
+    
+    // Build Options HTML
+    const buildOptions = (selectedId) => {
+        return NAV_SECTIONS.map(s => `
+            <option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${s.name}</option>
+        `).join('');
+    };
+    
+    const { value: formValues } = await Swal.fire({
+        title: 'הגדרת ניווט מהיר',
+        html: `
+            <div style="text-align: right;">
+                <label style="display:block; margin-bottom:5px;">כפתור 1:</label>
+                <select id="swal-nav-1" class="swal2-input" style="margin: 0 0 15px 0; width: 100%; direction: rtl;">
+                    ${buildOptions(prefs[0] || 'deals')}
+                </select>
+                
+                <label style="display:block; margin-bottom:5px;">כפתור 2:</label>
+                <select id="swal-nav-2" class="swal2-input" style="margin: 0 0 15px 0; width: 100%; direction: rtl;">
+                    ${buildOptions(prefs[1] || 'customers')}
+                </select>
+                
+                <label style="display:block; margin-bottom:5px;">כפתור 3:</label>
+                <select id="swal-nav-3" class="swal2-input" style="margin: 0 0 15px 0; width: 100%; direction: rtl;">
+                    ${buildOptions(prefs[2] || 'thisweek')}
+                </select>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'שמור',
+        cancelButtonText: 'ביטול',
+        preConfirm: () => {
+            return [
+                document.getElementById('swal-nav-1').value,
+                document.getElementById('swal-nav-2').value,
+                document.getElementById('swal-nav-3').value
+            ];
+        }
+    });
+
+    if (formValues) {
+        localStorage.setItem('quick_nav_prefs', JSON.stringify(formValues));
+        renderQuickNav();
+        showAlert('ההגדרות נשמרו בהצלחה', 'success');
+    }
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', initQuickNav);
