@@ -193,8 +193,12 @@ async function initializeApp() {
     // Default is now deals, no specific load needed as it's a form
     // await loadThisWeek();
     
-    // Update empty state
-    updateEmptyState();
+    // Initialize with one empty deal item (status is already set to 'Closed' in HTML/resetForm)
+    if (products.length > 0) {
+        addDealItem();
+    } else {
+        updateEmptyState();
+    }
     
     console.log('✅ CRM System ready!');
 }
@@ -6585,14 +6589,15 @@ function resetForm() {
     document.getElementById('customer-select').value = '';
     const searchInput = document.getElementById('customer-search-input');
     if (searchInput) searchInput.value = '';
-    document.getElementById('deal-status').value = 'חדש';
+    document.getElementById('deal-status').value = 'זכייה';
     document.getElementById('deal-notes').value = '';
     document.getElementById('discount-percentage').value = '0';
     
     dealItems = [];
-    renderDealItems();
-    updateEmptyState();
-    calculateTotal();
+    addDealItem(); // Add one default item
+    // renderDealItems(); // Handled by addDealItem
+    // updateEmptyState(); // Handled by addDealItem
+    // calculateTotal(); // Handled by addDealItem -> renderDealItems
     
     // Clear edit mode
     delete document.getElementById('deals-tab').dataset.editDealId;
