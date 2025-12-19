@@ -83,4 +83,10 @@
         gap: var(--spacing-sm);
         justify-content: center;
     }
+    
+    /* Narrower catalog button on mobile */
+    #btn-goto-catalog {
+        padding: 0.4rem 0.8rem !important;
+        font-size: 0.85rem;
+    }
 }
