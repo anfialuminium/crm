@@ -34,6 +34,7 @@ let suppliers = [];
 let supplierOrders = [];
 let dealItems = [];
 let itemCounter = 0;
+let orderColors = []; // Global state for colors
 
 // Pagination Global State
 // Pagination Global State
@@ -187,6 +188,7 @@ async function initializeApp() {
     // Load initial data
     await loadProducts();
     await loadCustomers();
+    await loadOrderColors(); // Load colors
     await checkSchemaCapabilities();
     
     // Load dashboard data (default tab)
@@ -9584,11 +9586,20 @@ function renderSupplierOrderItems() {
             productOptions += '<option value="__NEW__" style="font-weight: bold; color: var(--primary-color);">➕ הוסף מוצר חדש...</option>';
 
             // Build color options
-            const stdColors = ['שחור', 'לבן', 'ברונזה', 'כסף', 'טבעי', 'שמפניה'];
             let colorOptions = `<option value="" ${!item.color ? 'selected' : ''}>בחר...</option>`;
-            stdColors.forEach(c => colorOptions += `<option value="${c}" ${item.color === c ? 'selected' : ''}>${c}</option>`);
-            if (item.color && !stdColors.includes(item.color)) colorOptions += `<option value="${item.color}" selected>${item.color}</option>`;
-            colorOptions += `<option value="__OTHER__" style="font-weight: bold; color: var(--primary-color);">➕ צבע חדש...</option>`;
+            
+            // Use dynamic colors from DB
+            const dynamicColors = orderColors.map(c => c.color_name);
+            dynamicColors.forEach(c => {
+                colorOptions += `<option value="${c}" ${item.color === c ? 'selected' : ''}>${c}</option>`;
+            });
+
+            // Handle cases where existing item has a color not in current list
+            if (item.color && !dynamicColors.includes(item.color)) {
+                colorOptions += `<option value="${item.color}" selected>${item.color}</option>`;
+            }
+
+
 
             if (isSupplierOrderReadOnly) {
                 // Read Only View - Plain Text
@@ -10420,7 +10431,7 @@ async function exportSupplierOrderHTML() {
                     <span>🏢</span>
                     <h3>פרטי ספק</h3>
                 </div>
-                <div style="font-size: 18px; font-weight: 700; color: #111827;">${supplierName}</div>
+                <div style="font-size: 18px; font-weight: 700; color: #111827;" dir="auto">${supplierName}</div>
             </div>
             
             <div class="info-card">
@@ -10464,7 +10475,7 @@ async function exportSupplierOrderHTML() {
                 <tbody>
                     ${itemsRows.map(item => `
                         <tr>
-                            <td class="digit-fix" style="font-weight: 600;">${item.desc}</td>
+                            <td class="digit-fix" style="font-weight: 600;" dir="auto">${item.desc}</td>
                             <td style="text-align: center;">${item.color}</td>
                             <td style="text-align: center; font-family: monospace;">${item.sku}</td>
                             <td style="text-align: center; font-weight: 700;">${item.qty}</td>
@@ -10856,8 +10867,215 @@ const NAV_SECTIONS = [
     { id: 'products', name: '📦 מוצרים', icon: '📦' },
     { id: 'auditlog', name: '📋 פעולות', icon: '📋' },
     { id: 'reports', name: '📊 דוחות', icon: '📊' },
-    { id: 'search', name: '🔍 חיפוש', icon: '🔍' }
+    { id: 'search', name: '🔍 חיפוש', icon: '🔍' },
+    { id: 'settings', name: '⚙️ הגדרות', icon: '⚙️' }
 ];
+
+// Color Management Logic
+async function loadOrderColors() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('product_colors')
+            .select('*')
+            .eq('active', true)
+            .order('color_name');
+        
+        if (error) throw error;
+        
+        // Only use defaults if DB is truly empty after success
+        if (!data || data.length === 0) {
+             console.log('No colors found in DB, showing defaults');
+             orderColors = [
+                { color_id: 'def1', color_name: 'שחור', color_code: '#000000' },
+                { color_id: 'def2', color_name: 'לבן', color_code: '#ffffff' },
+                { color_id: 'def3', color_name: 'ברונזה', color_code: '#CD7F32' },
+                { color_id: 'def4', color_name: 'כסף', color_code: '#C0C0C0' }
+             ];
+        } else {
+            orderColors = data;
+        }
+        
+        renderOrderColors();
+    } catch (e) {
+        console.error('Error loading colors:', e);
+        // On 401 or other error, fallback to defaults so UI still works
+        orderColors = [
+            { color_id: 'err1', color_name: 'שחור', color_code: '#000000' },
+            { color_id: 'err2', color_name: 'לבן', color_code: '#ffffff' },
+            { color_id: 'err3', color_name: 'ברונזה', color_code: '#CD7F32' },
+            { color_id: 'err4', color_name: 'כסף', color_code: '#C0C0C0' }
+        ];
+        renderOrderColors();
+    }
+}
+
+function renderOrderColors() {
+    const container = document.getElementById('colors-list-container');
+    if (!container) return;
+    
+    if (orderColors.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-tertiary); padding: 1rem;">אין צבעים מוגדרים במערכת.</p>';
+        return;
+    }
+    
+    let html = `
+        <div class="table-responsive" style="border: none;">
+        <table class="items-table" style="min-width: 100%; font-size: 0.9rem;">
+            <thead>
+                <tr>
+                    <th style="padding: 12px;">שם הצבע</th>
+                    <th style="padding: 12px; text-align: center;">דוגמה</th>
+                    <th style="padding: 12px; text-align: center;">פעולות</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    orderColors.forEach(c => {
+        html += `
+            <tr>
+                <td style="padding: 8px 12px; font-weight: 600;">${c.color_name}</td>
+                <td style="padding: 8px 12px; text-align: center;">
+                    <div style="width: 20px; height: 20px; border-radius: 50%; background: ${c.color_code || '#ddd'}; border: 1px solid #e2e8f0; margin: 0 auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+                </td>
+                <td style="padding: 8px 12px; text-align: center;">
+                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                        <button class="btn btn-secondary btn-icon" onclick="editOrderColor('${c.color_id}')" style="width:28px; height:28px;" title="ערוך">✏️</button>
+                        <button class="btn btn-secondary btn-icon" onclick="deleteOrderColor('${c.color_id}')" style="width:28px; height:28px; color: #ef4444;" title="מחק">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+async function addOrderColor() {
+    const { value: formValues } = await Swal.fire({
+        title: 'הוספת צבע חדש',
+        html: `
+            <div style="text-align: right; font-family: 'Heebo', sans-serif;">
+                <label class="form-label">שם הצבע</label>
+                <input id="swal-color-name" class="swal2-input" placeholder="למשל: ברונזה עתיק" style="width: 80%; margin: 10px auto;">
+                <label class="form-label">קוד צבע (HEX)</label>
+                <div style="display: flex; align-items: center; gap: 10px; margin: 10px auto; width: 80%;">
+                    <input type="color" id="swal-color-picker" style="height: 45px; width: 45px; border: none; padding: 0;">
+                    <input id="swal-color-code" class="swal2-input" placeholder="#ffffff" style="flex: 1; margin: 0;">
+                </div>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'שמור',
+        cancelButtonText: 'ביטול',
+        didOpen: () => {
+            const picker = document.getElementById('swal-color-picker');
+            const codeInput = document.getElementById('swal-color-code');
+            picker.oninput = (e) => codeInput.value = e.target.value;
+            codeInput.oninput = (e) => picker.value = e.target.value;
+        },
+        preConfirm: () => {
+            const name = document.getElementById('swal-color-name').value;
+            const code = document.getElementById('swal-color-code').value;
+            if (!name) {
+                Swal.showValidationMessage('יש להזין שם צבע');
+                return false;
+            }
+            return { color_name: name, color_code: code || '#cccccc' };
+        }
+    });
+
+    if (formValues) {
+        try {
+            const { error } = await supabaseClient
+                .from('product_colors')
+                .insert([formValues]);
+            
+            if (error) throw error;
+            showAlert('הצבע נוסף בהצלחה', 'success');
+            await loadOrderColors();
+        } catch (e) {
+            console.error(e);
+            showAlert('שגיאה בשמירת הצבע', 'error');
+        }
+    }
+}
+
+async function editOrderColor(colorId) {
+    const color = orderColors.find(c => c.color_id === colorId);
+    if (!color) return;
+
+    const { value: formValues } = await Swal.fire({
+        title: 'עריכת צבע',
+        html: `
+            <div style="text-align: right; font-family: 'Heebo', sans-serif;">
+                <label class="form-label">שם הצבע</label>
+                <input id="swal-color-name" class="swal2-input" value="${color.color_name}" style="width: 80%; margin: 10px auto;">
+                <label class="form-label">קוד צבע (HEX)</label>
+                <div style="display: flex; align-items: center; gap: 10px; margin: 10px auto; width: 80%;">
+                    <input type="color" id="swal-color-picker" value="${color.color_code || '#cccccc'}" style="height: 45px; width: 45px; border: none; padding: 0;">
+                    <input id="swal-color-code" class="swal2-input" value="${color.color_code || '#cccccc'}" style="flex: 1; margin: 0;">
+                </div>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'עדכן',
+        cancelButtonText: 'ביטול',
+        didOpen: () => {
+            const picker = document.getElementById('swal-color-picker');
+            const codeInput = document.getElementById('swal-color-code');
+            picker.oninput = (e) => codeInput.value = e.target.value;
+            codeInput.oninput = (e) => picker.value = e.target.value;
+        },
+        preConfirm: () => {
+            const name = document.getElementById('swal-color-name').value;
+            const code = document.getElementById('swal-color-code').value;
+            if (!name) {
+                Swal.showValidationMessage('יש להזין שם צבע');
+                return false;
+            }
+            return { color_name: name, color_code: code || '#cccccc' };
+        }
+    });
+
+    if (formValues) {
+        try {
+            const { error } = await supabaseClient
+                .from('product_colors')
+                .update(formValues)
+                .eq('color_id', colorId);
+            
+            if (error) throw error;
+            showAlert('הצבע עודכן בהצלחה', 'success');
+            await loadOrderColors();
+        } catch (e) {
+            console.error(e);
+            showAlert('שגיאה בעדכון הצבע', 'error');
+        }
+    }
+}
+
+async function deleteOrderColor(colorId) {
+    const confirmed = await showConfirmation('מחיקת צבע', 'האם אתה בטוח שברצונך למחוק צבע זה?');
+    if (confirmed) {
+        try {
+            const { error } = await supabaseClient
+                .from('product_colors')
+                .update({ active: false })
+                .eq('color_id', colorId);
+            
+            if (error) throw error;
+            showAlert('הצבע נמחק בהצלחה', 'success');
+            await loadOrderColors();
+        } catch (e) {
+            console.error(e);
+            showAlert('שגיאה במחיקת הצבע', 'error');
+        }
+    }
+}
 
 function initQuickNav() {
     renderQuickNav();
