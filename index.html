@@ -27,24 +27,24 @@
         <main class="main-content">
             <!-- Navigation Tabs -->
             <!-- Quick Navigation -->
-            <div id="quick-nav-area" style="margin-bottom: 1.5rem; max-width: 500px; margin-left: auto; margin-right: auto; padding-bottom: 1.5rem; border-bottom: 1px dashed var(--border-color);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                    <label style="font-weight: 500; color: var(--text-secondary); font-size: 0.95rem;">ניווט מהיר (3 מועדפים):</label>
-                    <button type="button" onclick="configureQuickNav()" style="font-size: 0.85rem; color: var(--primary-color); cursor: pointer; background: none; border: none; display: flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem; border-radius: 4px;">
+            <div id="quick-nav-area" style="margin-bottom: 0.5rem; max-width: 500px; margin-left: auto; margin-right: auto; padding-bottom: 0.5rem; border-bottom: 1px dashed var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.2rem;">
+                    <label style="font-weight: 500; color: var(--text-secondary); font-size: 0.85rem;">ניווט מהיר (3 מועדפים):</label>
+                    <button type="button" onclick="configureQuickNav()" style="font-size: 0.8rem; color: var(--primary-color); cursor: pointer; background: none; border: none; display: flex; align-items: center; gap: 0.2rem; padding: 0.2rem 0.4rem; border-radius: 4px;">
                         <span>⚙️</span> הגדר
                     </button>
                 </div>
-                <div id="quick-nav-buttons" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                <div id="quick-nav-buttons" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem;">
                     <!-- Buttons injected by JS -->
                 </div>
             </div>
 
             <!-- Navigation Dropdown -->
-            <div class="nav-container" style="margin-bottom: 2rem; max-width: 500px; margin-left: auto; margin-right: auto;">
-                <label for="main-navigation" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-secondary);">בחר אזור במערכת:</label>
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <button type="button" class="btn btn-secondary btn-icon" onclick="navigateSection(-1)" title="הקודם (דף ימינה)">➡️</button>
-                    <select id="main-navigation" class="form-select" style="flex: 1; font-size: 1.1rem; padding: 0.8rem; background-color: var(--bg-secondary); border: 2px solid var(--primary-color); cursor: pointer;">
+            <div class="nav-container" style="margin-bottom: 0.75rem; max-width: 500px; margin-left: auto; margin-right: auto;">
+                <label for="main-navigation" style="display: block; margin-bottom: 0.15rem; font-weight: 500; color: var(--text-secondary); font-size: 0.85rem;">בחר אזור במערכת:</label>
+                <div style="display: flex; gap: 0.4rem; align-items: center;">
+                    <button type="button" class="btn btn-secondary btn-icon" onclick="navigateSection(-1)" title="הקודם (דף ימינה)" style="width: 30px; height: 30px; padding: 0.15rem;">➡️</button>
+                    <select id="main-navigation" class="form-select" style="flex: 1; font-size: 0.95rem; padding: 0.3rem; background-color: var(--bg-secondary); border: 2px solid var(--primary-color); cursor: pointer;">
                         <option value="deals">➕ עסקה חדשה</option>
                         <option value="thisweek">📅 השבוע</option>
                         <option value="history">💼 עסקאות</option>
@@ -58,7 +58,7 @@
                         <option value="reports">📊 דוחות</option>
                         <option value="search">🔍 חיפוש</option>
                     </select>
-                    <button type="button" class="btn btn-secondary btn-icon" onclick="navigateSection(1)" title="הבא (דף שמאלה)">⬅️</button>
+                    <button type="button" class="btn btn-secondary btn-icon" onclick="navigateSection(1)" title="הבא (דף שמאלה)" style="width: 30px; height: 30px; padding: 0.15rem;">⬅️</button>
                 </div>
             </div>
 
@@ -262,17 +262,19 @@
                     <div class="action-header">
                         <h2 class="section-title" style="margin-bottom: 0;">📅 פעילויות השבוע</h2>
                         <div class="action-buttons">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
-                                <button class="btn btn-secondary btn-icon" onclick="changeWeek(-1)" title="שבוע קודם" style="width: 36px; height: 36px;">
-                                    ▶
-                                </button>
-                                <div id="thisweek-date-range" style="color: var(--text-secondary); font-size: 0.9rem; min-width: 130px; text-align: center;"></div>
-                                <button class="btn btn-secondary btn-icon" onclick="changeWeek(1)" title="שבוע הבא" style="width: 36px; height: 36px;">
-                                    ◀
-                                </button>
-                                <button class="btn btn-primary" onclick="goToCurrentWeek()" style="font-size: 0.85rem; padding: 0.3rem 0.6rem;">
+                            <div class="week-nav-wrapper" style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
+                                <button class="btn btn-primary" onclick="goToCurrentWeek()" style="font-size: 0.85rem; padding: 0.3rem 0.6rem; white-space: nowrap;">
                                     היום
                                 </button>
+                                <div style="display: flex; align-items: center; justify-content: space-between; flex: 1; background: var(--bg-secondary); padding: 4px; border-radius: 8px; gap: 4px;">
+                                    <button class="btn btn-secondary btn-icon" onclick="changeWeek(-1)" title="שבוע קודם" style="width: 32px; height: 32px; min-height: 32px; flex-shrink: 0; padding: 0; display: flex; align-items: center; justify-content: center;">
+                                        ▶
+                                    </button>
+                                    <div id="thisweek-date-range" style="color: var(--text-secondary); font-size: 0.85rem; text-align: center; line-height: 1.2; flex: 1; padding: 0 4px;"></div>
+                                    <button class="btn btn-secondary btn-icon" onclick="changeWeek(1)" title="שבוע הבא" style="width: 32px; height: 32px; min-height: 32px; flex-shrink: 0; padding: 0; display: flex; align-items: center; justify-content: center;">
+                                        ◀
+                                    </button>
+                                </div>
                             </div>
                             
                             <button class="btn btn-primary" onclick="openNewActivityModal()" style="font-size: 0.9rem; padding: 0.3rem 0.75rem;">

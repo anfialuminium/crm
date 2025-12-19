@@ -1898,14 +1898,28 @@ async function viewCustomerDetails(customerId) {
                         <div class="deal-card-info">
                             <span class="deal-card-label">טלפון:</span>
                             <span class="deal-card-value">
-                                 ${customer.primary_contact.phone ? `
-                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                         <a href="tel:${customer.primary_contact.phone}">${customer.primary_contact.phone}</a>
-                                          <a href="https://wa.me/${customer.primary_contact.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="ווטסאפ">
-                                            <img src="images/whatsapp.png" style="width: 16px;">
-                                        </a>
-                                     </div>
-                                 ` : '-'}
+                                 ${(() => {
+                                     const p = customer.primary_contact.phone;
+                                     if (!p) return '-';
+                                     return p.split(/[,;\n]/).map(part => part.trim()).filter(Boolean).map(num => {
+                                         // Basic cleanup for link
+                                         const cleanNum = num.replace(/[^\d+]/g, '');
+                                         // Check if mobile (starts with 05 or 9725)
+                                         const isMobile = cleanNum.startsWith('05') || cleanNum.startsWith('9725');
+                                         const waNum = cleanNum.replace(/^0/, '972');
+                                         
+                                         return `
+                                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
+                                                <a href="tel:${cleanNum}" style="word-break: break-all;">${num}</a>
+                                                ${isMobile ? `
+                                                <a href="https://wa.me/${waNum}" target="_blank" title="ווטסאפ" style="flex-shrink: 0;">
+                                                    <img src="images/whatsapp.png" style="width: 16px; height: 16px; display: block;">
+                                                </a>` : ''}
+                                            </div>
+                                         `;
+                                     }).join('');
+                                 })()}
+
                             </span>
                         </div>
                         <div class="deal-card-info">
@@ -2531,7 +2545,15 @@ function filterContacts(preservePage = false) {
                     ${pagedContacts.map(contact => `
                         <tr>
                             <td><strong>${contact.contact_name}</strong></td>
-                            <td>${contact.role || '-'}</td>
+                            <td>
+                                ${(() => {
+                                    const r = contact.role || '-';
+                                    if (r === '-') return r;
+                                    const display = r.replace(/\([^)]+\)/g, '(...)');
+                                    // Use simple title attribute for tooltip
+                                    return `<span title="${r.replace(/"/g, '&quot;')}">${display}</span>`;
+                                })()}
+                            </td>
                             <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${contact.customers?.business_name || ''}">
                                 ${contact.customers ? `<span class="badge badge-new" style="cursor: pointer; display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom;" onclick="viewCustomerDetails('${contact.customers.customer_id}')">${contact.customers.business_name}</span>` : '-'}
                             </td>
@@ -10511,29 +10533,58 @@ async function configureQuickNav() {
     };
     
     const { value: formValues } = await Swal.fire({
-        title: 'הגדרת ניווט מהיר',
+        title: '<div style="font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, #2563eb, #1e40af); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">הגדרת ניווט מהיר</div>',
         html: `
-            <div style="text-align: right;">
-                <label style="display:block; margin-bottom:5px;">כפתור 1:</label>
-                <select id="swal-nav-1" class="swal2-input" style="margin: 0 0 15px 0; width: 100%; direction: rtl;">
-                    ${buildOptions(prefs[0] || 'deals')}
-                </select>
+            <div style="text-align: right; font-family: 'Heebo', sans-serif;">
+                <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.5;">
+                    בחר את 3 הפעולות השימושיות ביותר עבורך שיופיעו בראש הדף לגישה מיידית.
+                </p>
                 
-                <label style="display:block; margin-bottom:5px;">כפתור 2:</label>
-                <select id="swal-nav-2" class="swal2-input" style="margin: 0 0 15px 0; width: 100%; direction: rtl;">
-                    ${buildOptions(prefs[1] || 'customers')}
-                </select>
-                
-                <label style="display:block; margin-bottom:5px;">כפתור 3:</label>
-                <select id="swal-nav-3" class="swal2-input" style="margin: 0 0 15px 0; width: 100%; direction: rtl;">
-                    ${buildOptions(prefs[2] || 'thisweek')}
-                </select>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0; transition: all 0.2s;">
+                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155; font-size: 0.9rem;">
+                            <span style="background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 4px; margin-left: 8px; font-size: 0.8rem;">1</span>
+                            כפתור ראשון (ימין)
+                         </label>
+                         <select id="swal-nav-1" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background-color: #fff; cursor: pointer; outline: none;">
+                            ${buildOptions(prefs[0] || 'deals')}
+                         </select>
+                    </div>
+
+                    <div style="background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0; transition: all 0.2s;">
+                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155; font-size: 0.9rem;">
+                            <span style="background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 4px; margin-left: 8px; font-size: 0.8rem;">2</span>
+                            כפתור שני (אמצע)
+                         </label>
+                         <select id="swal-nav-2" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background-color: #fff; cursor: pointer; outline: none;">
+                            ${buildOptions(prefs[1] || 'customers')}
+                         </select>
+                    </div>
+
+                    <div style="background: #f8fafc; padding: 1rem; border-radius: 12px; border: 1px solid #e2e8f0; transition: all 0.2s;">
+                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #334155; font-size: 0.9rem;">
+                            <span style="background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 4px; margin-left: 8px; font-size: 0.8rem;">3</span>
+                            כפתור שלישי (שמאל)
+                         </label>
+                         <select id="swal-nav-3" style="width: 100%; padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background-color: #fff; cursor: pointer; outline: none;">
+                            ${buildOptions(prefs[2] || 'thisweek')}
+                         </select>
+                    </div>
+                </div>
             </div>
         `,
         focusConfirm: false,
         showCancelButton: true,
-        confirmButtonText: 'שמור',
+        confirmButtonText: 'שמור שינויים',
         cancelButtonText: 'ביטול',
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#64748b',
+        customClass: {
+            popup: 'rounded-xl shadow-2xl',
+            confirmButton: 'px-5 py-2.5 rounded-lg btn font-medium',
+            cancelButton: 'px-5 py-2.5 rounded-lg btn font-medium'
+        },
+        width: '450px',
         preConfirm: () => {
             return [
                 document.getElementById('swal-nav-1').value,
