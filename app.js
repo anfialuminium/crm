@@ -186,6 +186,7 @@ async function initializeApp() {
     setupTabs();
     
     // Load initial data
+    await loadSystemSettings();
     await loadProducts();
     await loadCustomers();
     await loadOrderColors(); // Load colors
@@ -7299,6 +7300,22 @@ function closeConfirmationModal() {
     }
 }
 
+// Promise-based confirmation helper using Swal
+async function showConfirmation(title, message) {
+    const result = await Swal.fire({
+        title: title,
+        text: message,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'כן, מחק',
+        cancelButtonText: 'ביטול',
+        reverseButtons: true
+    });
+    return result.isConfirmed;
+}
+
 // ============================================
 // Reports & Analytics
 // ============================================
@@ -11074,6 +11091,193 @@ async function deleteOrderColor(colorId) {
             console.error(e);
             showAlert('שגיאה במחיקת הצבע', 'error');
         }
+    }
+}
+
+// System Settings Management
+let systemSettings = {
+    customer_types: ["חנות", "קבלן", "מחסן", "מפעל", "אחר"],
+    supplier_categories: ["אלומיניום", "פרזול", "זכוכית", "אחר"],
+    deal_statuses: ["חדש", "ממתין", "זכייה", "הפסד", "טיוטה"],
+    lead_sources: ["המלצה", "אתר", "תערוכה", "פרסום", "לקוח חוזר", "אחר"],
+    product_categories: ["פרופילים", "אביזרים", "רשתות", "גלגלים", "ידיות", "מנעולים", "אחר"]
+};
+
+async function loadSystemSettings() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('system_settings')
+            .select('*');
+        
+        if (error) {
+            console.warn('System settings table not found or error, using defaults');
+        } else if (data && data.length > 0) {
+            data.forEach(s => {
+                systemSettings[s.setting_key] = s.setting_value;
+            });
+        }
+        
+        renderAllSystemSettings();
+        populateAllDynamicDropdowns();
+    } catch (e) {
+        console.error('Error loading settings:', e);
+    }
+}
+
+function renderAllSystemSettings() {
+    const mappings = [
+        { key: 'customer_types', containerId: 'customer-types-list-container' },
+        { key: 'supplier_categories', containerId: 'supplier-categories-list-container' },
+        { key: 'deal_statuses', containerId: 'deal-statuses-list-container' },
+        { key: 'lead_sources', containerId: 'lead-sources-list-container' },
+        { key: 'product_categories', containerId: 'product-categories-list-container' }
+    ];
+    
+    mappings.forEach(m => {
+        const container = document.getElementById(m.containerId);
+        if (container) {
+            renderGenericSettingList(m.key, container);
+        }
+    });
+}
+
+function renderGenericSettingList(key, container) {
+    const list = systemSettings[key] || [];
+    if (list.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-tertiary); padding: 1rem;">אין נתונים.</p>';
+        return;
+    }
+    
+    let html = `
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+    `;
+    
+    list.forEach((item, index) => {
+        html += `
+            <div style="background: #f1f5f9; padding: 0.4rem 0.8rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; border: 1px solid #e2e8f0; transition: all 0.2s;">
+                <span style="font-weight: 500; color: var(--text-primary);">${item}</span>
+                <button onclick="deleteSystemSetting('${key}', ${index})" style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0; display: flex; align-items: center; font-size: 1.1rem; border-radius: 50%; width: 18px; height: 18px; justify-content: center; hover: background: #e2e8f0;">✕</button>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function addSystemSetting(key) {
+    const labels = {
+        'customer_types': 'סוג לקוח',
+        'supplier_categories': 'קטגוריית ספק',
+        'deal_statuses': 'סטטוס עסקה',
+        'lead_sources': 'מקור הגעה',
+        'product_categories': 'קטגוריית מוצר'
+    };
+    
+    const { value: newValue } = await Swal.fire({
+        title: `הוספת ${labels[key]} חדש`,
+        input: 'text',
+        inputPlaceholder: 'הכנס שם...',
+        showCancelButton: true,
+        confirmButtonText: 'הוסף',
+        cancelButtonText: 'ביטול',
+        inputValidator: (value) => {
+            if (!value) return 'יש להזין ערך';
+            if (systemSettings[key] && systemSettings[key].includes(value)) return 'ערך זה כבר קיים';
+        }
+    });
+    
+    if (newValue) {
+        if (!systemSettings[key]) systemSettings[key] = [];
+        systemSettings[key].push(newValue);
+        await saveSystemSettings(key);
+    }
+}
+
+async function deleteSystemSetting(key, index) {
+    const confirmed = await showConfirmation('מחיקת הגדרה', 'האם אתה בטוח שברצונך למחוק הגדרה זו?');
+    if (confirmed) {
+        systemSettings[key].splice(index, 1);
+        await saveSystemSettings(key);
+    }
+}
+
+async function saveSystemSettings(key) {
+    try {
+        const { error } = await supabaseClient
+            .from('system_settings')
+            .upsert({ 
+                setting_key: key, 
+                setting_value: systemSettings[key],
+                updated_at: new Date()
+            }, { onConflict: 'setting_key' });
+        
+        if (error) throw error;
+        
+        renderAllSystemSettings();
+        populateAllDynamicDropdowns();
+        showAlert('ההגדרות עודכנו בהצלחה', 'success');
+    } catch (e) {
+        console.error(e);
+        showAlert('שגיאה בשמירת ההגדרות', 'error');
+    }
+}
+
+function populateAllDynamicDropdowns() {
+    // 1. Customer Types Select
+    const custTypeSelect = document.getElementById('new-customer-type');
+    if (custTypeSelect) {
+        const currentVal = custTypeSelect.value;
+        let html = '<option value="">-- בחר סוג --</option>';
+        (systemSettings.customer_types || []).forEach(type => {
+            html += `<option value="${type}" ${type === currentVal ? 'selected' : ''}>${type}</option>`;
+        });
+        custTypeSelect.innerHTML = html;
+    }
+    
+    // 2. Supplier Category Select/Input
+    // Converting the search/filter selects too
+    const supplierCatSelect = document.getElementById('filter-supplier-category');
+    if (supplierCatSelect) {
+        const currentVal = supplierCatSelect.value;
+        let html = '<option value="">כל הקטגוריות</option>';
+        (systemSettings.supplier_categories || []).forEach(cat => {
+            html += `<option value="${cat}" ${cat === currentVal ? 'selected' : ''}>${cat}</option>`;
+        });
+        supplierCatSelect.innerHTML = html;
+    }
+
+    // 3. Lead Sources Select
+    const leadSourceSelect = document.getElementById('new-source');
+    if (leadSourceSelect) {
+        const currentVal = leadSourceSelect.value;
+        let html = '<option value="">-- בחר מקור --</option>';
+        (systemSettings.lead_sources || []).forEach(src => {
+            html += `<option value="${src}" ${src === currentVal ? 'selected' : ''}>${src}</option>`;
+        });
+        leadSourceSelect.innerHTML = html;
+    }
+
+    // 4. Product Categories Select
+    const productCatSelect = document.getElementById('product-category');
+    if (productCatSelect) {
+        const currentVal = productCatSelect.value;
+        let html = '<option value="">-- בחר קטגוריה --</option>';
+        (systemSettings.product_categories || []).forEach(cat => {
+            html += `<option value="${cat}" ${cat === currentVal ? 'selected' : ''}>${cat}</option>`;
+        });
+        productCatSelect.innerHTML = html;
+    }
+
+    // 5. Supplier Categories (in modal)
+    const supplierModalCatSelect = document.getElementById('supplier-category');
+    if (supplierModalCatSelect) {
+        const currentVal = supplierModalCatSelect.value;
+        let html = '<option value="">-- בחר קטגוריה --</option>';
+        (systemSettings.supplier_categories || []).forEach(cat => {
+            html += `<option value="${cat}" ${cat === currentVal ? 'selected' : ''}>${cat}</option>`;
+        });
+        supplierModalCatSelect.innerHTML = html;
     }
 }
 

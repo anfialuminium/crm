@@ -816,7 +816,7 @@
                                 <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
                                     🎨 ניהול צבעים להזמנות
                                 </h3>
-                                <button class="btn btn-primary btn-sm" onclick="addOrderColor()">➕ הוסיפי צבע</button>
+                                <button class="btn btn-primary btn-sm" onclick="addOrderColor()">➕ הוסף צבע</button>
                             </div>
                             <div style="padding: 1.25rem;">
                                 <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 1rem;">צבעים אלו יופיעו לבחירה ביצירת ועריכת הזמנות רכש מספקים.</p>
@@ -826,7 +826,84 @@
                             </div>
                         </div>
                         
-                        <!-- More settings can be added here later -->
+                        <!-- Customer Types Management Card -->
+                        <div style="background: white; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden;">
+                            <div style="padding: 1.25rem; background: #f8fafc; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                                    👥 סוגי לקוחות
+                                </h3>
+                                <button class="btn btn-primary btn-sm" onclick="addSystemSetting('customer_types')">➕ הוסף סוג</button>
+                            </div>
+                            <div style="padding: 1.25rem;">
+                                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 1rem;">הגדרת סיווגי הלקוחות הקיימים במערכת.</p>
+                                <div id="customer-types-list-container">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Supplier Categories Card -->
+                        <div style="background: white; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden;">
+                            <div style="padding: 1.25rem; background: #f8fafc; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                                    🏭 קטגוריות ספקים
+                                </h3>
+                                <button class="btn btn-primary btn-sm" onclick="addSystemSetting('supplier_categories')">➕ הוסף קטגוריה</button>
+                            </div>
+                            <div style="padding: 1.25rem;">
+                                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 1rem;">סיווג הספקים לפי סוגי מוצרים (אלומיניום, פרזול וכו').</p>
+                                <div id="supplier-categories-list-container">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Deal Statuses Card -->
+                        <div style="background: white; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden;">
+                            <div style="padding: 1.25rem; background: #f8fafc; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                                    💼 סטטוסי עסקאות
+                                </h3>
+                                <button class="btn btn-primary btn-sm" onclick="addSystemSetting('deal_statuses')">➕ הוסף סטטוס</button>
+                            </div>
+                            <div style="padding: 1.25rem;">
+                                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 1rem;">ניהול שלבי המכירה והסטטוסים של עסקאות לקוחות.</p>
+                                <div id="deal-statuses-list-container">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Lead Sources Card -->
+                        <div style="background: white; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden;">
+                            <div style="padding: 1.25rem; background: #f8fafc; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                                    📢 מקורות הגעה
+                                </h3>
+                                <button class="btn btn-primary btn-sm" onclick="addSystemSetting('lead_sources')">➕ הוסף מקור</button>
+                            </div>
+                            <div style="padding: 1.25rem;">
+                                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 1rem;">ניהול מקורות ההגעה של לקוחות חדשים.</p>
+                                <div id="lead-sources-list-container">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product Categories Card -->
+                        <div style="background: white; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden;">
+                            <div style="padding: 1.25rem; background: #f8fafc; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                                    📦 קטגוריות מוצרים
+                                </h3>
+                                <button class="btn btn-primary btn-sm" onclick="addSystemSetting('product_categories')">➕ הוסף קטגוריה</button>
+                            </div>
+                            <div style="padding: 1.25rem;">
+                                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 1rem;">ניהול הקטגוריות עבור מוצרי המערכת.</p>
+                                <div id="product-categories-list-container">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                  </div>
             </div>
@@ -866,7 +943,9 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">מקור</label>
-                        <input type="text" id="new-source" class="form-input" placeholder="המלצה, אתר, תערוכה...">
+                        <select id="new-source" class="form-select">
+                            <option value="">-- בחר מקור --</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -992,8 +1071,9 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">קטגוריה</label>
-                        <input type="text" id="product-category" class="form-input" 
-                               placeholder="פרופילים, אביזרים, רשתות...">
+                        <select id="product-category" class="form-select">
+                            <option value="">-- בחר קטגוריה --</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">מק״ט</label>
@@ -1108,7 +1188,9 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">קטגוריה</label>
-                        <input type="text" id="supplier-category" class="form-input" placeholder="אלומיניום, פרזול, זכוכית...">
+                        <select id="supplier-category" class="form-select">
+                            <option value="">-- בחר קטגוריה --</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">איש קשר</label>
@@ -1217,15 +1299,15 @@
                     </div>
 
                     <div class="table-responsive">
-                    <table class="items-table" style="min-width: 800px;">
+                    <table class="items-table" style="min-width: 1000px;">
                         <colgroup>
-                            <col style="width: 25%;"> <!-- Description -->
-                            <col style="width: 15%;"> <!-- Color -->
+                            <col style="width: 35%;"> <!-- Description -->
+                            <col style="width: 20%;"> <!-- Color -->
                             <col style="width: 15%;"> <!-- SKU -->
-                            <col style="width: 12%;"> <!-- Quantity -->
-                            <col style="width: 13%;"> <!-- Price -->
-                            <col style="width: 15%;"> <!-- Total -->
-                            <col style="width: 5%;">  <!-- Delete -->
+                            <col style="width: 8%;">  <!-- Quantity -->
+                            <col style="width: 10%;"> <!-- Price -->
+                            <col style="width: 8%;">  <!-- Total -->
+                            <col style="width: 4%;">  <!-- Delete -->
                         </colgroup>
                         <thead>
                             <tr>
