@@ -7337,13 +7337,64 @@ async function loadReports() {
         // Fetch Supplier Orders for Procurement Report
         const { data: supplierOrdersData, error: supplierOrdersError } = await supabaseClient
             .from('supplier_orders')
-            .select('total_amount, order_status'); // Select only needed fields
+            .select('total_amount, order_status, created_at');
 
         const supplierOrders = supplierOrdersData || [];
         
-        const totalSupplierExpenses = supplierOrders
-            .filter(o => o.order_status !== 'בוטל')
-            .reduce((sum, o) => sum + (o.total_amount || 0), 0);
+        // --- Currency Conversion Logic (USD to ILS) ---
+        const activeOrders = supplierOrders.filter(o => o.order_status !== 'בוטל');
+        
+        // Helper to fetch rates with caching
+        const rateCache = {};
+        const getRateForDate = async (dateStr) => {
+            if (rateCache[dateStr]) return rateCache[dateStr];
+            
+            // Validate date - cannot be in future
+            const today = new Date().toISOString().split('T')[0];
+            if (dateStr > today) dateStr = today;
+            
+            try {
+                // Validate date string format YYYY-MM-DD
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) throw new Error('Invalid date');
+
+                const res = await fetch(`https://api.frankfurter.app/${dateStr}?from=USD&to=ILS`);
+                if (!res.ok) throw new Error('Rate not found');
+                const json = await res.json();
+                rateCache[dateStr] = json.rates.ILS;
+                return json.rates.ILS;
+            } catch (e) {
+                // If specific date fails (e.g. weekend), try fetching latest as global fallback
+                if (rateCache[dateStr]) return rateCache[dateStr]; // Check if parallel request already filled it
+                
+                // Use a shared fallback promise/value
+                if (!rateCache['fallback']) {
+                     try {
+                        const fallbackRes = await fetch('https://api.frankfurter.app/latest?from=USD&to=ILS');
+                        const fallbackJson = await fallbackRes.json();
+                        rateCache['fallback'] = fallbackJson.rates.ILS;
+                     } catch {
+                        rateCache['fallback'] = 3.6; // Hard fallback
+                     }
+                }
+                rateCache[dateStr] = rateCache['fallback'];
+                return rateCache['fallback'];
+            }
+        };
+
+        // Get unique dates to fetch
+        const uniqueDates = [...new Set(activeOrders.map(o => {
+            return o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+        }))];
+
+        // Fetch rates in parallel
+        await Promise.all(uniqueDates.map(date => getRateForDate(date)));
+
+        // Calculate Total
+        const totalSupplierExpenses = activeOrders.reduce((sum, o) => {
+             const dateStr = o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+             const rate = rateCache[dateStr] || 3.6;
+             return sum + ((o.total_amount || 0) * rate);
+        }, 0);
             
         const totalOrdersCount = supplierOrders.length;
         const openOrdersCount = supplierOrders.filter(o => !['התקבל', 'בוטל'].includes(o.order_status)).length;
@@ -9109,7 +9160,7 @@ async function loadSupplierOrders() {
         // Build query
         let query = supabaseClient
             .from('supplier_orders')
-            .select('*, suppliers(supplier_name, contact_name)')
+            .select('*, suppliers(supplier_name, contact_name, address, email)') // added address/email for currency logic
             .order('created_at', { ascending: false });
             
         // Filters
@@ -9130,7 +9181,50 @@ async function loadSupplierOrders() {
         }
         
         supplierOrders = data || [];
-        renderSupplierOrdersList(supplierOrders);
+
+        // Pre-fetch exchange rates for display
+        const ordersWithRates = await Promise.all(supplierOrders.map(async (o) => {
+            let currencySymbol = '₪';
+            let isUSD = false;
+            const s = o.suppliers;
+            if (s && ((s.address && s.address.toLowerCase().includes('china')) || 
+                     (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
+                     (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
+                     (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
+                     (s.email && s.email.endsWith('.cn')))) {
+                currencySymbol = '$';
+                isUSD = true;
+            }
+
+            if (isUSD) {
+                const dateStr = o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                let rate = 3.6; // Default fallback
+                try {
+                     // Check cache if implemented globally, or fetch simple
+                     // Using a simple fetch here for now, optimizable via shared cache
+                     const today = new Date().toISOString().split('T')[0];
+                     const queryDate = dateStr > today ? today : dateStr;
+                     const res = await fetch(`https://api.frankfurter.app/${queryDate}?from=USD&to=ILS`);
+                     if (res.ok) {
+                         const json = await res.json();
+                         rate = json.rates.ILS;
+                     } else {
+                         // fallback to latest if date specific fails
+                         const resLat = await fetch(`https://api.frankfurter.app/latest?from=USD&to=ILS`);
+                         if(resLat.ok) {
+                             const jsonLat = await resLat.json();
+                             rate = jsonLat.rates.ILS;
+                         }
+                     }
+                } catch(e) { console.error('Rate fetch failed', e); }
+                
+                return { ...o, currencySymbol, isUSD, rate, ilsAmount: (parseFloat(o.total_amount) || 0) * rate };
+            }
+            
+            return { ...o, currencySymbol, isUSD, rate: 1, ilsAmount: parseFloat(o.total_amount) || 0 };
+        }));
+
+        renderSupplierOrdersList(ordersWithRates);
         
     } catch (e) {
         console.error(e);
@@ -9152,33 +9246,40 @@ function renderSupplierOrdersList(list) {
             <table class="items-table" style="width: 100%; min-width: 1000px; table-layout: fixed;">
                 <thead>
                     <tr>
-                        <th style="width: 120px;">מס׳ הזמנה</th>
-                        <th style="width: 25%;">ספק</th>
-                        <th style="width: 15%;">תאריך</th>
-                        <th style="width: 15%;">צפי הגעה</th>
-                        <th style="width: 12%;">סכום</th>
-                        <th style="width: 12%;">סטטוס</th>
-                        <th style="width: 140px;">פעולות</th>
+                        <th style="width: 100px;">מס׳ הזמנה</th>
+                        <th style="width: 20%;">ספק</th>
+                        <th style="width: 12%;">תאריך</th>
+                        <th style="width: 12%;">צפי הגעה</th>
+                        <th style="width: 15%;">סכום (ש"ח)</th>
+                        <th style="width: 15%;">המרה / מקור</th>
+                        <th style="width: 10%;">סטטוס</th>
+                        <th style="width: 120px;">פעולות</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${list.map(o => {
-                        let currencySymbol = '₪';
-                        const s = o.suppliers;
-                        if (s && ((s.address && s.address.toLowerCase().includes('china')) || 
-                                 (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
-                                 (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
-                                 (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
-                                 (s.email && s.email.endsWith('.cn')))) {
-                            currencySymbol = '$';
+                        // Format ILS amount
+                        const ilsDisplay = `₪${o.ilsAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                        
+                        // Format Original / Rate info
+                        let rateInfo = '-';
+                        if (o.isUSD) {
+                            rateInfo = `
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.2;">
+                                    <div>$${(parseFloat(o.total_amount)||0).toLocaleString()}</div>
+                                    <div style="font-size: 0.75rem; color: #64748b;">שער: ${o.rate.toFixed(3)}</div>
+                                </div>
+                            `;
                         }
+
                         return `
                         <tr>
                             <td><strong>${o.order_number ? '#' + o.order_number : '#' + o.order_id.slice(0, 6).toUpperCase()}</strong></td>
                             <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${o.suppliers?.supplier_name || ''}" dir="auto">${o.suppliers?.supplier_name || 'לא ידוע'}</td>
                             <td>${new Date(o.created_at).toLocaleDateString('he-IL')}</td>
                             <td>${o.expected_date ? new Date(o.expected_date).toLocaleDateString('he-IL') : '-'}</td>
-                            <td>${currencySymbol}${(parseFloat(o.total_amount) || 0).toLocaleString()}</td>
+                            <td style="font-weight: 600; color: var(--primary-color);">${ilsDisplay}</td>
+                            <td>${rateInfo}</td>
                             <td><span class="badge ${getStatusBadgeClass(o.order_status)}">${o.order_status}</span></td>
                             <td>
                                 <button class="btn btn-sm btn-info" onclick="viewSupplierOrder('${o.order_id}', '${o.supplier_id}')" title="צפה">👁️</button>
@@ -9213,11 +9314,21 @@ function viewSupplierOrder(orderId, supplierId) {
     openSupplierOrderModal(orderId, true);
 }
 
+// Global/Module variables for modal context
+let modalCurrencySymbol = '₪';
+let modalExchangeRate = 1;
+let modalIsUSD = false;
+
 async function openSupplierOrderModal(orderId = null, readOnly = false) {
     const modal = document.getElementById('supplier-order-modal');
     isSupplierOrderReadOnly = readOnly;
     currentOrderItems = [];
     document.getElementById('edit-supplier-order-id').value = '';
+    
+    // Reset global currency state
+    modalCurrencySymbol = '₪';
+    modalExchangeRate = 1;
+    modalIsUSD = false;
     
     // UI Adjustments for Read Only
     const title = document.querySelector('#supplier-order-modal h2');
@@ -9257,37 +9368,32 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
         noteControls.style.display = 'flex';
         notesEditor.style.display = 'none';
 
-        // Add Export PDF Button if not exists
-        if (!document.getElementById('btn-export-pdf')) {
+        // Add Export HTML Button if not exists
+        if (!document.getElementById('btn-export-html')) {
             const btn = document.createElement('button');
-            btn.id = 'btn-export-pdf';
+            btn.id = 'btn-export-html';
             btn.type = 'button';
             btn.className = 'btn btn-secondary';
             btn.style.marginRight = '10px';
-            btn.innerHTML = '📄 ייצא PDF';
-            btn.onclick = () => exportSupplierOrderPDF(orderId);
+            btn.innerHTML = '🌐 ייצא HTML';
+            btn.onclick = () => exportSupplierOrderHTML(orderId);
             const headerActions = document.querySelector('#supplier-order-modal .modal-header');
             if (headerActions) {
-                 // Insert before close button or somewhere suitable. 
-                 // Actually easier to put it near the edit button logic or append to header
-                 // Let's look for a container in header or create one.
-                 // The modal header usually contains title and close button. 
-                 // We can inject it into the header.
                  headerActions.insertBefore(btn, headerActions.firstChild);
             }
         } else {
-             const btn = document.getElementById('btn-export-pdf');
+             const btn = document.getElementById('btn-export-html');
              btn.style.display = 'inline-block';
-             btn.onclick = () => exportSupplierOrderPDF(orderId);
+             btn.onclick = () => exportSupplierOrderHTML(orderId);
         }
         
     } else {
         modal.classList.remove('read-only-mode');
         // ... (existing code)
         
-        // Hide Export PDF Button
-        const pdfBtn = document.getElementById('btn-export-pdf');
-        if (pdfBtn) pdfBtn.style.display = 'none';
+        // Hide Export HTML Button
+        const htmlBtn = document.getElementById('btn-export-html');
+        if (htmlBtn) htmlBtn.style.display = 'none';
         
         title.textContent = orderId ? 'ערוך הזמנה' : 'הזמנה חדשה';
         saveBtn.style.display = 'inline-block';
@@ -9302,10 +9408,9 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
         viewHeader.style.display = 'none';
         
         // Notes Edit
-        // Notes Edit - NOW USES SAME STRUCTURE AS VIEW MODE
-        notesHistory.style.display = 'block'; // Show history in edit mode too
-        noteControls.style.display = 'flex';  // Show "Add Note" controls
-        notesEditor.style.display = 'none';   // Hide raw textarea (it's internal now)
+        notesHistory.style.display = 'block'; 
+        noteControls.style.display = 'flex';  
+        notesEditor.style.display = 'none';   
         
         // Reset disabled state
         inputs.forEach(input => input.disabled = false);
@@ -9319,7 +9424,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             // Fetch order
             const { data: order, error } = await supabaseClient
                 .from('supplier_orders')
-                .select('*')
+                .select('*, suppliers(supplier_name, address, email)')
                 .eq('order_id', orderId)
                 .single();
                 
@@ -9333,8 +9438,43 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             document.getElementById('order-expected-date').value = order.expected_date ? order.expected_date.split('T')[0] : '';
             document.getElementById('order-creation-date').value = order.created_at ? order.created_at.split('T')[0] : '';
             document.getElementById('order-notes').value = order.notes || '';
-            document.getElementById('order-notes').value = order.notes || '';
             
+            // Calculate Currency Info
+            const s = order.suppliers;
+            if (s && ((s.address && s.address.toLowerCase().includes('china')) || 
+                     (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
+                     (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
+                     (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
+                     (s.email && s.email.endsWith('.cn')))) {
+                modalCurrencySymbol = '$';
+                modalIsUSD = true;
+                
+                // Fetch rate
+                const dateStr = order.created_at ? new Date(order.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                const today = new Date().toISOString().split('T')[0];
+                const queryDate = dateStr > today ? today : dateStr;
+                
+                try {
+                     const res = await fetch(`https://api.frankfurter.app/${queryDate}?from=USD&to=ILS`);
+                     if (res.ok) {
+                         const json = await res.json();
+                         modalExchangeRate = json.rates.ILS;
+                     } else {
+                         // Fallback
+                         const fallbackRes = await fetch('https://api.frankfurter.app/latest?from=USD&to=ILS');
+                         if(fallbackRes.ok) {
+                             const fbJson = await fallbackRes.json();
+                             modalExchangeRate = fbJson.rates.ILS;
+                         } else {
+                             modalExchangeRate = 3.6;
+                         }
+                     }
+                } catch(e) {
+                    console.error('Modal rate fetch error', e);
+                    modalExchangeRate = 3.6;
+                }
+            }
+
             // Render Notes History
             renderOrderNotes(order.notes || '');
             
@@ -9385,6 +9525,9 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('order-expected-date').value = today;
         document.getElementById('order-creation-date').value = today;
+        
+        // Reset/Check supplier if selected for basic currency (won't have date/rate yet usually)
+        // or just default
     }
     
     renderSupplierOrderItems();
@@ -9403,28 +9546,23 @@ function renderSupplierOrderItems() {
     tbody.innerHTML = '';
     let total = 0;
     
-    // Determine currency based on supplier
+    // Determine currency based on supplier selected in dropdown if specific order not loaded/overriding
     const supplierId = document.getElementById('order-supplier-select')?.value;
-    let currencySymbol = '₪';
+    let currencySymbol = modalCurrencySymbol;
     
-    // Attempt to detect if supplier is from abroad (e.g., China)
-    // We can check the supplier object if available, or infer from current view
-    if (supplierId) {
+    // Simplistic check if user changes supplier in edit mode to one that is foreign
+    if (!modalIsUSD && supplierId) { // Only override if not already determined by order load (or could be dynamic)
        const supplier = suppliers.find(s => s.supplier_id == supplierId);
        if (supplier && (
            (supplier.address && supplier.address.toLowerCase().includes('china')) || 
-           (supplier.supplier_name && /[\u4e00-\u9fa5]/.test(supplier.supplier_name)) || // Chinese characters
+           (supplier.supplier_name && /[\u4e00-\u9fa5]/.test(supplier.supplier_name)) || 
            (supplier.supplier_name && supplier.supplier_name.toLowerCase().includes('china')) ||
-           (supplier.supplier_name && supplier.supplier_name.toLowerCase().includes('qingdao')) ||
            (supplier.email && supplier.email.endsWith('.cn'))
        )) {
            currencySymbol = '$';
        }
     }
     
-    // Also check for view mode where select might act differently or we use the cached order details if possible
-    // But renderSupplierOrderItems relies on UI state primarily.
-
     if (currentOrderItems.length === 0) {
         emptyState.style.display = 'block';
     } else {
@@ -9487,7 +9625,19 @@ function renderSupplierOrderItems() {
         });
     }
     
-    totalEl.textContent = currencySymbol + total.toLocaleString();
+    let totalHtml = `<span style="font-size: 1.2rem; margin-bottom: 4px; display: block;">${currencySymbol}${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
+    
+    if (modalIsUSD && modalExchangeRate) {
+        const ilsTotal = total * modalExchangeRate;
+        totalHtml += `
+            <div style="font-size: 0.95rem; margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.3); padding-top: 8px;">
+                <div style="color: #fff; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.5px;">₪${ilsTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-top: 2px;">שער המרה: ${modalExchangeRate.toFixed(3)}</div>
+            </div>
+        `;
+    }
+    
+    totalEl.innerHTML = totalHtml;
 }
 
 async function handleProductSelect(index, selectEl) {
@@ -9956,184 +10106,427 @@ async function deleteSupplierOrder(orderId) {
 
 
 
-async function exportSupplierOrderPDF() {
-    // Determine currency logic from total element
-    const totalElContent = document.getElementById('supplier-order-total').textContent;
-    const isDollar = totalElContent.includes('$');
-    const currencySym = isDollar ? '$' : '₪';
-
-    // Get order ID from DOM
+async function exportSupplierOrderHTML() {
     const orderId = document.getElementById('edit-supplier-order-id').value;
     
-    
-    // Get notes text properly
+    // GATHER DATA
     const notesContainer = document.getElementById('order-notes-history');
-    let notesText = '';
+    let notesHtml = '';
     if (notesContainer) {
         const noteBlocks = notesContainer.querySelectorAll('div[id^="note-block-"]');
         noteBlocks.forEach(block => {
-             const clone = block.cloneNode(true);
-             const actions = clone.querySelector('div[style*="position: absolute"]');
-             if (actions) actions.remove();
-             notesText += clone.innerText + '\n\n';
+             const time = block.querySelector('small')?.innerText || '';
+             const text = block.querySelector('div:not([style*="position: absolute"])')?.innerText || '';
+             if (text) {
+                 notesHtml += `
+                    <div class="note-item">
+                        <div class="note-meta">${time}</div>
+                        <div class="note-body">${text}</div>
+                    </div>`;
+             }
         });
-        if (notesText.trim() === '') notesText = notesContainer.innerText; 
-    }
-    
-    // Fix parenthesis direction for PDF by injecting RLM markers
-    if (notesText) {
-        notesText = '\u200F' + notesText.replace(/\(/g, '\u200F(').replace(/\)/g, '\u200F)');
+        if (!notesHtml && notesContainer.innerText.trim()) {
+            notesHtml = `<div class="note-body">${notesContainer.innerText}</div>`;
+        }
     }
 
-    // Clone items
     const itemsTbody = document.getElementById('supplier-order-items-tbody');
-    // Fetch real Order Number and Creation Date
     let displayOrderId = orderId ? orderId.slice(0, 6).toUpperCase() : '';
-    let creationDate = new Date().toLocaleDateString('he-IL'); // Fallback
+    let creationDate = new Date().toLocaleDateString('he-IL');
 
     try {
-        const { data, error } = await supabaseClient
+        const { data } = await supabaseClient
             .from('supplier_orders')
             .select('order_number, created_at')
             .eq('order_id', orderId)
             .single();
-            
         if (data) {
             if (data.order_number) displayOrderId = data.order_number;
             if (data.created_at) creationDate = new Date(data.created_at).toLocaleDateString('he-IL');
         }
-    } catch (e) {
-        console.error('Could not fetch order details for PDF', e);
-    }
+    } catch (e) { console.error(e); }
 
-    // Fix parenthesis direction for PDF by physically swapping them for the render
-    // This is a workaround for the visual rendering issue where they appear reversed
-    let processedNotes = '';
-    if (notesText) {
-        processedNotes = notesText.replace(/[()]/g, m => m === '(' ? ')' : '(');
-    }
-
-    // Show loading or feedback
     const supplierName = document.getElementById('view-order-supplier').textContent;
-    const orderDate = document.getElementById('view-order-date').textContent; // This is expected date
+    const orderDate = document.getElementById('view-order-date').textContent;
     const orderStatus = document.getElementById('view-order-status').textContent;
     
-    // Clone items
     const itemsRows = Array.from(itemsTbody.querySelectorAll('tr')).map(tr => {
        const cells = tr.querySelectorAll('td');
-       // Assuming structure: Desc, Color, SKU, Qty, Unit, Total
        return {
-           desc: cells[0].innerText,
-           color: cells[1].innerText,
-           sku: cells[2].innerText,
-           qty: cells[3].innerText,
-           price: cells[4].innerText,
-           total: cells[5].innerText
+           desc: cells[0]?.innerText || '',
+           color: cells[1]?.innerText || '',
+           sku: cells[2]?.innerText || '',
+           qty: cells[3]?.innerText || '',
+           price: cells[4]?.innerText || '',
+           total: cells[5]?.innerText || ''
        };
     });
 
-    const totalText = document.getElementById('supplier-order-total').textContent;
+    const currencySym = modalIsUSD ? '$' : '₪';
+    let totalUSD = 0;
+    itemsRows.forEach(item => {
+        totalUSD += parseFloat(item.total?.replace(/[^\d.-]/g, '')) || 0;
+    });
+    const totalILS = modalIsUSD ? (totalUSD * (modalExchangeRate || 1)) : totalUSD;
 
-    // Build PDF HTML
-    const pdfContent = document.createElement('div');
-    pdfContent.style.direction = 'rtl';
-    pdfContent.style.fontFamily = 'Arial, Helvetica, sans-serif'; 
-    pdfContent.style.fontSize = '13px'; // Increased from 12px
-    pdfContent.style.padding = '20px';
-    pdfContent.style.background = '#fff';
-    pdfContent.style.color = '#333';
-    pdfContent.style.width = '100%'; 
-    pdfContent.style.textAlign = 'right';
-    pdfContent.style.letterSpacing = '0.5px'; // Restored to prevent merged text
+    // GENERATE HTML
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הזמנת רכש #${displayOrderId}</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #64748b;
+            --success: #166534;
+            --warning: #92400e;
+            --bg-light: #f8fafc;
+            --border: #e2e8f0;
+            --text-main: #1f2937;
+        }
 
-    pdfContent.innerHTML = `
-        <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 5px;">
-                <h1 style="color: #2563eb; margin: 0; font-size: 22px;">הזמנת רכש</h1>
-                <h1 style="color: #2563eb; margin: 0; font-size: 22px; direction: ltr;">#${displayOrderId}</h1>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            line-height: 1.5;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        @media print {
+            body { padding: 0; background: white; }
+            .no-print { display: none !important; }
+            .container { 
+                box-shadow: none !important; 
+                border: none !important; 
+                width: 100% !important; 
+                max-width: none !important; 
+                padding: 20px 0; 
+                margin: 0;
+            }
+            @page {
+                margin: 15mm;
+            }
+            .total-box {
+                break-inside: avoid;
+            }
+            .notes-section {
+                break-inside: avoid;
+            }
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 4px solid var(--primary);
+            padding-bottom: 20px;
+        }
+
+        .header-title h1 {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary-dark);
+            margin: 0;
+        }
+
+        .header-title p {
+            margin: 2px 0 0;
+            color: var(--secondary);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .order-badge {
+            background-color: var(--primary-dark);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .card-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .info-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .info-table td { padding: 5px 0; }
+        .label { color: var(--secondary); font-weight: 600; width: 45%; }
+        .value { font-weight: 700; text-align: left; }
+
+        .status-pill {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .table-container {
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+            border-top: none;
+        }
+
+        table.items-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .items-table th {
+            background-color: var(--primary-dark);
+            color: white;
+            padding: 12px 10px;
+            text-align: right;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .items-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .items-table tr:nth-child(even) { background-color: #f9fafb; }
+
+        .total-box {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            background-color: var(--primary-dark);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            width: 300px;
+            margin-right: auto;
+        }
+
+        .total-row { display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 10px; }
+        .total-label { font-size: 14px; opacity: 0.9; }
+        .total-value { font-size: 24px; font-weight: 800; }
+        .ils-total { border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; width: 100%; }
+        .ils-value { font-size: 18px; font-weight: 700; display: block; margin-top: 2px; }
+
+        .notes-section {
+            background-color: #fffbeb;
+            border: 1px solid #fef3c7;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .notes-section h3 { margin: 0 0 15px; color: #92400e; font-size: 16px; border-bottom: 1px solid rgba(146,64,14,0.1); padding-bottom: 8px; }
+        .note-item { margin-bottom: 15px; }
+        .note-meta { font-size: 11px; color: #b45309; font-weight: 700; margin-bottom: 3px; }
+        .note-body { font-size: 13px; color: #78350f; white-space: pre-wrap; font-weight: 400; }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--secondary);
+            font-size: 11px;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .no-print-actions {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-print {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .digit-fix { word-spacing: 1px; }
+    </style>
+</head>
+<body>
+    <div class="no-print-actions no-print">
+        <button class="btn-print" onclick="window.print()">🖨️ הדפס / שמור PDF</button>
+        <button class="btn-print" style="background:#64748b" onclick="window.close()">✖️ סגור</button>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <h1>הזמנת רכש</h1>
+                <p>אנפי אלומיניום • מערכת ניהול עסק</p>
             </div>
-            <p style="margin: 5px 0 0; color: #666; font-size: 11px;">
-                הופק ע"י: <span dir="ltr" style="display: inline-block;">CRM</span>&nbsp;מערכת ניהול
-            </p>
+            <div class="order-badge">#${displayOrderId}</div>
         </div>
 
-        <table style="width: 100%; border-collapse: separate; border-spacing: 15px 0; margin-bottom: 20px; table-layout: fixed;">
-            <tr>
-                <td style="width: 50%; vertical-align: top; background: #f8f9fa; padding: 15px; border-radius: 8px;">
-                    <h3 style="margin: 0 0 10px; color: #1e40af; font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">פרטי&nbsp;ספק</h3>
-                    <div style="font-weight: bold; font-size: 13px; word-wrap: break-word; word-break: break-word; overflow-wrap: anywhere; line-height: 1.4; padding: 2px;" dir="auto">${supplierName}</div>
-                </td>
-                <td style="width: 50%; vertical-align: top; background: #f8f9fa; padding: 15px; border-radius: 8px;">
-                     <h3 style="margin: 0 0 10px; color: #1e40af; font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">פרטי&nbsp;הזמנה</h3>
-                    <div style="margin-bottom: 5px;"><strong>תאריך&nbsp;ביצוע:</strong> <span dir="ltr" style="float: left;">${creationDate}</span></div>
-                    <div style="margin-bottom: 5px; clear: both;"><strong>תאריך&nbsp;צפי:</strong> <span dir="ltr" style="float: left;">${orderDate}</span></div>
-                    <div style="clear: both;"><strong>סטטוס:</strong> ${orderStatus}</div>
-                </td>
-            </tr>
-        </table>
-
-        <h3 style="border-right: 4px solid #2563eb; padding-right: 10px; margin-bottom: 10px; font-size: 16px;">פריטים</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px;">
-            <thead>
-                <tr style="background: #2563eb; color: white;">
-                    <th style="padding: 8px; text-align: right;">מוצר</th>
-                    <th style="padding: 8px; text-align: right;">צבע</th>
-                    <th style="padding: 8px; text-align: right;">מק"ט</th>
-                    <th style="padding: 8px; text-align: center;">כמות</th>
-                    <th style="padding: 8px; text-align: center;">מחיר יחידה</th>
-                    <th style="padding: 8px; text-align: center;">סה"כ</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${itemsRows.map((item, i) => `
-                    <tr style="background: ${i % 2 === 0 ? '#fff' : '#f9fafb'}; border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 8px 5px;">${item.desc}</td>
-                        <td style="padding: 8px;">${item.color}</td>
-                        <td style="padding: 8px;">${item.sku}</td>
-                        <td style="padding: 8px; text-align: center;">${item.qty}</td>
-                        <td style="padding: 8px; text-align: center;">${item.price}</td>
-                        <td style="padding: 8px; text-align: center; font-weight: bold;">${item.total}</td>
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="card-header">
+                    <span>🏢</span>
+                    <h3>פרטי ספק</h3>
+                </div>
+                <div style="font-size: 18px; font-weight: 700; color: #111827;">${supplierName}</div>
+            </div>
+            
+            <div class="info-card">
+                <div class="card-header">
+                    <span>📋</span>
+                    <h3>פרטי הזמנה</h3>
+                </div>
+                <table class="info-table">
+                    <tr>
+                        <td class="label">תאריך ביצוע:</td>
+                        <td class="value" dir="ltr">${creationDate}</td>
                     </tr>
-                `).join('')}
-                <tr style="background: #eff6ff; border-top: 2px solid #2563eb;">
-                    <td colspan="5" style="padding: 10px; text-align: left; font-weight: bold; font-size: 14px;">סה"כ&nbsp;לתשלום:</td>
-                    <td style="padding: 10px; text-align: center; font-weight: bold; font-size: 14px; color: #1e40af;">${totalText}</td>
-                </tr>
-            </tbody>
-        </table>
-
-         ${processedNotes.trim() ? `
-        <div style="margin-top: 20px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; text-align: right;">
-            <h3 style="margin: 0 0 10px; color: #4b5563; font-size: 14px;">הערות&nbsp;והיסטוריה</h3>
-            <div dir="rtl" style="white-space: pre-wrap; font-size: 11px; color: #666; line-height: 1.5;">${processedNotes}</div>
+                    <tr>
+                        <td class="label">תאריך צפי:</td>
+                        <td class="value" dir="ltr">${orderDate || '-'}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">סטטוס:</td>
+                        <td class="value">
+                            <span class="status-pill" style="background:${orderStatus === 'התקבל' ? '#dcfce7' : orderStatus === 'נשלח' ? '#fef3c7' : '#e0e7ff'}; color:${orderStatus === 'התקבל' ? '#166534' : orderStatus === 'נשלח' ? '#92400e' : '#3730a3'};">
+                                ${orderStatus}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
+
+        <div class="table-container">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40%">מוצר</th>
+                        <th style="text-align: center; width: 12%">צבע</th>
+                        <th style="text-align: center; width: 15%">מק"ט</th>
+                        <th style="text-align: center; width: 8%">כמות</th>
+                        <th style="text-align: center; width: 12%">מחיר יחידה</th>
+                        <th style="text-align: center; width: 13%">סה"כ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemsRows.map(item => `
+                        <tr>
+                            <td class="digit-fix" style="font-weight: 600;">${item.desc}</td>
+                            <td style="text-align: center;">${item.color}</td>
+                            <td style="text-align: center; font-family: monospace;">${item.sku}</td>
+                            <td style="text-align: center; font-weight: 700;">${item.qty}</td>
+                            <td style="text-align: center;">${item.price}</td>
+                            <td style="text-align: center; font-weight: 700; color: var(--primary-dark);">${item.total}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="total-box">
+            <div class="total-row">
+                <span class="total-label">סה"כ לתשלום:</span>
+                <span class="total-value" dir="ltr">${currencySym}${totalUSD.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+            ${modalIsUSD ? `
+                <div class="ils-total">
+                    <div class="total-row" style="margin-bottom: 2px;">
+                        <span style="font-size: 13px;">שווי בשקלים:</span>
+                        <span style="font-size: 16px; font-weight: 700;">₪${totalILS.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    </div>
+                    <div style="font-size: 11px; opacity: 0.8; text-align: left;">שער המרה: ${modalExchangeRate.toFixed(3)}</div>
+                </div>
+            ` : ''}
+        </div>
+
+        ${notesHtml ? `
+            <div class="notes-section">
+                <h3>הערות והיסטוריה</h3>
+                ${notesHtml}
+            </div>
         ` : ''}
 
-        <div style="margin-top: 30px; text-align: center; color: #9ca3af; font-size: 10px;">
-            המסמך הופק באופן אוטומטי בתאריך <span dir="ltr">${new Date().toLocaleDateString('he-IL')}</span>
+        <div class="footer">
+            מסמך זה הופק באופן אוטומטי ממערכת ניהול עסק CRM • ${new Date().toLocaleDateString('he-IL')} • ${new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute: '2-digit'})}
         </div>
-    `;
-
-    // Configuration for html2pdf
-    const opt = {
-        margin: [10, 10, 10, 10], 
-        filename: `הזמנת רכש (${creationDate}).pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true }, 
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    // Use html2pdf to download/open
-    if (typeof html2pdf !== 'undefined') {
-        html2pdf().set(opt).from(pdfContent).toPdf().get('pdf').then(function(pdf) {
-            window.open(pdf.output('bloburl'), '_blank');
-        }).catch(err => {
-             console.error(err);
-             showAlert('שגיאה ביצירת ה-PDF', 'error');
+    </div>
+    
+    <script>
+        // SMART digit spacing - avoids spaces before punctuation
+        document.querySelectorAll('.digit-fix').forEach(el => {
+            let html = el.innerHTML;
+            // Space between digits and Hebrew letters ONLY
+            html = html.replace(/(\\d+)([א-ת])/g, '$1 $2');
+            html = html.replace(/([א-ת])(\\d+)/g, '$1 $2');
+            // Remove space before colon if any existed
+            html = html.replace(/\\s+:/g, ':');
+            el.innerHTML = html;
         });
-    } else {
-        showAlert('ספריית ה-PDF לא נטענה כראוי. אנא רענן את העמוד ונסה שוב.', 'error');
-    }
+    </script>
+</body>
+</html>`;
+
+    const win = window.open("", "_blank");
+    win.document.write(htmlContent);
+    win.document.close();
+}
+
+// Keep a placeholder or remove the old function to avoid errors if called
+async function exportSupplierOrderPDF() {
+    exportSupplierOrderHTML();
 }
 
 // ============================================
