@@ -4084,7 +4084,7 @@ async function viewDealDetails(dealId) {
             <div style="margin-bottom: 2rem;">
                 <h3 style="margin-bottom: 1rem;">פריטים בעסקה</h3>
                 <div class="table-responsive">
-                    <table class="items-table" style="min-width: 600px;">
+                    <table class="items-table" style="width: 100%; min-width: 600px;">
                         <thead>
                             <tr>
                                 <th style="width: 50px;">#</th>
@@ -5695,15 +5695,15 @@ async function loadThisWeek() {
         
         const summaryHtml = `
             <div style="display: flex; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: nowrap; justify-content: center;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.75rem 1rem; border-radius: 12px; text-align: center; min-width: 90px; flex: 1; max-width: 140px;">
+                <div style="background: var(--primary-color); color: white; padding: 0.75rem 1rem; border-radius: 12px; text-align: center; min-width: 90px; flex: 1; max-width: 140px;">
                     <div style="font-size: 1.5rem; font-weight: 700;">${totalActivities}</div>
                     <div style="font-size: 0.75rem; opacity: 0.9;">סה"כ פעילויות</div>
                 </div>
-                <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 0.75rem 1rem; border-radius: 12px; text-align: center; min-width: 90px; flex: 1; max-width: 140px;">
+                <div style="background: var(--warning-color); color: white; padding: 0.75rem 1rem; border-radius: 12px; text-align: center; min-width: 90px; flex: 1; max-width: 140px;">
                     <div style="font-size: 1.5rem; font-weight: 700;">${pendingCount}</div>
                     <div style="font-size: 0.75rem; opacity: 0.9;">ממתינות</div>
                 </div>
-                <div style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 0.75rem 1rem; border-radius: 12px; text-align: center; min-width: 90px; flex: 1; max-width: 140px;">
+                <div style="background: var(--success-color); color: white; padding: 0.75rem 1rem; border-radius: 12px; text-align: center; min-width: 90px; flex: 1; max-width: 140px;">
                     <div style="font-size: 1.5rem; font-weight: 700;">${completedCount}</div>
                     <div style="font-size: 0.75rem; opacity: 0.9;">הושלמו</div>
                 </div>
@@ -6149,7 +6149,7 @@ async function loadActivities(preservePage = false) {
             const table = document.createElement('div');
             table.style.overflowX = 'auto';
             table.innerHTML = `
-                <table class="items-table" style="min-width: 800px;">
+                <table class="items-table" style="width: 100%; min-width: 800px;">
                     <thead>
                         <tr>
                             <th style="width: 80px;">סוג</th>
@@ -10957,7 +10957,7 @@ function renderOrderColors() {
     
     let html = `
         <div class="table-responsive" style="border: none;">
-        <table class="items-table" style="min-width: 100%; font-size: 0.9rem;">
+        <table class="items-table" style="width: 100%; min-width: 100%; font-size: 0.9rem;">
             <thead>
                 <tr>
                     <th style="padding: 12px;">שם הצבע</th>

@@ -271,7 +271,7 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    background: var(--primary-color);
     color: white;
     box-shadow: var(--shadow-md);
 }
@@ -297,7 +297,7 @@ body {
 }
 
 .btn-success {
-    background: linear-gradient(135deg, var(--success-color), #059669);
+    background: var(--success-color);
     color: white;
     box-shadow: var(--shadow-md);
 }
@@ -319,7 +319,7 @@ body {
 }
 
 .btn-info {
-    background: linear-gradient(135deg, var(--info-color), #2563eb);
+    background: var(--info-color);
     color: white;
     box-shadow: var(--shadow-md);
 }
@@ -362,16 +362,20 @@ body {
 }
 
 .items-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    width: 100% !important;
+    border-collapse: collapse !important;
     margin-bottom: var(--spacing-lg);
-    table-layout: auto; /* Allow columns to adjust to content */
+    table-layout: auto;
 }
 
-.items-table thead {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+.items-table thead th {
+    background: var(--primary-color) !important;
     color: white;
+    padding: var(--spacing-md);
+    text-align: right;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: none !important;
 }
 
 .items-table th {
@@ -383,12 +387,9 @@ body {
     border-bottom: none; /* Remove border */
 }
 
-.items-table th:first-child {
-    border-radius: 0 var(--radius-sm) 0 0; /* Top-Right for RTL start */
-}
-
+.items-table th:first-child,
 .items-table th:last-child {
-    border-radius: var(--radius-sm) 0 0 0; /* Top-Left for RTL end */
+    border-radius: 0 !important;
 }
 
 .items-table tbody tr {
@@ -1669,9 +1670,6 @@ a[href^="tel:"] {
     -webkit-overflow-scrolling: touch;
     margin-bottom: 1rem;
     padding-bottom: 0.5rem; /* Add padding for scrollbar/spacing */
-    /* Add padding to sides to prevent touching edge */
-    padding-left: 10px;
-    padding-right: 10px;
 }
 
 .table-responsive::-webkit-scrollbar {
