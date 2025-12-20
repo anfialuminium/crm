@@ -44,6 +44,14 @@ function toggleFilters(button) {
     }
 }
 
+// Utility to check if a phone number is a mobile number (Israel)
+function isMobileNumber(phone) {
+    if (!phone) return false;
+    const cleanPhone = phone.toString().replace(/\D/g, '');
+    // In Israel mobile starts with 05 or 9725
+    return cleanPhone.startsWith('05') || cleanPhone.startsWith('5') || cleanPhone.startsWith('9725');
+}
+
 // Global state
 let products = [];
 let customers = [];
@@ -1610,9 +1618,10 @@ function filterCustomers(preservePage = false) {
                                     <a href="tel:${contactPhone}" title="התקשר">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
+                                    ${isMobileNumber(contactPhone) ? `
                                     <a href="https://wa.me/${contactPhone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                         <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
-                                    </a>
+                                    </a>` : ''}
                                 </div>
                             ` : '<span class="deal-card-value">-</span>'}
                         </span>
@@ -1928,7 +1937,7 @@ async function viewCustomerDetails(customerId) {
                                          // Basic cleanup for link
                                          const cleanNum = num.replace(/[^\d+]/g, '');
                                          // Check if mobile (starts with 05 or 9725)
-                                         const isMobile = cleanNum.startsWith('05') || cleanNum.startsWith('9725');
+                                         const isMobile = isMobileNumber(num);
                                          const waNum = cleanNum.replace(/^0/, '972');
                                          
                                          return `
@@ -2594,7 +2603,7 @@ function filterContacts(preservePage = false) {
                                     const cleanPhone = phone.replace(/\D/g, '').replace(/^0/, '972'); // For WhatsApp
                                     const cleanNumber = phone.replace(/[^0-9+]/g, ''); // For tel: link keeping + if exists
 
-                                    const isMobile = phone.trim().startsWith('05');
+                                    const isMobile = isMobileNumber(phone);
 
                                     return `
                                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2px;">
@@ -2681,9 +2690,10 @@ function filterContacts(preservePage = false) {
                                         <a href="tel:${cleanNumber}" title="התקשר">
                                             <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                         </a>
+                                        ${isMobileNumber(phone) ? `
                                         <a href="https://wa.me/${cleanPhone}" target="_blank" title="שלח הודעה בווטסאפ">
                                             <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
-                                        </a>
+                                        </a>` : ''}
                                     </div>
                                 </div>
                                 `;
@@ -3049,7 +3059,7 @@ async function viewContactDetails(contactId) {
                                 const cleanPhone = phone.replace(/\D/g, '').replace(/^0/, '972');
                                 const cleanNumber = phone.replace(/[^0-9+]/g, '');
 
-                                const isMobile = phone.trim().startsWith('05');
+                                const isMobile = isMobileNumber(phone);
 
                                 return `
                                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2px;">
@@ -3915,9 +3925,10 @@ function createDealCard(deal) {
                             <a href="tel:${deal.customers.phone}" title="התקשר">
                                 <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                             </a>
+                            ${isMobileNumber(deal.customers.phone) ? `
                             <a href="https://wa.me/${deal.customers.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                 <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
-                            </a>
+                            </a>` : ''}
                         </div>
                     ` : '-'}
                 </span>
@@ -4041,9 +4052,10 @@ async function viewDealDetails(dealId) {
                                 <a href="tel:${deal.customers.phone}" title="התקשר">
                                     <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                 </a>
+                                ${isMobileNumber(deal.customers.phone) ? `
                                 <a href="https://wa.me/${deal.customers.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                     <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
-                                </a>
+                                </a>` : ''}
                             </div>
                         ` : '-'}
                     </div>
@@ -5641,9 +5653,10 @@ async function loadThisWeek() {
                                         <a href="tel:${phone}" title="התקשר">
                                             <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                         </a>
+                                        ${isMobileNumber(phone) ? `
                                         <a href="https://wa.me/${phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                             <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
-                                        </a>
+                                        </a>` : ''}
                                     </div>
                                 ` : ''}
                                 ${customer?.email ? `
@@ -5907,9 +5920,10 @@ async function viewActivityDetails(activityId) {
                                     <a href="tel:${customer.phone}" title="התקשר">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
+                                    ${isMobileNumber(customer.phone) ? `
                                     <a href="https://wa.me/${customer.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                         <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
-                                    </a>
+                                    </a>` : ''}
                                 </div>
                             ` : '-'}
                         </span>
@@ -6273,7 +6287,7 @@ async function loadActivities(preservePage = false) {
                 
                 // Format phone for WhatsApp (remove dashes, ensure +972)
                 let whatsappLink = '';
-                if (phone) {
+                if (phone && isMobileNumber(phone)) {
                     let cleanPhone = phone.replace(/\D/g, '');
                     if (cleanPhone.startsWith('0')) cleanPhone = '972' + cleanPhone.substring(1);
                     whatsappLink = `https://wa.me/${cleanPhone}`;
@@ -7191,17 +7205,26 @@ async function loadAuditLog() {
             'contact': 'איש קשר'
         };
         
+        // Helper to map technical status names to user-friendly ones
+        const formatAuditText = (text) => {
+            if (!text || typeof text !== 'string') return text;
+            return text
+                .replace(/זכייה|נסגר/g, '<span class="status-text-won">נסגר</span>')
+                .replace(/הפסד|בוטל/g, '<span class="status-text-lost">בוטל</span>');
+        };
+
         // Build HTML
         let html = `
-            <p style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
-                מציג ${filteredLogs.length} פעולות אחרונות
-            </p>
+            <div class="audit-list-container">
+                <p style="margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                    מציג ${filteredLogs.length} פעולות אחרונות
+                </p>
         `;
         
         // Group by date
         const groupedByDate = {};
         
-        const page = paginationState.audit.page;
+        const page = paginationState.audit.page || 1;
         const limit = paginationState.audit.limit || 10;
         const start = (page - 1) * limit;
         const pagedLogs = filteredLogs.slice(start, start + limit);
@@ -7220,14 +7243,12 @@ async function loadAuditLog() {
         
         Object.keys(groupedByDate).forEach(dateKey => {
             html += `
-                <div style="margin-bottom: 1.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color);">
-                        <span style="font-weight: 600; color: var(--text-primary);">${dateKey}</span>
-                        <span style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; color: var(--text-secondary);">
-                            ${groupedByDate[dateKey].length} פעולות
-                        </span>
+                <div class="audit-date-group">
+                    <div class="audit-date-title">
+                        <span class="audit-date-text">${dateKey}</span>
+                        <span class="audit-item-count">${groupedByDate[dateKey].length} פעולות</span>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div class="audit-items-stack">
             `;
             
             groupedByDate[dateKey].forEach(log => {
@@ -7239,12 +7260,14 @@ async function loadAuditLog() {
                 let itemChangesHtml = '';
                 if (log.new_value && log.new_value.itemChanges && log.new_value.itemChanges.length > 0) {
                     itemChangesHtml = `
-                        <div style="width: 100%; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border-color);">
-                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">📋 פירוט שינויים:</div>
-                            <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem;">
+                        <div class="audit-changes-box">
+                            <div class="audit-changes-title">
+                                <span>📋</span> פירוט שינויים
+                            </div>
+                            <div class="audit-changes-list">
                                 ${log.new_value.itemChanges.map(change => `
-                                    <div style="padding: 0.25rem 0.5rem; background: var(--bg-tertiary); border-radius: 4px; color: var(--text-primary);">
-                                        ${change}
+                                    <div class="audit-change-line">
+                                        <span>🔹</span> ${formatAuditText(change)}
                                     </div>
                                 `).join('')}
                             </div>
@@ -7253,20 +7276,33 @@ async function loadAuditLog() {
                 }
                 
                 html += `
-                    <div style="display: flex; align-items: flex-start; gap: 1rem; padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; flex-wrap: wrap;">
-                        <span style="font-size: 1.2rem;">${action.icon}</span>
-                        <span class="badge ${action.class}" style="font-size: 0.75rem;">${action.label}</span>
-                        <span style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 8px; font-size: 0.8rem; color: var(--text-secondary);">
-                            ${entity}
-                        </span>
-                        <div style="flex: 1; min-width: 200px;">
-                            <span style="font-weight: 600; color: var(--text-primary);">${log.entity_name || '-'}</span>
-                            ${log.description ? `<span style="color: var(--text-secondary); margin-right: 0.5rem;">• ${log.description}</span>` : ''}
-                            ${itemChangesHtml}
+                    <div class="audit-item action-${log.action_type || 'update'}">
+                        <div class="audit-item-icon">
+                            ${action.icon}
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-tertiary);">
-                            <span>👤 ${log.performed_by}</span>
-                            <span>⏰ ${time}</span>
+                        <div class="audit-item-content">
+                            <div class="audit-item-header">
+                                <div class="audit-entity-info">
+                                    <span class="audit-entity-type">${entity}</span>
+                                    <span class="audit-entity-name">${formatAuditText(log.entity_name) || '-'}</span>
+                                </div>
+                                <span class="badge ${action.class}">${action.label}</span>
+                            </div>
+                            
+                            <div class="audit-description">
+                                ${formatAuditText(log.description) || 'אין תיאור נוסף'}
+                            </div>
+
+                            ${itemChangesHtml}
+
+                            <div class="audit-item-meta">
+                                <div class="audit-performer">
+                                    <span>👤</span> ${log.performed_by}
+                                </div>
+                                <div class="audit-time">
+                                    <span>⏰</span> ${time}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -7277,6 +7313,8 @@ async function loadAuditLog() {
                 </div>
             `;
         });
+        
+        html += `</div>`; // Close audit-list-container
         
         container.innerHTML = html;
         container.innerHTML += renderPagination(filteredLogs.length, page, 'audit');
@@ -8629,9 +8667,10 @@ function renderGlobalSearchResults(results, query) {
                             <span>${phoneDisplay}</span>
                             ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                         </div>
+                        ${isMobileNumber(phone) ? `
                         <a href="https://wa.me/${cleanPhone}" target="_blank" title="שלח וואטסאפ" style="text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
                             <img src="images/whatsapp.png" alt="WhatsApp" style="width: 25px; height: 25px; vertical-align: middle;">
-                        </a>
+                        </a>` : ''}
                         <a href="tel:${cleanNumber}" title="חייג" style="text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
                             <img src="images/call.png" alt="Call" style="width: 20px; height: 20px; vertical-align: middle;">
                         </a>
