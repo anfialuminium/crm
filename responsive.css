@@ -84,8 +84,11 @@
         margin-bottom: 0.75rem !important;
     }
 
-    #quick-nav-area label, .nav-container label {
+    #quick-nav-area label, 
+    .nav-container label,
+    .form-section .section-title[style*="display: block"] {
         display: none !important;
+        visibility: hidden !important;
     }
 
     #quick-nav-buttons {
@@ -224,6 +227,11 @@
     /* Collapsible Filters */
     .filters-content.collapsed {
         display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
     }
 
     .filters-toggle {
