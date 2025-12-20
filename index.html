@@ -287,9 +287,14 @@
                             </button>
                         </div>
                     </div>
+
+                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
+                        🔍 הצג סינונים
+                    </button>
                     
                     <!-- Filters -->
-                    <div class="form-grid" style="margin-bottom: 2rem;">
+                    <div class="filters-content collapsed">
+                        <div class="form-grid" style="margin-bottom: 2rem;">
                         <div class="form-group">
                             <label class="form-label">סינון לפי סוג פעילות</label>
                             <select id="filter-thisweek-type" class="form-select" onchange="loadThisWeek()">
@@ -329,6 +334,7 @@
                             </select>
                         </div>
                     </div>
+                    </div>
 
                     <!-- This Week Content -->
                     <div id="thisweek-list">
@@ -357,8 +363,13 @@
                         </div>
                     </div>
                     
+                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
+                        🔍 הצג סינונים
+                    </button>
+
                     <!-- Filters -->
-                    <div class="form-grid" style="margin-bottom: 2rem;">
+                    <div class="filters-content collapsed">
+                        <div class="form-grid" style="margin-bottom: 2rem;">
                         <div class="form-group">
                             <label class="form-label">סינון לפי סטטוס</label>
                             <select id="filter-status" class="form-select" onchange="loadDealsHistory()">
@@ -384,6 +395,7 @@
                                 <option value="lowest">סכום נמוך לגבוה</option>
                             </select>
                         </div>
+                    </div>
                     </div>
 
                     <!-- Deals List -->
@@ -416,8 +428,13 @@
                         </div>
                     </div>
                     
+                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
+                        🔍 הצג סינונים
+                    </button>
+
                     <!-- Filters -->
-                    <div class="form-grid" style="margin-bottom: 2rem;">
+                    <div class="filters-content collapsed">
+                        <div class="form-grid" style="margin-bottom: 2rem;">
                         <div class="form-group">
                             <label class="form-label">סינון לפי סוג</label>
                             <select id="filter-activity-type" class="form-select" onchange="loadActivities()">
@@ -457,6 +474,7 @@
                             </select>
                         </div>
                     </div>
+                    </div>
 
                     <!-- Activities List -->
                     <div id="activities-list">
@@ -492,8 +510,13 @@
                         </div>
                     </div>
 
+                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
+                        🔍 הצג סינונים
+                    </button>
+
                     <!-- Filters -->
-                    <div class="form-grid" style="margin-bottom: 2rem;">
+                    <div class="filters-content collapsed">
+                        <div class="form-grid" style="margin-bottom: 2rem;">
                         <div class="form-group">
                             <label class="form-label">חיפוש</label>
                             <input type="text" id="filter-customer-list-search" class="form-input" 
@@ -532,6 +555,7 @@
                             </select>
                         </div>
                     </div>
+                    </div>
 
                     <div id="customers-list">
                         <!-- Customers will be loaded here -->
@@ -563,8 +587,13 @@
                         </div>
                     </div>
                     
+                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
+                        🔍 הצג סינונים
+                    </button>
+
                     <!-- Filters -->
-                    <div class="form-grid" style="margin-bottom: 2rem;">
+                    <div class="filters-content collapsed">
+                        <div class="form-grid" style="margin-bottom: 2rem;">
                         <div class="form-group">
                             <label class="form-label">חיפוש מוצר</label>
                             <input type="text" id="filter-product-search" class="form-input" 
@@ -586,6 +615,7 @@
                                 <option value="price-desc">מחיר - מהגבוה לנמוך</option>
                             </select>
                         </div>
+                    </div>
                     </div>
                     
                     <div id="products-list">
@@ -622,8 +652,13 @@
                         </div>
                     </div>
                     
+                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
+                        🔍 הצג סינונים
+                    </button>
+
                     <!-- Filters -->
-                    <div class="form-grid" style="margin-bottom: 2rem;">
+                    <div class="filters-content collapsed">
+                        <div class="form-grid" style="margin-bottom: 2rem;">
                         <div class="form-group">
                             <label class="form-label">חיפוש</label>
                             <input type="text" id="filter-contact-search" class="form-input" 
@@ -644,6 +679,7 @@
                             </select>
                         </div>
                     </div>
+                    </div>
                     
                     <div id="contacts-list">
                         <!-- Contacts will be loaded here -->
@@ -663,18 +699,24 @@
                         </div>
                     </div>
                     
+                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
+                        🔍 הצג סינונים
+                    </button>
+
                     <!-- Filters -->
-                    <div class="form-grid" style="margin-bottom: 2rem;">
-                        <div class="form-group">
-                            <label class="form-label">חיפוש</label>
-                            <input type="text" id="filter-supplier-search" class="form-input" 
-                                   placeholder="שם ספק, איש קשר, קטגוריה..." onkeyup="filterSuppliers()">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">סינון לפי קטגוריה</label>
-                            <select id="filter-supplier-category" class="form-select" onchange="filterSuppliers()">
-                                <option value="">כל הקטגוריות</option>
-                            </select>
+                    <div class="filters-content collapsed">
+                        <div class="form-grid" style="margin-bottom: 2rem;">
+                            <div class="form-group">
+                                <label class="form-label">חיפוש</label>
+                                <input type="text" id="filter-supplier-search" class="form-input" 
+                                       placeholder="שם ספק, איש קשר, קטגוריה..." onkeyup="filterSuppliers()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">סינון לפי קטגוריה</label>
+                                <select id="filter-supplier-category" class="form-select" onchange="filterSuppliers()">
+                                    <option value="">כל הקטגוריות</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     
@@ -686,7 +728,6 @@
 
             <!-- Supplier Orders Tab -->
             <div id="supplier-orders-tab" class="tab-content hidden">
-                <div class="form-section">
                     <div class="action-header">
                         <h2 class="section-title" style="margin-bottom: 0;">הזמנות רכש מספקים</h2>
                         <div class="action-buttons">
@@ -696,25 +737,31 @@
                         </div>
                     </div>
 
+                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
+                        🔍 הצג סינונים
+                    </button>
+
                     <!-- Filters -->
-                     <div class="form-grid" style="margin-bottom: 2rem;">
-                         <div class="form-group">
-                             <label class="form-label">סטטוס הזמנה</label>
-                             <select id="filter-supplier-order-status" class="form-select" onchange="loadSupplierOrders()">
-                                 <option value="">הכל</option>
-                                 <option value="חדש">חדש</option>
-                                 <option value="נשלח">נשלח</option>
-                                 <option value="התקבל">התקבל</option>
-                                 <option value="בוטל">בוטל</option>
-                             </select>
+                    <div class="filters-content collapsed">
+                         <div class="form-grid" style="margin-bottom: 2rem;">
+                             <div class="form-group">
+                                 <label class="form-label">סטטוס הזמנה</label>
+                                 <select id="filter-supplier-order-status" class="form-select" onchange="loadSupplierOrders()">
+                                     <option value="">הכל</option>
+                                     <option value="חדש">חדש</option>
+                                     <option value="נשלח">נשלח</option>
+                                     <option value="התקבל">התקבל</option>
+                                     <option value="בוטל">בוטל</option>
+                                 </select>
+                             </div>
+                             <div class="form-group">
+                                 <label class="form-label">ספק</label>
+                                 <select id="filter-supplier-order-supplier" class="form-select" onchange="loadSupplierOrders()">
+                                     <option value="">כל הספקים</option>
+                                 </select>
+                             </div>
                          </div>
-                         <div class="form-group">
-                             <label class="form-label">ספק</label>
-                             <select id="filter-supplier-order-supplier" class="form-select" onchange="loadSupplierOrders()">
-                                 <option value="">כל הספקים</option>
-                             </select>
-                         </div>
-                     </div>
+                    </div>
 
                     <div id="supplier-orders-list">
                         <div class="spinner"></div>
@@ -723,7 +770,6 @@
             </div>
             <!-- Audit Log Tab -->
             <div id="auditlog-tab" class="tab-content hidden">
-                <div class="form-section">
                     <div class="action-header">
                         <h2 class="section-title" style="margin-bottom: 0;">📋 יומן פעולות</h2>
                         <div class="action-buttons">
@@ -733,47 +779,53 @@
                         </div>
                     </div>
                     
+                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
+                        🔍 הצג סינונים
+                    </button>
+
                     <!-- Filters -->
-                    <div class="form-grid" style="margin-bottom: 2rem;">
-                        <div class="form-group">
-                            <label class="form-label">סוג פעולה</label>
-                            <select id="filter-audit-action" class="form-select" onchange="loadAuditLog()">
-                                <option value="">הכל</option>
-                                <option value="create">יצירה</option>
-                                <option value="update">עדכון</option>
-                                <option value="delete">מחיקה</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">סוג ישות</label>
-                            <select id="filter-audit-entity" class="form-select" onchange="loadAuditLog()">
-                                <option value="">הכל</option>
-                                <option value="customer">לקוח</option>
-                                <option value="deal">עסקה</option>
-                                <option value="product">מוצר</option>
-                                <option value="activity">פעילות</option>
-                                <option value="contact">איש קשר</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">חיפוש</label>
-                            <input type="text" id="filter-audit-search" class="form-input" 
-                                   placeholder="חיפוש בתיאור או שם..." onkeyup="loadAuditLog()">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">תאריך</label>
-                            <select id="filter-audit-date" class="form-select" onchange="loadAuditLog()">
-                                <option value="">הכל</option>
-                                <option value="today">היום</option>
-                                <option value="week">השבוע</option>
-                                <option value="month">החודש</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">בוצע ע"י</label>
-                            <select id="filter-audit-performer" class="form-select" onchange="loadAuditLog()">
-                                <option value="">הכל</option>
-                            </select>
+                    <div class="filters-content collapsed">
+                        <div class="form-grid" style="margin-bottom: 2rem;">
+                            <div class="form-group">
+                                <label class="form-label">סוג פעולה</label>
+                                <select id="filter-audit-action" class="form-select" onchange="loadAuditLog()">
+                                    <option value="">הכל</option>
+                                    <option value="create">יצירה</option>
+                                    <option value="update">עדכון</option>
+                                    <option value="delete">מחיקה</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">סוג ישות</label>
+                                <select id="filter-audit-entity" class="form-select" onchange="loadAuditLog()">
+                                    <option value="">הכל</option>
+                                    <option value="customer">לקוח</option>
+                                    <option value="deal">עסקה</option>
+                                    <option value="product">מוצר</option>
+                                    <option value="activity">פעילות</option>
+                                    <option value="contact">איש קשר</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">חיפוש</label>
+                                <input type="text" id="filter-audit-search" class="form-input" 
+                                       placeholder="חיפוש בתיאור או שם..." onkeyup="loadAuditLog()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">תאריך</label>
+                                <select id="filter-audit-date" class="form-select" onchange="loadAuditLog()">
+                                    <option value="">הכל</option>
+                                    <option value="today">היום</option>
+                                    <option value="week">השבוע</option>
+                                    <option value="month">החודש</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">בוצע ע"י</label>
+                                <select id="filter-audit-performer" class="form-select" onchange="loadAuditLog()">
+                                    <option value="">הכל</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     

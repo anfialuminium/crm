@@ -36,6 +36,14 @@ function handleLogout() {
     location.reload(); // Refresh to show login screen
 }
 
+function toggleFilters(button) {
+    const container = button.closest('.form-section').querySelector('.filters-content');
+    if (container) {
+        container.classList.toggle('collapsed');
+        button.textContent = container.classList.contains('collapsed') ? '🔍 הצג סינונים' : '🔼 הסתר סינונים';
+    }
+}
+
 // Global state
 let products = [];
 let customers = [];

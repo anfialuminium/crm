@@ -20,8 +20,6 @@
     white-space: nowrap;
 }
 
-/* Allow wrapping for description or long text if specific class is added, otherwise keep nowrap for cleanliness in scrollable table */
-
 /* Fix Action Buttons in Table */
 .items-table .btn-icon {
     width: 32px;
@@ -33,60 +31,209 @@
 }
 
 @media (max-width: 768px) {
+    :root {
+        --spacing-xl: 1rem;
+        --spacing-2xl: 1.5rem;
+    }
+
+    body {
+        padding: var(--spacing-sm);
+    }
+
     /* Adjust Main Content Padding */
     .main-content {
-        padding: var(--spacing-md);
-        width: 100%;
-        overflow-x: hidden; /* Prevent body scroll */
-    }
-    
-    .container {
-        padding: 0 var(--spacing-sm);
+        padding: var(--spacing-md) var(--spacing-sm);
         width: 100%;
         overflow-x: hidden;
     }
     
-    /* Ensure modal fits */
-    .modal-content {
-        width: 95%;
-        margin: var(--spacing-sm) auto;
-        padding: var(--spacing-md);
-        max-height: 85vh; /* Ensure it fits within view */
-        overflow-y: auto; /* Enable scrolling */
-    }
-    
-    .modal-header {
-        position: sticky;
-        top: 0;
-        background: white;
-        z-index: 10;
-        padding-bottom: 1rem; /* Visual separation */
-        border-bottom: 1px solid var(--border-color);
-        margin-bottom: 1rem;
-    }
-    
-    /* Improve close button hit area */
-    .modal-close {
-        padding: 10px;
-        margin: -10px; /* Increase hit area without affecting layout */
-        font-size: 1.5rem;
+    .container {
+        padding: 0;
+        width: 100%;
     }
 
-    /* Fix header font size */
-    .header h1 {
-        font-size: 1.5rem;
+    /* Header adjustments */
+    .header {
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
     }
-    
-    /* Better pagination on mobile */
-    .pagination {
-        flex-wrap: wrap;
-        gap: var(--spacing-sm);
+
+    .header h1 {
+        font-size: 1.4rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .header .btn {
+        width: 100%;
         justify-content: center;
     }
-    
-    /* Narrower catalog button on mobile */
-    #btn-goto-catalog {
-        padding: 0.4rem 0.8rem !important;
+
+    /* Navigation adjustments */
+    #quick-nav-area {
+        padding: 0.4rem;
+        margin-bottom: 0.75rem !important;
+    }
+
+    #quick-nav-area label, .nav-container label {
+        display: none !important;
+    }
+
+    #quick-nav-buttons {
+        gap: 0.3rem !important;
+    }
+
+    #quick-nav-buttons button {
+        font-size: 0.75rem !important;
+        padding: 0.4rem 0.2rem !important;
+    }
+
+    .nav-container {
+        margin-bottom: 1rem !important;
+    }
+
+    #main-navigation {
+        font-size: 0.85rem !important;
+        padding: 0.4rem !important;
+    }
+
+    .nav-container .btn-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Form Section Adjustments */
+    .form-section {
+        margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-grid {
+        gap: 0.75rem !important;
+    }
+
+    .form-group label {
         font-size: 0.85rem;
     }
+
+    .form-input, .form-select, .form-textarea {
+        padding: 0.6rem !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Summary Card on mobile */
+    .summary-card {
+        max-width: 100%;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .summary-label {
+        font-size: 0.95rem;
+    }
+
+    .summary-value {
+        font-size: 1.1rem;
+    }
+
+    .summary-total {
+        font-size: 1.3rem !important;
+    }
+
+    /* Table Font Size */
+    .items-table th, .items-table td {
+        padding: 0.4rem !important;
+        font-size: 0.85rem;
+    }
+
+    /* Modal Adjustments */
+    .modal-content {
+        width: 98%;
+        padding: var(--spacing-md);
+        border-radius: var(--radius-md);
+    }
+
+    .modal-header h2 {
+        font-size: 1.25rem;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+        margin: 0 !important;
+    }
+
+    /* Action Headers (Title + Buttons) */
+    .action-header {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .action-buttons {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+
+    .action-buttons .btn {
+        width: 100%;
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    /* Cards in list views */
+    .card-item, .deal-card {
+        padding: 0.75rem !important;
+    }
+
+    .deals-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+
+    .deal-card-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+
+    .deal-card-title {
+        font-size: 0.95rem !important;
+    }
+
+    /* Collapsible Filters */
+    .filters-content.collapsed {
+        display: none !important;
+    }
+
+    .filters-toggle {
+        display: flex !important;
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .week-nav-wrapper {
+        flex-direction: column;
+        gap: 0.4rem !important;
+    }
 }
+
+/* Default state for toggle button (hidden on desktop) */
+.filters-toggle {
+    display: none;
+}
+
