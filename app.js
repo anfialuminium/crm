@@ -13,9 +13,13 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 function handleLogin(event) {
     event.preventDefault();
     const password = document.getElementById('password').value;
+    const rememberMe = document.getElementById('remember-me')?.checked;
     
     if (password === '3737') {
         sessionStorage.setItem('isLoggedIn', 'true');
+        if (rememberMe) {
+            localStorage.setItem('isLoggedIn', 'true');
+        }
         document.getElementById('login-modal').classList.remove('active');
         // Initialize app only after login
         initializeApp();
@@ -24,6 +28,12 @@ function handleLogin(event) {
         document.getElementById('password').value = '';
         document.getElementById('password').focus();
     }
+}
+
+function handleLogout() {
+    sessionStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('isLoggedIn');
+    location.reload(); // Refresh to show login screen
 }
 
 // Global state
@@ -169,8 +179,10 @@ async function changePage(viewName, newPage) {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if already logged in (sessionStorage persists until tab close)
-    if (sessionStorage.getItem('isLoggedIn') === 'true') {
+    // Check if already logged in (sessionStorage persists until tab close, localStorage persists between sessions)
+    const isLoggedIn = sessionStorage.getItem('isLoggedIn') === 'true' || localStorage.getItem('isLoggedIn') === 'true';
+    
+    if (isLoggedIn) {
         document.getElementById('login-modal').classList.remove('active');
         initializeApp();
     } else {
