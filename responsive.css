@@ -69,6 +69,13 @@
     .header .btn {
         width: 100%;
         justify-content: center;
+        text-align: center;
+    }
+
+    .header-actions {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.5rem !important;
     }
 
     /* Navigation adjustments */
