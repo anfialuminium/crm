@@ -9407,32 +9407,13 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
         noteControls.style.display = 'flex';
         notesEditor.style.display = 'none';
 
-        // Add Export HTML Button if not exists
-        if (!document.getElementById('btn-export-html')) {
-            const btn = document.createElement('button');
-            btn.id = 'btn-export-html';
-            btn.type = 'button';
-            btn.className = 'btn btn-secondary';
-            btn.style.marginRight = '10px';
-            btn.innerHTML = '🌐 ייצא HTML';
-            btn.onclick = () => exportSupplierOrderHTML(orderId);
-            const headerActions = document.querySelector('#supplier-order-modal .modal-header');
-            if (headerActions) {
-                 headerActions.insertBefore(btn, headerActions.firstChild);
-            }
-        } else {
-             const btn = document.getElementById('btn-export-html');
-             btn.style.display = 'inline-block';
-             btn.onclick = () => exportSupplierOrderHTML(orderId);
-        }
+
         
     } else {
         modal.classList.remove('read-only-mode');
         // ... (existing code)
         
-        // Hide Export HTML Button
-        const htmlBtn = document.getElementById('btn-export-html');
-        if (htmlBtn) htmlBtn.style.display = 'none';
+
         
         title.textContent = orderId ? 'ערוך הזמנה' : 'הזמנה חדשה';
         saveBtn.style.display = 'inline-block';
