@@ -510,18 +510,21 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
-                        🔍 הצג סינונים
-                    </button>
+                    <!-- Search and Filters -->
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <label class="form-label">🔍 חיפוש לקוח</label>
+                            <input type="text" id="filter-customer-list-search" class="form-input" 
+                                   placeholder="שם עסק, איש קשר, טלפון..." onkeyup="filterCustomers()">
+                        </div>
+                        <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)" style="margin-bottom: 0; min-height: 42px;">
+                            ⚙️ סינונים מתקדמים
+                        </button>
+                    </div>
 
                     <!-- Filters -->
                     <div class="filters-content collapsed">
                         <div class="form-grid" style="margin-bottom: 2rem;">
-                        <div class="form-group">
-                            <label class="form-label">חיפוש</label>
-                            <input type="text" id="filter-customer-list-search" class="form-input" 
-                                   placeholder="שם עסק, איש קשר, טלפון..." onkeyup="filterCustomers()">
-                        </div>
                         <div class="form-group">
                             <label class="form-label">סוג לקוח</label>
                             <select id="filter-customer-type" class="form-select" onchange="filterCustomers()">

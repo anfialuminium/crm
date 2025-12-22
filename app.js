@@ -1812,7 +1812,7 @@ function deleteCustomer(customerId) {
             
             // Log the action
             const deletedCustomer = customers.find(c => c.customer_id === customerId);
-            logAction('delete', 'customer', customerId, deletedCustomer?.business_name || 'לקוח', 'מחיקת לקוח');
+            logAction('delete', 'customer', customerId, deletedCustomer?.business_name || 'לקוח', 'מחיקת לקוח', deletedCustomer, null);
             
             showAlert('✅ הלקוח נמחק בהצלחה', 'success');
             
@@ -3714,7 +3714,7 @@ function deleteProduct(productId) {
             
             // Log the action
             const deletedProduct = products.find(p => p.product_id === productId);
-            logAction('delete', 'product', productId, deletedProduct?.product_name || 'מוצר', 'מחיקת מוצר');
+            logAction('delete', 'product', productId, deletedProduct?.product_name || 'מוצר', 'מחיקת מוצר', deletedProduct, null);
             
             showAlert('✅ המוצר נמחק בהצלחה', 'success');
             
@@ -4997,19 +4997,27 @@ function openNewActivityModal(prefillData = null) {
                     </div>
                     
                     <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">קשר ללקוח</label>
+                        <input type="text" id="new-activity-customer-search" class="form-input" placeholder="🔍 חפש לקוח..." style="margin-bottom: 0.5rem;" onkeyup="filterNewActivityCustomers(this.value)">
+                        <select id="new-activity-customer" class="form-select" size="5" onchange="loadCustomerContactsForActivity(this.value, 'new-activity-contact'); populateNewActivityDeals(this.value)">
+                            <option value="">-- ללא לקוח --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">איש קשר</label>
+                        <select id="new-activity-contact" class="form-select">
+                            <option value="">-- ראשי (ברירת מחדל) --</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 1rem;">
                         <label class="form-label">קשר לעסקה</label>
                         <select id="new-activity-deal" class="form-select">
                             <option value="">-- ללא עסקה --</option>
                         </select>
                     </div>
-                    
-                    <div class="form-group" style="margin-bottom: 1rem;">
-                        <label class="form-label">קשר ללקוח</label>
-                        <select id="new-activity-customer" class="form-select">
-                            <option value="">-- ללא לקוח --</option>
-                        </select>
-                    </div>
-                    
+
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label class="form-label">נוצר על ידי</label>
                         <input type="text" id="new-activity-author" class="form-input" placeholder="הזן את שמך">
@@ -5025,12 +5033,18 @@ function openNewActivityModal(prefillData = null) {
         document.body.appendChild(modal);
     }
     
-    // Populate deals dropdown
+    // Populate deals dropdown (initially all or limited)
     populateNewActivityDeals();
     
     // Populate customers dropdown
     populateNewActivityCustomers();
     
+    // Reset search and contact
+    const searchInput = document.getElementById('new-activity-customer-search');
+    if (searchInput) searchInput.value = '';
+    const contactSelect = document.getElementById('new-activity-contact');
+    if (contactSelect) contactSelect.innerHTML = '<option value="">-- ראשי (ברירת מחדל) --</option>';
+
     // Load saved author name
     const savedAuthor = localStorage.getItem('crm_username') || '';
     document.getElementById('new-activity-author').value = savedAuthor;
@@ -5058,7 +5072,11 @@ function openNewActivityModal(prefillData = null) {
         }
         if (prefillData.customer_id) {
              const customerSelect = document.getElementById('new-activity-customer');
-             if (customerSelect) customerSelect.value = prefillData.customer_id;
+             if (customerSelect) {
+                 customerSelect.value = prefillData.customer_id;
+                 // Trigger load contacts
+                 loadCustomerContactsForActivity(prefillData.customer_id, 'new-activity-contact', prefillData.contact_id);
+             }
         }
     }
 
@@ -5068,29 +5086,69 @@ function openNewActivityModal(prefillData = null) {
     modal.classList.add('active');
 }
 
-async function populateNewActivityDeals() {
+async function populateNewActivityDeals(filterCustomerId = null) {
     const select = document.getElementById('new-activity-deal');
-    select.innerHTML = '<option value="">-- ללא עסקה --</option>';
+    if (!select) return;
     
     try {
-        const { data: deals, error } = await supabaseClient
+        let query = supabaseClient
             .from('deals')
-            .select('deal_id, customers(business_name), created_at')
-            .order('created_at', { ascending: false })
-            .limit(50);
-        
+            .select(`
+                deal_id,
+                total_amount,
+                status,
+                customers (business_name)
+            `)
+            .neq('status', 'Won')
+            .neq('status', 'Lost')
+            .order('created_at', { ascending: false });
+            
+        if (filterCustomerId) {
+            query = query.eq('customer_id', filterCustomerId);
+        } else {
+            query = query.limit(50);
+        }
+
+        const { data: activeDeals, error } = await query;
+            
         if (error) throw error;
         
-        deals.forEach(deal => {
-            const date = new Date(deal.created_at).toLocaleDateString('he-IL');
+        select.innerHTML = '<option value="">-- ללא עסקה --</option>';
+        
+        activeDeals.forEach(deal => {
+            const customerName = deal.customers?.business_name || 'לקוח לא ידוע';
             const option = document.createElement('option');
             option.value = deal.deal_id;
-            option.textContent = `${deal.customers?.business_name || 'ללא לקוח'} - ${date}`;
-            option.dataset.customerId = deal.customer_id;
+            option.textContent = `${customerName} - ₪${deal.total_amount.toLocaleString()} (${deal.status})`;
             select.appendChild(option);
         });
+        
     } catch (error) {
-        console.error('Error loading deals for activity:', error);
+        console.error('❌ Error populating deals:', error);
+    }
+}
+
+function filterNewActivityCustomers(searchTerm) {
+    const select = document.getElementById('new-activity-customer');
+    if (!select) return;
+    
+    const currentSelected = select.value;
+    const lowerTerm = searchTerm.toLowerCase();
+    
+    select.innerHTML = '<option value="">-- ללא לקוח --</option>';
+    
+    if (typeof customers !== 'undefined' && customers) {
+        customers.forEach(customer => {
+            if (customer.business_name.toLowerCase().includes(lowerTerm)) {
+                const option = document.createElement('option');
+                option.value = customer.customer_id;
+                option.textContent = customer.business_name;
+                if (customer.customer_id === currentSelected) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            }
+        });
     }
 }
 
@@ -5121,6 +5179,8 @@ async function saveNewActivity(event) {
     const description = document.getElementById('new-activity-description').value;
     const dealId = document.getElementById('new-activity-deal').value;
     const customerId = document.getElementById('new-activity-customer').value;
+    const contactElement = document.getElementById('new-activity-contact');
+    const contactId = (contactElement && contactElement.value) ? contactElement.value : null;
     const authorInput = document.getElementById('new-activity-author').value.trim();
     const author = authorInput || 'משתמש מערכת';
     
@@ -5153,6 +5213,10 @@ async function saveNewActivity(event) {
         } else if (customerId) {
             // Only link to customer if no deal selected
             activityData.customer_id = customerId;
+        }
+
+        if (contactId) {
+            activityData.contact_id = contactId;
         }
         
         const { data: newActivity, error } = await supabaseClient
@@ -7125,7 +7189,8 @@ async function loadAuditLog() {
         let query = supabaseClient
             .from('audit_log')
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .limit(200);
         
         // Apply filters
         if (actionFilter) {
@@ -7291,7 +7356,7 @@ async function loadAuditLog() {
                         </div>
                     `;
                 } 
-                // Case 2: Generic old/new value comparison for simple fields (if not itemChanges)
+                // Case 2: Generic old/new value comparison for update
                 else if (log.action_type === 'update' && log.old_value && log.new_value) {
                     const changes = [];
                     const fieldLabels = {
@@ -7303,16 +7368,38 @@ async function loadAuditLog() {
                         'supplier_id': 'ספק',
                         'order_status': 'סטטוס הזמנה',
                         'expected_date': 'תאריך צפוי',
-                        'notes': 'הערות'
+                        'notes': 'הערות',
+                        'business_name': 'שם עסק',
+                        'city': 'עיר',
+                        'customer_type': 'סוג לקוח',
+                        'source': 'מקור',
+                        'contact_name': 'איש קשר',
+                        'phone': 'טלפון',
+                        'email': 'אימייל',
+                        'product_name': 'שם מוצר',
+                        'category': 'קטגוריה',
+                        'sku': 'מק"ט',
+                        'description': 'תיאור',
+                        'requires_color': 'דורש צבע',
+                        'requires_size': 'דורש מידה'
+                    };
+
+                    const formatVal = (v) => {
+                        if (v === true) return 'כן';
+                        if (v === false) return 'לא';
+                        if (v === null || v === undefined || v === '') return '-';
+                        return v;
                     };
 
                     for (const key in log.new_value) {
-                        if (key === 'itemChanges' || key === 'items') continue;
-                        if (log.old_value[key] !== log.new_value[key]) {
+                        if (['itemChanges', 'items', 'updated_at', 'created_at', 'created_by', 'active', 'customer_id', 'product_id', 'order_id'].includes(key)) continue;
+                        
+                        let oldVal = log.old_value[key];
+                        let newVal = log.new_value[key];
+
+                        if (String(oldVal) !== String(newVal)) {
                             const label = fieldLabels[key] || key;
-                            const oldVal = log.old_value[key] || '-';
-                            const newVal = log.new_value[key] || '-';
-                            changes.push(`${label}: ${oldVal} ← ${newVal}`);
+                            changes.push(`${label}: ${formatVal(oldVal)} ← ${formatVal(newVal)}`);
                         }
                     }
 
@@ -7326,6 +7413,37 @@ async function loadAuditLog() {
                                     ${changes.map(change => `
                                         <div class="audit-change-line">
                                             <span>🔹</span> ${formatAuditText(change)}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+                // Case 3: Deletion details
+                else if (log.action_type === 'delete' && log.old_value) {
+                    const info = [];
+                    if (log.entity_type === 'customer') {
+                        info.push(`שם עסק: ${log.old_value.business_name}`);
+                        if (log.old_value.phone) info.push(`טלפון: ${log.old_value.phone}`);
+                    } else if (log.entity_type === 'supplier_order') {
+                        if (log.old_value.total_amount) info.push(`סכום: ₪${log.old_value.total_amount}`);
+                        if (log.old_value.created_at) info.push(`תאריך: ${new Date(log.old_value.created_at).toLocaleDateString('he-IL')}`);
+                    } else if (log.entity_type === 'product') {
+                        info.push(`מק"ט: ${log.old_value.sku || '-'}`);
+                        info.push(`מחיר: ₪${log.old_value.price || 0}`);
+                    }
+
+                    if (info.length > 0) {
+                        itemChangesHtml = `
+                            <div class="audit-changes-box">
+                                <div class="audit-changes-title">
+                                    <span>🗑️</span> נתוני הרשומה שנמחקה
+                                </div>
+                                <div class="audit-changes-list">
+                                    ${info.map(line => `
+                                        <div class="audit-change-line">
+                                            <span>🔸</span> ${line}
                                         </div>
                                     `).join('')}
                                 </div>
@@ -10219,6 +10337,13 @@ async function deleteSupplierOrder(orderId) {
     });
     if (result.isConfirmed) {
         try {
+            // Fetch order details before deleting for better logging
+            const { data: order } = await supabaseClient
+                .from('supplier_orders')
+                .select('*, suppliers(name)')
+                .eq('order_id', orderId)
+                .single();
+
             const { error } = await supabaseClient
                 .from('supplier_orders')
                 .delete()
@@ -10226,7 +10351,11 @@ async function deleteSupplierOrder(orderId) {
             
             if (error) throw error;
             
-            logAction('delete', 'supplier_order', orderId, 'הזמנה', 'מחיקת הזמנת רכש');
+            const supplierName = order?.suppliers?.name || 'לא ידוע';
+            const orderAmount = order?.total_amount ? `₪${order.total_amount.toFixed(0)}` : '';
+            const description = `מחיקת הזמנת רכש של ${supplierName} ${orderAmount}`;
+            
+            logAction('delete', 'supplier_order', orderId, 'הזמנת רכש', description, order, null);
             
             showAlert('ההזמנה נמחקה בהצלחה', 'success');
             await loadSupplierOrders();

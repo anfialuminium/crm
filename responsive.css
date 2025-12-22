@@ -247,8 +247,8 @@
     }
 }
 
-/* Default state for toggle button (hidden on desktop) */
+/* Default state for toggle button (visible) */
 .filters-toggle {
-    display: none;
+    display: flex;
 }
 
