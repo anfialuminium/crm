@@ -1311,6 +1311,13 @@ async function saveCustomer(event) {
             email: contactEmail || null
         };
         
+        // Fetch old state for logging if update
+        let oldCustomer = null;
+        if (customerId) {
+            const { data } = await supabaseClient.from('customers').select('*').eq('customer_id', customerId).single();
+            oldCustomer = data;
+        }
+
         let result;
         if (customerId) {
             // Update existing customer
@@ -1346,7 +1353,6 @@ async function saveCustomer(event) {
             
             if (customerId && existingContactId) {
                 // Update existing primary contact
-                console.log('Updating existing contact:', existingContactId);
                 const { error: updateContactError } = await supabaseClient
                     .from('contacts')
                     .update(contactData)
@@ -1358,8 +1364,7 @@ async function saveCustomer(event) {
                      loadContacts(); // Refresh contacts list
                 }
             } else {
-                // Create new contact (for new customer OR existing customer without linked contact)
-                console.log('Creating new contact for:', savedCustomer.business_name);
+                // Create new contact
                 contactData.created_by = localStorage.getItem('crm_username') || 'משתמש מערכת';
                 
                 const { data: newContact, error: contactError } = await supabaseClient
@@ -1370,7 +1375,6 @@ async function saveCustomer(event) {
                 
                 if (contactError) {
                     console.error('Error creating contact:', contactError);
-                    showAlert('הלקוח נשמר אך הייתה שגיאה ביצירת איש הקשר: ' + contactError.message, 'warning');
                 } else if (newContact) {
                     // Set as primary contact
                     await supabaseClient
@@ -1378,19 +1382,20 @@ async function saveCustomer(event) {
                         .update({ primary_contact_id: newContact.contact_id })
                         .eq('customer_id', savedCustomer.customer_id);
                     
-                    console.log('✅ Created and linked primary contact');
                     loadContacts(); // Refresh contacts list
                 }
             }
         }
         
-        // Log the action
+        // Log the action with detailed changes
         logAction(
             customerId ? 'update' : 'create',
             'customer',
             savedCustomer.customer_id,
             savedCustomer.business_name,
-            customerId ? 'עדכון פרטי לקוח' : 'יצירת לקוח חדש'
+            customerId ? 'עדכון פרטי לקוח' : 'יצירת לקוח חדש',
+            oldCustomer,
+            customerData
         );
         
         showAlert(customerId ? '✅ הלקוח עודכן בהצלחה!' : '✅ הלקוח נשמר בהצלחה!', 'success');
@@ -1407,12 +1412,10 @@ async function saveCustomer(event) {
             const searchInput = document.getElementById('customer-search-input');
             if (searchInput) searchInput.value = savedCustomer.business_name;
         }
-        
         closeCustomerModal();
-        
-    } catch (error) {
-        console.error('❌ Error saving customer:', error);
-        showAlert('שגיאה בשמירת הלקוח: ' + error.message, 'error');
+    } catch (e) {
+        console.error(e);
+        showAlert('שגיאה בשמירת לקוח: ' + e.message, 'error');
     }
 }
 
@@ -3644,6 +3647,13 @@ async function saveProduct(event) {
             active: true
         };
         
+        // Fetch old state for logging if update
+        let oldProductData = null;
+        if (productId) {
+            const { data } = await supabaseClient.from('products').select('*').eq('product_id', productId).single();
+            oldProductData = data;
+        }
+
         let result;
         if (productId) {
             // Update existing product
@@ -3664,13 +3674,15 @@ async function saveProduct(event) {
         
         if (result.error) throw result.error;
         
-        // Log the action
+        // Log the action with detailed changes
         logAction(
             productId ? 'update' : 'create',
             'product',
             result.data.product_id,
             result.data.product_name,
-            productId ? 'עדכון פרטי מוצר' : 'הוספת מוצר חדש'
+            productId ? 'עדכון פרטי מוצר' : 'הוספת מוצר חדש',
+            oldProductData,
+            productData
         );
         
         showAlert(productId ? '✅ המוצר עודכן בהצלחה!' : '✅ המוצר נוסף בהצלחה!', 'success');
@@ -7202,7 +7214,10 @@ async function loadAuditLog() {
             'deal': 'עסקה',
             'product': 'מוצר',
             'activity': 'פעילות',
-            'contact': 'איש קשר'
+            'contact': 'איש קשר',
+            'supplier': 'ספק',
+            'supplier_order': 'הזמנת רכש',
+            'note': 'הערה'
         };
         
         // Helper to map technical status names to user-friendly ones
@@ -7256,9 +7271,11 @@ async function loadAuditLog() {
                 const entity = entityLabels[log.entity_type] || log.entity_type;
                 const time = new Date(log.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
                 
-                // Check for detailed item changes
+                // Check for detailed changes
                 let itemChangesHtml = '';
-                if (log.new_value && log.new_value.itemChanges && log.new_value.itemChanges.length > 0) {
+                
+                // Case 1: Specific itemChanges array (used in deals)
+                if (log.new_value && log.new_value.itemChanges && Array.isArray(log.new_value.itemChanges) && log.new_value.itemChanges.length > 0) {
                     itemChangesHtml = `
                         <div class="audit-changes-box">
                             <div class="audit-changes-title">
@@ -7273,6 +7290,48 @@ async function loadAuditLog() {
                             </div>
                         </div>
                     `;
+                } 
+                // Case 2: Generic old/new value comparison for simple fields (if not itemChanges)
+                else if (log.action_type === 'update' && log.old_value && log.new_value) {
+                    const changes = [];
+                    const fieldLabels = {
+                        'status': 'סטטוס',
+                        'total': 'סכום',
+                        'discount': 'הנחה',
+                        'price': 'מחיר',
+                        'quantity': 'כמות',
+                        'supplier_id': 'ספק',
+                        'order_status': 'סטטוס הזמנה',
+                        'expected_date': 'תאריך צפוי',
+                        'notes': 'הערות'
+                    };
+
+                    for (const key in log.new_value) {
+                        if (key === 'itemChanges' || key === 'items') continue;
+                        if (log.old_value[key] !== log.new_value[key]) {
+                            const label = fieldLabels[key] || key;
+                            const oldVal = log.old_value[key] || '-';
+                            const newVal = log.new_value[key] || '-';
+                            changes.push(`${label}: ${oldVal} ← ${newVal}`);
+                        }
+                    }
+
+                    if (changes.length > 0) {
+                        itemChangesHtml = `
+                            <div class="audit-changes-box">
+                                <div class="audit-changes-title">
+                                    <span>📋</span> פירוט שינויים
+                                </div>
+                                <div class="audit-changes-list">
+                                    ${changes.map(change => `
+                                        <div class="audit-change-line">
+                                            <span>🔹</span> ${formatAuditText(change)}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
                 }
                 
                 html += `
@@ -10033,14 +10092,8 @@ async function saveSupplierOrder(event) {
     if (newNoteContent) {
         const now = new Date();
         const timestamp = now.toLocaleDateString('he-IL') + ', ' + now.toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-        // Get current user name (assuming simple auth or 'משתמש')
-        // Ideally fetch from session or config. Using hardcoded or simple retrieval if available.
-        // Looking at other parts of app, 'שחר' is used in example, or we can use generic.
-        // Let's use a generic 'משתמש' or try to find where user name is stored if poss.
-        // For now, consistent with other parts:
-        const userName = sessionStorage.getItem('userName') || 'שחר'; // Fallback or session
+        const userName = sessionStorage.getItem('userName') || 'שחר'; 
         const header = `📅 ${timestamp} | ${userName}:`;
-        
         const newNoteEntry = `${header}\n${newNoteContent}`;
         
         if (finalNotes) {
@@ -10063,10 +10116,16 @@ async function saveSupplierOrder(event) {
         let savedOrderId = orderId;
         
         if (orderId) {
+            // Fetch old state for logging
+            const { data: oldOrder } = await supabaseClient.from('supplier_orders').select('*').eq('order_id', orderId).single();
+
             // Update Order
             const { error } = await supabaseClient.from('supplier_orders').update(orderData).eq('order_id', orderId);
             if (error) throw error;
             
+            // Log update
+            logAction('update', 'supplier_order', orderId, 'הזמנה', `עדכון הזמנה - סטטוס: ${orderData.order_status}`, oldOrder, orderData);
+
             // Delete existing items (simple replace strategy)
             await supabaseClient.from('supplier_order_items').delete().eq('order_id', orderId);
         } else {
@@ -10075,12 +10134,14 @@ async function saveSupplierOrder(event) {
             const { data, error } = await supabaseClient.from('supplier_orders').insert(orderData).select().single();
             if (error) throw error;
             savedOrderId = data.order_id;
+
+            // Log creation
+            logAction('create', 'supplier_order', savedOrderId, 'הזמנה', `יצירת הזמנה חדשה בסכום ₪${orderData.total_amount.toFixed(0)}`);
         }
         
         // Insert Items
         if (currentOrderItems.length > 0) {
             const itemsToInsert = currentOrderItems.map(item => {
-                // Combine description and color if color exists, as DB might not have color column
                 let dbDescription = item.description;
                 if (item.color && item.color.trim()) {
                     dbDescription = `${item.description} (${item.color})`;
@@ -10089,7 +10150,6 @@ async function saveSupplierOrder(event) {
                 return {
                     order_id: savedOrderId,
                     description: dbDescription,
-                    // color: item.color || null, // Removed to avoid 400 error if column doesn't exist
                     sku: item.sku,
                     quantity: parseFloat(item.quantity),
                     unit_price: parseFloat(item.unit_price)
@@ -10124,6 +10184,9 @@ async function deleteSupplier(supplierId) {
 
     if (result.isConfirmed) {
         try {
+            // Get name before delete
+            const { data: supplier } = await supabaseClient.from('suppliers').select('name').eq('supplier_id', supplierId).single();
+
             const { error } = await supabaseClient
                 .from('suppliers')
                 .delete()
@@ -10131,6 +10194,8 @@ async function deleteSupplier(supplierId) {
             
             if (error) throw error;
             
+            logAction('delete', 'supplier', supplierId, supplier?.name || 'ספק', 'מחיקת ספק');
+
             showAlert('הספק נמחק בהצלחה', 'success');
             await loadSuppliers();
             filterSuppliers();
