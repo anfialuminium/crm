@@ -6094,7 +6094,17 @@ async function loadActivities(preservePage = false) {
         const statusFilter = document.getElementById('filter-activity-status')?.value || '';
         const searchFilter = document.getElementById('filter-activity-search')?.value.toLowerCase() || '';
         const creatorFilter = document.getElementById('filter-activity-creator')?.value || '';
-        const sortFilter = document.getElementById('filter-activity-sort')?.value || 'upcoming';
+        
+        // Auto-sort based on status
+        const sortSelect = document.getElementById('filter-activity-sort');
+        if (sortSelect) {
+            if (statusFilter === 'completed') {
+                sortSelect.value = 'activity-date'; // Descending
+            } else if (statusFilter === 'pending') {
+                sortSelect.value = 'upcoming'; // Ascending
+            }
+        }
+        const sortFilter = sortSelect?.value || 'upcoming';
         
         // Build query - exclude "הערה" type
         let query = supabaseClient
@@ -9421,11 +9431,12 @@ async function loadSupplierOrders() {
         // Filters
         const statusFilter = document.getElementById('filter-supplier-order-status')?.value;
         const supplierFilter = document.getElementById('filter-supplier-order-supplier')?.value;
+        const searchQuery = document.getElementById('filter-supplier-order-search')?.value?.toLowerCase() || '';
         
         if (statusFilter) query = query.eq('order_status', statusFilter);
         if (supplierFilter) query = query.eq('supplier_id', supplierFilter);
         
-        const { data, error } = await query;
+        let { data, error } = await query;
         
         if (error) {
              if (error.code === '42P01') { 
@@ -9433,6 +9444,18 @@ async function loadSupplierOrders() {
                  return;
              }
              throw error;
+        }
+
+        // Apply client-side search filter
+        if (searchQuery && data) {
+            data = data.filter(o => {
+                const supplierName = o.suppliers?.supplier_name?.toLowerCase() || '';
+                const orderNum = o.order_number?.toLowerCase() || '';
+                const orderId = o.order_id.toLowerCase();
+                return supplierName.includes(searchQuery) || 
+                       orderNum.includes(searchQuery) || 
+                       orderId.includes(searchQuery);
+            });
         }
         
         supplierOrders = data || [];

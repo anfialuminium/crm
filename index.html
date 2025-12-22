@@ -288,9 +288,17 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
-                        🔍 הצג סינונים
-                    </button>
+                    <!-- Search and Filters -->
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <label class="form-label">🔍 חיפוש פעילות</label>
+                            <input type="text" id="filter-thisweek-search" class="form-input" 
+                                   placeholder="חיפוש לקוח או תיאור..." onkeyup="loadThisWeek()">
+                        </div>
+                        <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)" style="margin-bottom: 0; min-height: 42px;">
+                            ⚙️ סינונים מתקדמים
+                        </button>
+                    </div>
                     
                     <!-- Filters -->
                     <div class="filters-content collapsed">
@@ -318,11 +326,6 @@
                                 <option value="pending" selected>ממתין לביצוע</option>
                                 <option value="completed">בוצע</option>
                             </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">חיפוש</label>
-                            <input type="text" id="filter-thisweek-search" class="form-input" 
-                                   placeholder="חיפוש לקוח או תיאור..." onkeyup="loadThisWeek()">
                         </div>
                         <div class="form-group">
                             <label class="form-label">מיון</label>
@@ -363,9 +366,17 @@
                         </div>
                     </div>
                     
-                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
-                        🔍 הצג סינונים
-                    </button>
+                    <!-- Search and Filters -->
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <label class="form-label">🔍 חיפוש בעסקאות</label>
+                            <input type="text" id="filter-customer" class="form-input" 
+                                   placeholder="הקלד שם לקוח..." onkeyup="loadDealsHistory()">
+                        </div>
+                        <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)" style="margin-bottom: 0; min-height: 42px;">
+                            ⚙️ סינונים מתקדמים
+                        </button>
+                    </div>
 
                     <!-- Filters -->
                     <div class="filters-content collapsed">
@@ -380,11 +391,6 @@
                                 <option value="זכייה">זכייה</option>
                                 <option value="הפסד">בוטל</option>
                             </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">חיפוש לקוח</label>
-                            <input type="text" id="filter-customer" class="form-input" 
-                                   placeholder="הקלד שם לקוח..." onkeyup="loadDealsHistory()">
                         </div>
                         <div class="form-group">
                             <label class="form-label">מיון</label>
@@ -428,9 +434,17 @@
                         </div>
                     </div>
                     
-                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
-                        🔍 הצג סינונים
-                    </button>
+                    <!-- Search and Filters -->
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <label class="form-label">🔍 חיפוש פעילות</label>
+                            <input type="text" id="filter-activity-search" class="form-input" 
+                                   placeholder="חיפוש בתיאור..." onkeyup="loadActivities()">
+                        </div>
+                        <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)" style="margin-bottom: 0; min-height: 42px;">
+                            ⚙️ סינונים מתקדמים
+                        </button>
+                    </div>
 
                     <!-- Filters -->
                     <div class="filters-content collapsed">
@@ -452,11 +466,6 @@
                                 <option value="pending" selected>ממתין לביצוע</option>
                                 <option value="completed">בוצע</option>
                             </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">חיפוש</label>
-                            <input type="text" id="filter-activity-search" class="form-input" 
-                                   placeholder="חיפוש בתיאור..." onkeyup="loadActivities()">
                         </div>
                         <div class="form-group">
                             <label class="form-label">יוצר הפעילות</label>
@@ -590,18 +599,21 @@
                         </div>
                     </div>
                     
-                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
-                        🔍 הצג סינונים
-                    </button>
+                    <!-- Search and Filters -->
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <label class="form-label">🔍 חיפוש מוצר</label>
+                            <input type="text" id="filter-product-search" class="form-input" 
+                                   placeholder="הקלד שם מוצר או מק״ט..." onkeyup="filterProducts()">
+                        </div>
+                        <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)" style="margin-bottom: 0; min-height: 42px;">
+                            ⚙️ סינונים מתקדמים
+                        </button>
+                    </div>
 
                     <!-- Filters -->
                     <div class="filters-content collapsed">
                         <div class="form-grid" style="margin-bottom: 2rem;">
-                        <div class="form-group">
-                            <label class="form-label">חיפוש מוצר</label>
-                            <input type="text" id="filter-product-search" class="form-input" 
-                                   placeholder="הקלד שם מוצר או מק״ט..." onkeyup="filterProducts()">
-                        </div>
                         <div class="form-group">
                             <label class="form-label">סינון לפי קטגוריה</label>
                             <select id="filter-product-category" class="form-select" onchange="filterProducts()">
@@ -655,18 +667,21 @@
                         </div>
                     </div>
                     
-                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
-                        🔍 הצג סינונים
-                    </button>
+                    <!-- Search and Filters -->
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <label class="form-label">🔍 חיפוש איש קשר</label>
+                            <input type="text" id="filter-contact-search" class="form-input" 
+                                   placeholder="הקלד שם, טלפון או אימייל..." onkeyup="filterContacts()">
+                        </div>
+                        <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)" style="margin-bottom: 0; min-height: 42px;">
+                            ⚙️ סינונים מתקדמים
+                        </button>
+                    </div>
 
                     <!-- Filters -->
                     <div class="filters-content collapsed">
                         <div class="form-grid" style="margin-bottom: 2rem;">
-                        <div class="form-group">
-                            <label class="form-label">חיפוש</label>
-                            <input type="text" id="filter-contact-search" class="form-input" 
-                                   placeholder="הקלד שם, טלפון או אימייל..." onkeyup="filterContacts()">
-                        </div>
                         <div class="form-group">
                             <label class="form-label">סינון לפי לקוח</label>
                             <select id="filter-contact-customer" class="form-select" onchange="filterContacts()">
@@ -702,18 +717,21 @@
                         </div>
                     </div>
                     
-                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
-                        🔍 הצג סינונים
-                    </button>
+                    <!-- Search and Filters -->
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <label class="form-label">🔍 חיפוש ספק</label>
+                            <input type="text" id="filter-supplier-search" class="form-input" 
+                                   placeholder="שם ספק, איש קשר, קטגוריה..." onkeyup="filterSuppliers()">
+                        </div>
+                        <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)" style="margin-bottom: 0; min-height: 42px;">
+                            ⚙️ סינונים מתקדמים
+                        </button>
+                    </div>
 
                     <!-- Filters -->
                     <div class="filters-content collapsed">
                         <div class="form-grid" style="margin-bottom: 2rem;">
-                            <div class="form-group">
-                                <label class="form-label">חיפוש</label>
-                                <input type="text" id="filter-supplier-search" class="form-input" 
-                                       placeholder="שם ספק, איש קשר, קטגוריה..." onkeyup="filterSuppliers()">
-                            </div>
                             <div class="form-group">
                                 <label class="form-label">סינון לפי קטגוריה</label>
                                 <select id="filter-supplier-category" class="form-select" onchange="filterSuppliers()">
@@ -741,9 +759,17 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
-                        🔍 הצג סינונים
-                    </button>
+                    <!-- Search and Filters -->
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <label class="form-label">🔍 חיפוש הזמנות רכש</label>
+                            <input type="text" id="filter-supplier-order-search" class="form-input" 
+                                   placeholder="חפש לפי ספק או מספר הזמנה..." onkeyup="loadSupplierOrders()">
+                        </div>
+                        <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)" style="margin-bottom: 0; min-height: 42px;">
+                            ⚙️ סינונים מתקדמים
+                        </button>
+                    </div>
 
                     <!-- Filters -->
                     <div class="filters-content collapsed">
@@ -784,9 +810,17 @@
                         </div>
                     </div>
                     
-                    <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)">
-                        🔍 הצג סינונים
-                    </button>
+                    <!-- Search and Filters -->
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                            <label class="form-label">🔍 חיפוש ביומן פעולות</label>
+                            <input type="text" id="filter-audit-search" class="form-input" 
+                                   placeholder="חיפוש בתיאור או שם ישות..." onkeyup="loadAuditLog()">
+                        </div>
+                        <button class="btn btn-secondary filters-toggle" onclick="toggleFilters(this)" style="margin-bottom: 0; min-height: 42px;">
+                            ⚙️ סינונים מתקדמים
+                        </button>
+                    </div>
 
                     <!-- Filters -->
                     <div class="filters-content collapsed">
@@ -812,9 +846,10 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">חיפוש</label>
-                                <input type="text" id="filter-audit-search" class="form-input" 
-                                       placeholder="חיפוש בתיאור או שם..." onkeyup="loadAuditLog()">
+                                <label class="form-label">משתמש</label>
+                                <select id="filter-audit-performer" class="form-select" onchange="loadAuditLog()">
+                                    <option value="">הכל</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">תאריך</label>
