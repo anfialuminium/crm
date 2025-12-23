@@ -11729,3 +11729,110 @@ async function configureQuickNav() {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', initQuickNav);
+
+// ============================================
+// Modal ESC management and Dirty Form check
+// ============================================
+
+// Watch for input changes in any modal
+document.addEventListener('input', (e) => {
+    const modal = e.target.closest('.modal');
+    if (modal) {
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+            modal.dataset.isDirty = 'true';
+        }
+    }
+});
+
+// Manage ESC key and modal states
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const activeModals = Array.from(document.querySelectorAll('.modal.active'));
+        if (activeModals.length === 0) return;
+        
+        // Get the top-most active modal (last in DOM typically)
+        const activeModal = activeModals[activeModals.length - 1];
+        
+        // Check if we should ignore ESC for this modal (e.g., login modal)
+        if (activeModal.id === 'login-modal') return;
+        
+        // Special case for confirmation modal - just close it
+        if (activeModal.id === 'confirmation-modal') {
+            if (typeof closeConfirmationModal === 'function') closeConfirmationModal();
+            else activeModal.classList.remove('active');
+            return;
+        }
+
+        const modalsWithDirtyCheck = [
+            'customer-modal',
+            'deal-modal',
+            'product-modal', 
+            'supplier-modal',
+            'supplier-order-modal',
+            'edit-activity-modal',
+            'new-activity-modal',
+            'contact-modal',
+            'customer-details-modal',
+            'contact-details-modal'
+        ];
+
+        const closeActiveModalById = (modalId) => {
+            const closeFns = {
+                'customer-modal': typeof closeCustomerModal === 'function' ? closeCustomerModal : null,
+                'customer-details-modal': typeof closeCustomerDetailsModal === 'function' ? closeCustomerDetailsModal : null,
+                'contact-modal': typeof closeContactModal === 'function' ? closeContactModal : null,
+                'contact-details-modal': typeof closeContactDetailsModal === 'function' ? closeContactDetailsModal : null,
+                'product-modal': typeof closeProductModal === 'function' ? closeProductModal : null,
+                'image-modal': typeof closeImageModal === 'function' ? closeImageModal : null,
+                'edit-activity-modal': typeof closeEditActivityModal === 'function' ? closeEditActivityModal : null,
+                'new-activity-modal': typeof closeNewActivityModal === 'function' ? closeNewActivityModal : null,
+                'deal-modal': typeof closeDealModal === 'function' ? closeDealModal : null,
+                'view-activity-modal': typeof closeViewActivityModal === 'function' ? closeViewActivityModal : null,
+                'confirmation-modal': typeof closeConfirmationModal === 'function' ? closeConfirmationModal : null,
+                'supplier-modal': typeof closeSupplierModal === 'function' ? closeSupplierModal : null,
+                'supplier-details-modal': typeof closeSupplierDetailsModal === 'function' ? closeSupplierDetailsModal : null,
+                'supplier-order-modal': typeof closeSupplierOrderModal === 'function' ? closeSupplierOrderModal : null
+            };
+
+            const modalElement = document.getElementById(modalId);
+            if (modalElement) modalElement.dataset.isDirty = 'false';
+
+            if (closeFns[modalId]) {
+                closeFns[modalId]();
+            } else {
+                if (modalElement) modalElement.classList.remove('active');
+            }
+        };
+
+        const isDirty = activeModal.dataset.isDirty === 'true';
+
+        if (modalsWithDirtyCheck.includes(activeModal.id) && isDirty) {
+            showConfirmModal(
+                'סגירת חלון',
+                'ביצעת שינויים בחלון זה. האם אתה בטוח שברצונך לסגור אותו מבלי לשמור?',
+                () => {
+                    activeModal.dataset.isDirty = 'false';
+                    closeActiveModalById(activeModal.id);
+                }
+            );
+        } else {
+            closeActiveModalById(activeModal.id);
+        }
+    }
+});
+
+// Observer to reset dirty flag when any modal is opened or closed
+const modalObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+            // Reset the dirty flag on any class change (open/close)
+            mutation.target.dataset.isDirty = 'false';
+        }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.modal').forEach(modal => {
+        modalObserver.observe(modal, { attributes: true });
+    });
+});
