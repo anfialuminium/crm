@@ -1430,10 +1430,22 @@
                     </div>
                 </div>
 
-                <div class="summary-card">
-                     <div class="summary-row">
-                        <span class="summary-label">סה"כ:</span>
-                        <span class="summary-value" id="supplier-order-total">₪0.00</span>
+                <div class="summary-card" style="margin-right: auto; margin-left: 0; max-width: 400px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
+                     <div class="summary-row" style="border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 8px;">
+                        <span class="summary-label" style="font-size: 0.9rem; opacity: 0.9;">סה"כ הזמנה:</span>
+                        <span class="summary-value" id="supplier-order-subtotal" style="font-size: 1rem;">₪0.00</span>
+                    </div>
+                    <div class="summary-row" id="down-payment-input-row" style="border-bottom: 1px dashed rgba(255,255,255,0.3); padding: 10px 0;">
+                        <span class="summary-label" style="font-size: 0.9rem; opacity: 0.9;">מקדמה ששולמה:</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="number" id="order-down-payment" class="form-input" 
+                                   style="width: 130px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 4px 8px; border-radius: 6px; text-align: left; font-weight: 600;"
+                                   value="0" min="0" step="0.01" onchange="renderSupplierOrderItems()" placeholder="מקדמה...">
+                        </div>
+                    </div>
+                     <div class="summary-row" style="border-top: none; padding-top: 10px;">
+                        <span class="summary-label" style="font-weight: 700; font-size: 1.1rem;">יתרה לתשלום:</span>
+                        <span class="summary-value" id="supplier-order-total" style="font-size: 1.4rem; font-weight: 800;">₪0.00</span>
                     </div>
                 </div>
                 

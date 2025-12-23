@@ -9496,10 +9496,12 @@ async function loadSupplierOrders() {
                      }
                 } catch(e) { console.error('Rate fetch failed', e); }
                 
-                return { ...o, currencySymbol, isUSD, rate, ilsAmount: (parseFloat(o.total_amount) || 0) * rate };
+                const amount = (parseFloat(o.total_amount) || 0) - (parseFloat(o.down_payment) || 0);
+                return { ...o, currencySymbol, isUSD, rate, ilsAmount: amount * rate };
             }
             
-            return { ...o, currencySymbol, isUSD, rate: 1, ilsAmount: parseFloat(o.total_amount) || 0 };
+            const amount = (parseFloat(o.total_amount) || 0) - (parseFloat(o.down_payment) || 0);
+            return { ...o, currencySymbol, isUSD, rate: 1, ilsAmount: amount };
         }));
 
         renderSupplierOrdersList(ordersWithRates);
@@ -9542,10 +9544,25 @@ function renderSupplierOrdersList(list) {
                         // Format Original / Rate info
                         let rateInfo = '-';
                         if (o.isUSD) {
+                            const totalVal = parseFloat(o.total_amount) || 0;
+                            const downPay = parseFloat(o.down_payment) || 0;
+                            const balanceVal = totalVal - downPay;
+                            
                             rateInfo = `
                                 <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.2;">
-                                    <div>$${(parseFloat(o.total_amount)||0).toLocaleString()}</div>
+                                    <div title="סה״כ לפני מקדמה">$${totalVal.toLocaleString()}</div>
+                                    ${downPay > 0 ? `<div style="color: #ef4444; font-size: 0.75rem;">-$${downPay.toLocaleString()}</div>` : ''}
+                                    <div style="font-weight: 700; border-top: 1px dashed #ccc; margin-top: 2px;">$${balanceVal.toLocaleString()}</div>
                                     <div style="font-size: 0.75rem; color: #64748b;">שער: ${o.rate.toFixed(3)}</div>
+                                </div>
+                            `;
+                        } else if (parseFloat(o.down_payment) > 0) {
+                            const totalVal = parseFloat(o.total_amount) || 0;
+                            const downPay = parseFloat(o.down_payment) || 0;
+                            rateInfo = `
+                                <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.2;">
+                                    <div style="text-decoration: line-through; opacity: 0.6;">₪${totalVal.toLocaleString()}</div>
+                                    <div style="color: #ef4444; font-size: 0.75rem;">(מקדמה: ₪${downPay.toLocaleString()})</div>
                                 </div>
                             `;
                         }
@@ -9697,6 +9714,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             document.getElementById('order-expected-date').value = order.expected_date ? order.expected_date.split('T')[0] : '';
             document.getElementById('order-creation-date').value = order.created_at ? order.created_at.split('T')[0] : '';
             document.getElementById('order-notes').value = order.notes || '';
+            document.getElementById('order-down-payment').value = order.down_payment || 0;
             
             // Calculate Currency Info
             const s = order.suppliers;
@@ -9784,6 +9802,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('order-expected-date').value = today;
         document.getElementById('order-creation-date').value = today;
+        document.getElementById('order-down-payment').value = 0;
         
         // Reset/Check supplier if selected for basic currency (won't have date/rate yet usually)
         // or just default
@@ -9893,19 +9912,53 @@ function renderSupplierOrderItems() {
         });
     }
     
-    let totalHtml = `<span style="font-size: 1.2rem; margin-bottom: 4px; display: block;">${currencySymbol}${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
+    const subtotalEl = document.getElementById('supplier-order-subtotal');
+    const downPaymentInput = document.getElementById('order-down-payment');
+    const downPaymentRow = document.getElementById('down-payment-input-row');
+    
+    const downPayment = parseFloat(downPaymentInput?.value) || 0;
+    const finalTotal = total - downPayment;
+    
+    // Update subtotal (total items)
+    if (subtotalEl) {
+        subtotalEl.textContent = `${currencySymbol}${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    }
+
+    let totalHtml = `<span style="font-size: 1.4rem; display: block;">${currencySymbol}${finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
     
     if (modalIsUSD && modalExchangeRate) {
-        const ilsTotal = total * modalExchangeRate;
-        totalHtml += `
-            <div style="font-size: 0.95rem; margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.3); padding-top: 8px;">
-                <div style="color: #fff; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.5px;">₪${ilsTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                <div style="font-size: 0.85rem; color: rgba(255,255,255,0.8); margin-top: 2px;">שער המרה: ${modalExchangeRate.toFixed(3)}</div>
+        const ilsTotal = finalTotal * modalExchangeRate;
+        const ilsSubtotal = total * modalExchangeRate;
+        const ilsDownPayment = downPayment * modalExchangeRate;
+
+        // Update subtotal label to show ILS too if USD
+        if (subtotalEl) {
+            subtotalEl.innerHTML = `
+                <div>${currencySymbol}${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div style="font-size: 0.8rem; opacity: 0.8;">₪${ilsSubtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            `;
+        }
+
+        totalHtml = `
+            <div style="text-align: left;">
+                <div style="font-size: 1.4rem; line-height: 1;">${currencySymbol}${finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div style="font-size: 1.1rem; margin-top: 5px; border-top: 1px dashed rgba(255,255,255,0.3); padding-top: 5px; font-weight: 700;">₪${ilsTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 2px;">שער המרה: ${modalExchangeRate.toFixed(3)}</div>
             </div>
         `;
     }
     
     totalEl.innerHTML = totalHtml;
+
+    // Handle visibility of down payment input based on read-only mode (though usually handled by class, forcing here for clarity)
+    if (isSupplierOrderReadOnly && downPaymentRow) {
+        // In read-only mode, we can keep the row but maybe hide the input or replace with span
+        // For now, index.html has it as input, but it's disabled in read-only mode if we set it.
+        // Actually, let's just make sure it's disabled if needed.
+        if (downPaymentInput) downPaymentInput.disabled = true;
+    } else if (downPaymentInput) {
+        downPaymentInput.disabled = false;
+    }
 }
 
 async function handleProductSelect(index, selectEl) {
@@ -10250,7 +10303,8 @@ async function saveSupplierOrder(event) {
         expected_date: document.getElementById('order-expected-date').value || null,
         created_at: document.getElementById('order-creation-date').value ? new Date(document.getElementById('order-creation-date').value).toISOString() : new Date().toISOString(),
         notes: finalNotes,
-        total_amount: parseFloat(document.getElementById('supplier-order-total').textContent.replace(/[^\d.-]/g, ''))
+        down_payment: parseFloat(document.getElementById('order-down-payment').value) || 0,
+        total_amount: parseFloat(document.getElementById('supplier-order-subtotal').textContent.replace(/[^\d.-]/g, ''))
     };
     
     try {
