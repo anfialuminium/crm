@@ -1309,7 +1309,12 @@ function prepareNewCustomer() {
     const form = document.getElementById('customer-form');
     form.reset();
     delete form.dataset.customerId;
+    delete form.dataset.customerId;
     delete form.dataset.contactId;
+    
+    // Clear additional addresses
+    const addrContainer = document.getElementById('customer-additional-addresses-container');
+    if (addrContainer) addrContainer.innerHTML = '';
     
     // Reset title
     document.querySelector('#customer-modal .modal-header h2').textContent = 'לקוח חדש';
@@ -1338,6 +1343,10 @@ function closeCustomerModal() {
     delete form.dataset.customerId;
     delete form.dataset.contactId;
     
+    // Clear additional addresses
+    const addrContainer = document.getElementById('customer-additional-addresses-container');
+    if (addrContainer) addrContainer.innerHTML = '';
+    
     // Reset modal title
     document.querySelector('#customer-modal .modal-header h2').textContent = 'לקוח חדש';
     
@@ -1346,6 +1355,42 @@ function closeCustomerModal() {
     if (historySection) {
         historySection.style.display = 'none';
         document.getElementById('customer-notes-history').innerHTML = '';
+    }
+}
+
+// Add Customer Address Row Helper
+function addCustomerAddressRow(address = '', description = '') {
+    const container = document.getElementById('customer-additional-addresses-container');
+    if (!container) return;
+    
+    const row = document.createElement('div');
+    row.className = 'address-row';
+    row.style.display = 'flex';
+    row.style.gap = '0.5rem';
+    row.style.alignItems = 'center';
+    
+        <input type="text" class="form-input additional-address-input" placeholder="כתובת נוספת" value="${address.replace(/"/g, '&quot;')}" style="flex: 1;">
+        <input type="text" class="form-input additional-address-desc" placeholder="תיאור (למשל: סניף צפון)" value="${description.replace(/"/g, '&quot;')}" style="flex: 1;">
+        <button type="button" class="btn btn-danger btn-icon" onclick="this.parentElement.remove()" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">🗑️</button>
+    `;
+    
+    container.appendChild(row);
+}
+
+// Extract Extended Data Helper
+function extractExtendedData(notes) {
+    if (!notes) return { text: '', data: {} };
+    const marker = '[EXTENDED_DATA]';
+    const index = notes.lastIndexOf(marker);
+    if (index === -1) return { text: notes, data: {} };
+    
+    try {
+        const jsonStr = notes.substring(index + marker.length);
+        const data = JSON.parse(jsonStr);
+        const cleanText = notes.substring(0, index).trimEnd();
+        return { text: cleanText, data };
+    } catch (e) {
+        return { text: notes, data: {} };
     }
 }
 
@@ -1372,6 +1417,20 @@ async function saveCustomer(event) {
             phone: contactPhone || null,
             email: contactEmail || null
         };
+        
+        // Handle Additional Addresses (Extended Data in Notes)
+        const additionalAddresses = [];
+        document.querySelectorAll('#customer-additional-addresses-container .address-row').forEach(row => {
+            const addr = row.querySelector('.additional-address-input').value.trim();
+            const desc = row.querySelector('.additional-address-desc').value.trim();
+            if (addr) additionalAddresses.push({ address: addr, description: desc });
+        });
+        
+        if (additionalAddresses.length > 0) {
+            const currentNotes = customerData.notes || '';
+            const extraData = { additional_addresses: additionalAddresses };
+            customerData.notes = currentNotes.trim() + '\n\n[EXTENDED_DATA]' + JSON.stringify(extraData);
+        }
         
         // Fetch old state for logging if update
         let oldCustomer = null;
@@ -1784,7 +1843,23 @@ function editCustomer(customer) {
     document.getElementById('new-city').value = customer.city || '';
     document.getElementById('new-customer-type').value = customer.customer_type || '';
     document.getElementById('new-source').value = customer.source || '';
-    document.getElementById('new-notes').value = customer.notes || '';
+    document.getElementById('new-customer-type').value = customer.customer_type || '';
+    document.getElementById('new-source').value = customer.source || '';
+    
+    // Parse Extended Data from Notes
+    const { text: cleanNotes, data: extendedData } = extractExtendedData(customer.notes || '');
+    document.getElementById('new-notes').value = cleanNotes;
+    
+    // Populate Additional Addresses
+    const addrContainer = document.getElementById('customer-additional-addresses-container');
+    if (addrContainer) {
+        addrContainer.innerHTML = '';
+        if (extendedData.additional_addresses && Array.isArray(extendedData.additional_addresses)) {
+            extendedData.additional_addresses.forEach(addr => {
+                addCustomerAddressRow(addr.address, addr.description);
+            });
+        }
+    }
     
     // Store customer ID and Contact ID for update
     const form = document.getElementById('customer-form');
@@ -2105,12 +2180,42 @@ async function viewCustomerDetails(customerId) {
                             <span class="deal-card-value">${customer.source}</span>
                         </div>
                     ` : ''}
-                    ${customer.notes ? `
-                        <div class="deal-card-info" style="grid-column: 1 / -1;">
-                            <span class="deal-card-label">הערות כלליות:</span>
-                            <span class="deal-card-value">${customer.notes}</span>
-                        </div>
-                    ` : ''}
+                    ${(() => {
+                        if (!customer.notes) return '';
+                        const { text, data } = extractExtendedData(customer.notes);
+                        let output = '';
+                        
+                        if (text) {
+                            output += `
+                                <div class="deal-card-info" style="grid-column: 1 / -1;">
+                                    <span class="deal-card-label">הערות כלליות:</span>
+                                    <span class="deal-card-value">${text}</span>
+                                </div>
+                            `;
+                        }
+                        
+                        // Display additional addresses if present
+                        if (data && data.additional_addresses && Array.isArray(data.additional_addresses) && data.additional_addresses.length > 0) {
+                             output += `
+                                <div class="deal-card-info" style="grid-column: 1 / -1; margin-top: 0.5rem; background: #f8fafc; padding: 0.5rem; border-radius: 8px; display: block;">
+                                    <span class="deal-card-label" style="margin-bottom: 0.5rem; display: block;">📍 כתובות נוספות:</span>
+                                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                        ${data.additional_addresses.map(addr => `
+                                            <div style="display: flex; align-items: center; justify-content: flex-start; gap: 0.5rem; font-size: 0.95rem;">
+                                                <div>
+                                                    <span style="font-weight: 500;">${addr.address}</span>
+                                                    ${addr.description ? `<span style="color: var(--text-tertiary); margin-right: 0.5rem;">(${addr.description})</span>` : ''}
+                                                </div>
+                                                ${renderNavigationIcon(addr.address)}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                             `;
+                        }
+                        
+                        return output;
+                    })()}
                 </div>
             </div>
             
@@ -3998,7 +4103,13 @@ async function loadDealsHistory(preservePage = false) {
                             return `
                             <tr>
                                 <td>${date}</td>
-                                <td><strong>${deal.customers.business_name}</strong></td>
+                                <td>
+                                    <strong>
+                                        <a href="javascript:void(0)" onclick="viewCustomerDetails('${deal.customer_id}')" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                                            ${deal.customers.business_name}
+                                        </a>
+                                    </strong>
+                                </td>
                                 <td>
                                     ${deal.customers.primary_contact_id ? 
                                         `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500;" onclick="viewContactDetails('${deal.customers.primary_contact_id}')">${deal.customers.contact_name || 'איש קשר'}</span>` 
@@ -4069,7 +4180,11 @@ function createDealCard(deal) {
     card.innerHTML = `
         <div class="deal-card-header">
             <div>
-                <div class="deal-card-title">${deal.customers.business_name}</div>
+                <div class="deal-card-title">
+                    <a href="javascript:void(0)" onclick="viewCustomerDetails('${deal.customer_id}')" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                        ${deal.customers.business_name}
+                    </a>
+                </div>
                 <div class="deal-card-date">${date}</div>
             </div>
             <span class="badge ${statusBadgeClass}">${deal.deal_status === 'זכייה' ? 'נסגר' : (deal.deal_status === 'הפסד' ? 'בוטל' : deal.deal_status)}</span>
@@ -7651,6 +7766,26 @@ async function loadAuditLog() {
                         
                         let oldVal = log.old_value[key];
                         let newVal = log.new_value[key];
+                        
+                        // Handle Notes with Extended Data
+                        if (key === 'notes' && typeof extractExtendedData === 'function') {
+                             const oldParsed = extractExtendedData(oldVal || '');
+                             const newParsed = extractExtendedData(newVal || '');
+                             const cleanOld = oldParsed.text;
+                             const cleanNew = newParsed.text;
+                             
+                             if (cleanOld !== cleanNew) {
+                                  changes.push(`${fieldLabels['notes'] || 'הערות'}: ${formatVal(cleanOld)} ← ${formatVal(cleanNew)}`);
+                             }
+                             
+                             const oldAddrs = JSON.stringify(oldParsed.data?.additional_addresses || []);
+                             const newAddrs = JSON.stringify(newParsed.data?.additional_addresses || []);
+                             
+                             if (oldAddrs !== newAddrs) {
+                                  changes.push(`כתובות נוספות: עודכן`);
+                             }
+                             continue;
+                        }
 
                         if (String(oldVal) !== String(newVal)) {
                             const label = fieldLabels[key] || key;
@@ -8373,6 +8508,20 @@ function exportCustomers() {
         return matchesSearch && matchesType && matchesCity && matchesSource;
     });
 
+    const processedData = filtered.map(c => {
+        const { text, data } = extractExtendedData(c.notes || '');
+        let additionalAddrsStr = '';
+        if (data?.additional_addresses && Array.isArray(data.additional_addresses)) {
+             additionalAddrsStr = data.additional_addresses.map(a => `${a.address} (${a.description || ''})`).join(', ');
+        }
+        
+        return {
+            ...c,
+            notes: text,
+            additional_addresses: additionalAddrsStr // Add to object so exportToExcel can find it
+        };
+    });
+
     const headers = {
         'business_name': 'שם עסק',
         'contact_name': 'איש קשר',
@@ -8381,10 +8530,11 @@ function exportCustomers() {
         'city': 'כתובת',
         'customer_type': 'סוג לקוח',
         'source': 'מקור',
-        'notes': 'הערות'
+        'notes': 'הערות',
+        'additional_addresses': 'כתובות נוספות'
     };
 
-    exportToExcel(filtered, headers, 'לקוחות');
+    exportToExcel(processedData, headers, 'לקוחות');
 }
 
 function exportContacts() {
