@@ -2007,7 +2007,7 @@ async function viewCustomerDetails(customerId) {
                 <div style="background: var(--bg-secondary); border: 1px solid var(--primary-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                          <h4 style="margin: 0; color: var(--primary-color); font-size: 1rem;">⭐ איש קשר מוביל</h4>
-                         <button class="btn btn-sm btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;" onclick="viewContactDetails('${customer.primary_contact.contact_id}'); closeCustomerDetailsModal();">פרטים מלאים ➡️</button>
+                         <button class="btn btn-sm btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;" onclick="viewContactDetails('${customer.primary_contact.contact_id}'); closeCustomerDetailsModal();">פרטים מלאים ⬅️</button>
                     </div>
                     <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                         <div class="deal-card-info">
@@ -5947,7 +5947,7 @@ function renderThisWeekActivityCard(activity) {
                         <span style="color: var(--text-tertiary); font-size: 0.85rem;">⏰ ${activityTime}</span>
                     </div>
                     <div class="deal-card-date" style="font-size: 0.9rem;">
-                        🏢 ${customerName}${contactName ? ` • ${contactName}` : ''}
+                        🏢 ${customer ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customer.customer_id}')" style="color: inherit; text-decoration: underline; font-weight: 500;">${customerName}</a>` : customerName}${contactName ? ` • ${contactName}` : ''}
                         ${customer?.city ? (() => {
                             const cityName = getCityFromAddress(customer.city);
                             return cityName ? ` • 📍 ${cityName} ${renderNavigationIcon(customer.city)}` : '';
@@ -11396,6 +11396,9 @@ function formatActivityText(text) {
     text = text.replace(urlRegex, (url) => {
         return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${url}</a>`;
     });
+
+    // Bold: **text** -> <strong>text</strong>
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
     return text.replace(/@\[(Deal|Order|Contact):([^\|]+)\|([^\]]+)\]/g, (match, type, id, label) => {
         let onclick = '';
