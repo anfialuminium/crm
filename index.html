@@ -19,6 +19,14 @@
         <header class="header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
             <h1 style="margin-bottom: 0;">מערכת ניהול עסק</h1>
             <div class="header-actions" style="display: flex; gap: 0.75rem; align-items: center;">
+                <!-- Current User Selector -->
+                <div id="current-user-selector-container" style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-secondary); padding: 0.3rem 0.8rem; border-radius: 50px; border: 1px solid var(--border-color);">
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">👤 משתמש:</span>
+                    <select id="header-user-select" class="form-select" onchange="handleUserChange(this.value)" style="border: none; background: transparent; font-size: 0.9rem; padding: 0; min-width: 80px; color: var(--primary-color); font-weight: 600; cursor: pointer;">
+                        <!-- Options injected by JS -->
+                    </select>
+                </div>
+
                 <button type="button" onclick="handleLogout()" class="btn btn-secondary" style="border-radius: 50px; padding: 0.6rem 1.2rem; font-size: 0.9rem; border-color: var(--error-color); color: var(--error-color);">
                     🚪 התנתק
                 </button>
@@ -1001,6 +1009,22 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Users Management Card -->
+                        <div style="background: white; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); overflow: hidden;">
+                            <div style="padding: 1.25rem; background: #f8fafc; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                                    👥 ניהול משתמשים
+                                </h3>
+                                <button class="btn btn-primary btn-sm" onclick="addSystemSetting('system_users')">➕ הוסף משתמש</button>
+                            </div>
+                            <div style="padding: 1.25rem;">
+                                <p style="color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 1rem;">הגדרת המשתמשים שיוכלו להיבחר בראש הדף ולתעד פעולות.</p>
+                                <div id="system-users-list-container">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                  </div>
             </div>
@@ -1457,8 +1481,9 @@
                     <div id="order-notes-history" class="form-textarea" style="display:none; max-height: 200px; min-height: 40px; overflow-y: auto; background: #f9f9f9; white-space: pre-wrap; margin-bottom: 0.25rem; border: 1px solid #ddd; font-size: 0.9rem; line-height: 1.2;"></div>
                     
                     <!-- Edit Mode: Add New Note Controls -->
-                    <div id="order-add-note-controls" style="display:none; gap: 0.25rem; margin-top: 0.25rem;">
+                    <div id="order-add-note-controls" style="display:none; gap: 0.25rem; margin-top: 0.25rem; align-items: stretch;">
                          <textarea id="new-order-note-input" class="form-textarea" rows="2" placeholder="כתוב הערה חדשה..." style="flex: 1; resize: vertical;"></textarea>
+                         <button type="button" class="btn btn-primary" onclick="addSupplierOrderNote()" style="padding: 0 1rem;">💾 הוסף</button>
                     </div>
 
                     <!-- Hidden Raw Input for Storage & Form Submission -->

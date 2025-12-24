@@ -2309,7 +2309,20 @@ async function addCustomerNote(event, customerId) {
         
         document.getElementById('customer-new-note').value = '';
         showAlert('✅ ההערה נוספה בהצלחה', 'success');
-        loadCustomerNotes(customerId);
+        
+        // Refresh the correct history container
+        if (document.getElementById('view-customer-notes-history')) {
+            loadCustomerNotesHistory(customerId, 'view-customer-notes-history');
+        }
+        if (document.getElementById('customer-notes-history')) {
+            loadCustomerNotesHistory(customerId, 'customer-notes-history');
+        }
+        
+        // Fallback for any other note lists
+        const noteList = document.getElementById('customer-notes-list');
+        if (noteList) {
+            loadCustomerNotes(customerId);
+        }
         
     } catch (error) {
         console.error('❌ Error adding customer note:', error);
@@ -2318,20 +2331,32 @@ async function addCustomerNote(event, customerId) {
 }
 
 function editCustomerNote(activityId) {
-    const container = document.getElementById('customer-notes-list');
+    const container = document.getElementById('customer-notes-list') || document.getElementById('view-customer-notes-history') || document.getElementById('customer-notes-history');
     if (container) {
-        const customerId = document.getElementById('customer-details-modal').dataset.currentCustomerId;
+        const customerId = document.getElementById('customer-details-modal')?.dataset.currentCustomerId || document.getElementById('customer-form')?.dataset.customerId;
+        if (!customerId) return;
+        
         container.dataset.editingId = activityId;
-        loadCustomerNotes(customerId);
+        if (container.id === 'customer-notes-list') {
+            loadCustomerNotes(customerId);
+        } else {
+            loadCustomerNotesHistory(customerId, container.id);
+        }
     }
 }
 
 function cancelCustomerNoteEdit() {
-    const container = document.getElementById('customer-notes-list');
+    const container = document.getElementById('customer-notes-list') || document.getElementById('view-customer-notes-history') || document.getElementById('customer-notes-history');
     if (container) {
         delete container.dataset.editingId;
-        const customerId = document.getElementById('customer-details-modal').dataset.currentCustomerId;
-        loadCustomerNotes(customerId);
+        const customerId = document.getElementById('customer-details-modal')?.dataset.currentCustomerId || document.getElementById('customer-form')?.dataset.customerId;
+        if (customerId) {
+            if (container.id === 'customer-notes-list') {
+                loadCustomerNotes(customerId);
+            } else {
+                loadCustomerNotesHistory(customerId, container.id);
+            }
+        }
     }
 }
 
@@ -2365,10 +2390,15 @@ async function saveCustomerNoteEdit(activityId) {
         
         showAlert('✅ ההערה עודכנה בהצלחה', 'success');
         
-        const container = document.getElementById('customer-notes-list');
-        delete container.dataset.editingId;
-        
-        loadCustomerNotes(customerId);
+        const container = document.getElementById('customer-notes-list') || document.getElementById('view-customer-notes-history') || document.getElementById('customer-notes-history');
+        if (container) {
+            delete container.dataset.editingId;
+            if (container.id === 'customer-notes-list') {
+                loadCustomerNotes(customerId);
+            } else {
+                loadCustomerNotesHistory(customerId, container.id);
+            }
+        }
         
     } catch (error) {
         console.error('❌ Error editing customer note:', error);
@@ -2393,9 +2423,18 @@ function deleteCustomerNote(activityId) {
             
             showAlert('✅ ההערה נמחקה בהצלחה', 'success');
             
-            const customerId = document.getElementById('customer-details-modal').dataset.currentCustomerId;
-            loadCustomerNotes(customerId);
-            
+            const customerId = document.getElementById('customer-details-modal')?.dataset.currentCustomerId || document.getElementById('customer-form')?.dataset.customerId;
+            if (customerId) {
+                if (document.getElementById('view-customer-notes-history')) {
+                    loadCustomerNotesHistory(customerId, 'view-customer-notes-history');
+                }
+                if (document.getElementById('customer-notes-history')) {
+                    loadCustomerNotesHistory(customerId, 'customer-notes-history');
+                }
+                if (document.getElementById('customer-notes-list')) {
+                    loadCustomerNotes(customerId);
+                }
+            }
         } catch (error) {
             console.error('❌ Error deleting customer note:', error);
             showAlert('שגיאה במחיקת ההערה: ' + error.message, 'error');
@@ -4267,6 +4306,7 @@ async function addDealNote() {
     try {
         // Save author name for future use
         localStorage.setItem('crm_username', author);
+        syncHeaderUser();
 
         const { error } = await supabaseClient
             .from('activities')
@@ -4809,6 +4849,7 @@ async function saveActivityEdit(event) {
     // Save editor name for future use
     if (editorInput) {
         localStorage.setItem('crm_username', editorInput);
+        syncHeaderUser();
     }
     
     try {
@@ -5187,6 +5228,7 @@ async function saveNewActivity(event) {
     // Save author name for future use
     if (authorInput) {
         localStorage.setItem('crm_username', authorInput);
+        syncHeaderUser();
     }
     
     try {
@@ -10244,17 +10286,19 @@ async function saveNoteChange(content, action, index = null) {
     editor.value = updatedFullText;
     renderOrderNotes(updatedFullText);
     
-    // Save to DB
-    try {
-        const { error } = await supabaseClient
-            .from('supplier_orders')
-            .update({ notes: updatedFullText })
-            .eq('order_id', orderId);
-            
-        if (error) throw error;
-    } catch (e) {
-        console.error(e);
-        showAlert('שגיאה בשמירת הערות', 'error');
+    // Save to DB only if we have an orderId (existing order)
+    if (orderId) {
+        try {
+            const { error } = await supabaseClient
+                .from('supplier_orders')
+                .update({ notes: updatedFullText })
+                .eq('order_id', orderId);
+                
+            if (error) throw error;
+        } catch (e) {
+            console.error(e);
+            showAlert('שגיאה בשמירת הערות', 'error');
+        }
     }
 }
 
@@ -11441,7 +11485,8 @@ function renderAllSystemSettings() {
         { key: 'supplier_categories', containerId: 'supplier-categories-list-container' },
         { key: 'deal_statuses', containerId: 'deal-statuses-list-container' },
         { key: 'lead_sources', containerId: 'lead-sources-list-container' },
-        { key: 'product_categories', containerId: 'product-categories-list-container' }
+        { key: 'product_categories', containerId: 'product-categories-list-container' },
+        { key: 'system_users', containerId: 'system-users-list-container' }
     ];
     
     mappings.forEach(m => {
@@ -11453,7 +11498,15 @@ function renderAllSystemSettings() {
 }
 
 function renderGenericSettingList(key, container) {
-    const list = systemSettings[key] || [];
+    let list = systemSettings[key] || [];
+    
+    // Default users if empty and it's system_users
+    if (key === 'system_users' && list.length === 0) {
+        list = ['שחר', 'עופר', 'רקפת'];
+        systemSettings[key] = list;
+        saveSystemSettings(key);
+    }
+
     if (list.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-tertiary); padding: 1rem;">אין נתונים.</p>';
         return;
@@ -11482,7 +11535,8 @@ async function addSystemSetting(key) {
         'supplier_categories': 'קטגוריית ספק',
         'deal_statuses': 'סטטוס עסקה',
         'lead_sources': 'מקור הגעה',
-        'product_categories': 'קטגוריית מוצר'
+        'product_categories': 'קטגוריית מוצר',
+        'system_users': 'משתמש'
     };
     
     const { value: newValue } = await Swal.fire({
@@ -11589,6 +11643,53 @@ function populateAllDynamicDropdowns() {
             html += `<option value="${cat}" ${cat === currentVal ? 'selected' : ''}>${cat}</option>`;
         });
         supplierModalCatSelect.innerHTML = html;
+    }
+
+    // 6. Header User Select
+    const headerUserSelect = document.getElementById('header-user-select');
+    if (headerUserSelect) {
+        const users = systemSettings.system_users || ['שחר', 'עופר', 'רקפת'];
+        const currentUser = localStorage.getItem('crm_username');
+        
+        let html = '';
+        users.forEach(user => {
+            html += `<option value="${user}" ${user === currentUser ? 'selected' : ''}>${user}</option>`;
+        });
+        headerUserSelect.innerHTML = html;
+        
+        // If no user selected in localStorage, pick the first one
+        if (!currentUser && users.length > 0) {
+            handleUserChange(users[0]);
+        }
+    }
+}
+
+function handleUserChange(username) {
+    if (!username) return;
+    localStorage.setItem('crm_username', username);
+    console.log('Current user changed to:', username);
+    syncHeaderUser();
+}
+
+function syncHeaderUser() {
+    const headerUserSelect = document.getElementById('header-user-select');
+    if (headerUserSelect) {
+        const currentUser = localStorage.getItem('crm_username');
+        if (currentUser) {
+            const options = Array.from(headerUserSelect.options);
+            const exists = options.some(opt => opt.value === currentUser);
+            
+            if (!exists) {
+                // If not in list, add it temporarily so the dropdown reflects truth
+                const newOpt = document.createElement('option');
+                newOpt.value = currentUser;
+                newOpt.textContent = currentUser;
+                newOpt.selected = true;
+                headerUserSelect.appendChild(newOpt);
+            } else {
+                headerUserSelect.value = currentUser;
+            }
+        }
     }
 }
 
