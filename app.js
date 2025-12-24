@@ -52,6 +52,76 @@ function isMobileNumber(phone) {
     return cleanPhone.startsWith('05') || cleanPhone.startsWith('5') || cleanPhone.startsWith('9725');
 }
 
+function getCityFromAddress(address) {
+    if (!address) return '';
+    let city = address.trim();
+    // Extract city from address (text after the last comma)
+    if (city.includes(',')) {
+        const parts = city.split(',');
+        city = parts[parts.length - 1].trim();
+    }
+    
+    // Normalize Tel Aviv variants
+    if (city.includes('תל אביב')) {
+        return 'תל אביב';
+    }
+    
+    return city;
+}
+
+function renderNavigationIcon(address) {
+    if (!address) return '';
+    return `
+        <img src="images/map.png" alt="Map" 
+             style="width: 20px; height: 20px; cursor: pointer; vertical-align: middle; margin-right: 5px;" 
+             data-address="${address.replace(/"/g, '&quot;')}"
+             onclick="openNavigationMenu(this.dataset.address, event)"
+             title="נווט לכתובת">
+    `;
+}
+
+function openNavigationMenu(address, event) {
+    event.stopPropagation();
+    
+    // Remove existing menus
+    const existing = document.querySelector('.nav-menu-dropdown');
+    if (existing) existing.remove();
+    
+    const menu = document.createElement('div');
+    menu.className = 'nav-menu-dropdown';
+    
+    const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(address)}`;
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    
+    menu.innerHTML = `
+        <div class="nav-menu-item" data-url="${wazeUrl.replace(/"/g, '&quot;')}" onclick="window.open(this.dataset.url, '_blank')">
+             <span>🚙 Waze</span>
+        </div>
+        <div class="nav-menu-item" data-url="${mapsUrl.replace(/"/g, '&quot;')}" onclick="window.open(this.dataset.url, '_blank')">
+             <span>📍 Google Maps</span>
+        </div>
+    `;
+    
+    document.body.appendChild(menu);
+    
+    // Position menu
+    const rect = event.target.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + window.scrollY + 5}px`;
+    menu.style.left = `${rect.left + window.scrollX}px`;
+    
+    // Close menu when clicking outside
+    const closeMenu = (e) => {
+        if (!menu.contains(e.target)) {
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', closeMenu);
+    }, 10);
+}
+
 // Global state
 let products = [];
 let customers = [];
@@ -1471,7 +1541,9 @@ function filterCustomers(preservePage = false) {
         const matchesSource = !sourceFilter || source.includes(sourceFilter);
 
         // City filter
-        const matchesCity = !cityFilter || city.includes(cityFilter);
+        const customerCity = getCityFromAddress(customer.city).toLowerCase();
+        const filterCity = cityFilter.toLowerCase();
+        const matchesCity = !cityFilter || customerCity === filterCity;
         
         return matchesSearch && matchesType && matchesSource && matchesCity;
     });
@@ -1561,13 +1633,16 @@ function filterCustomers(preservePage = false) {
                                 const clean = p.replace(/[^\d+]/g, '');
                                 return clean.length > 6 ? `<a href="tel:${clean}">${p.trim()}</a>` : p.trim();
                             }).join(', <br>') : '-'}</td>
-                            <td>${customer.city || '-'}</td>
+                            <td>
+                                ${customer.city || '-'}
+                                ${customer.city ? renderNavigationIcon(customer.city) : ''}
+                            </td>
                             <td>${customer.customer_type ? `<span class="badge ${typeBadgeClass}">${customer.customer_type}</span>` : '-'}</td>
                             <td>${customer.source || '-'}</td>
                             <td>
                                 <div style="display: flex; gap: 0.5rem;">
                                     <button class="btn btn-sm btn-primary btn-icon" onclick="viewCustomerDetails('${customer.customer_id}')" title="פרטים">👁️</button>
-                                    <button class="btn btn-sm btn-secondary btn-icon" onclick='editCustomer(${JSON.stringify(customer).replace(/'/g, "&apos;")})' title="ערוך">✏️</button>
+                                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editCustomerById('${customer.customer_id}')" title="ערוך">✏️</button>
                                     <button class="btn btn-sm btn-danger btn-icon" onclick="deleteCustomer('${customer.customer_id}')" title="מחק">🗑️</button>
                                 </div>
                             </td>
@@ -1635,14 +1710,14 @@ function filterCustomers(preservePage = false) {
                             ${contactEmail !== '-' ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <a href="mailto:${contactEmail}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${contactEmail}</a>
-                                    <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${contactEmail}')" title="העתק אימייל">
+                                    <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${contactEmail}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                 </div>
                             ` : '-'}
                         </span>
                     </div>
                     <div class="deal-card-info">
                         <span class="deal-card-label">כתובת:</span>
-                        <span class="deal-card-value">${customer.city || '-'}</span>
+                        <span class="deal-card-value">${customer.city || '-'} ${customer.city ? renderNavigationIcon(customer.city) : ''}</span>
                     </div>
                     ${customer.source ? `
                         <div class="deal-card-info">
@@ -1656,7 +1731,7 @@ function filterCustomers(preservePage = false) {
                         <button class="btn btn-primary btn-icon" onclick="viewCustomerDetails('${customer.customer_id}')" title="צפה בפרטים והערות">
                             👁️
                         </button>
-                        <button class="btn btn-secondary btn-icon" onclick='editCustomer(${JSON.stringify(customer).replace(/'/g, "&apos;")})' title="ערוך">
+                        <button class="btn btn-secondary btn-icon" onclick="editCustomerById('${customer.customer_id}')" title="ערוך">
                             ✏️
                         </button>
                         <button class="btn btn-danger btn-icon" onclick="deleteCustomer('${customer.customer_id}')" title="מחק">
@@ -1677,6 +1752,19 @@ function filterCustomers(preservePage = false) {
 // ============================================
 // Customer Management
 // ============================================
+
+function editCustomerById(customerId) {
+    const customer = customers.find(c => c.customer_id === customerId);
+    if (customer) {
+        editCustomer(customer);
+    } else {
+        // Try fetching if not in current list (though usually it should be)
+        supabaseClient.from('customers').select('*').eq('customer_id', customerId).single()
+            .then(({data}) => {
+                if (data) editCustomer(data);
+            });
+    }
+}
 
 function editCustomer(customer) {
     // Populate the modal with customer data
@@ -2000,7 +2088,7 @@ async function viewCustomerDetails(customerId) {
                             ${customer.email ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <a href="mailto:${customer.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${customer.email}</a>
-                                    <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${customer.email}')" title="העתק אימייל">
+                                    <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${customer.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                 </div>
                             ` : '-'}
                         </span>
@@ -2009,7 +2097,7 @@ async function viewCustomerDetails(customerId) {
 
                     <div class="deal-card-info">
                         <span class="deal-card-label">כתובת:</span>
-                        <span class="deal-card-value">${customer.city || '-'}</span>
+                        <span class="deal-card-value">${customer.city || '-'} ${customer.city ? renderNavigationIcon(customer.city) : ''}</span>
                     </div>
                     ${customer.source ? `
                         <div class="deal-card-info">
@@ -2672,14 +2760,14 @@ function filterContacts(preservePage = false) {
                                 ${contact.email ? `
                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                                         <a href="mailto:${contact.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${contact.email}</a>
-                                        <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${contact.email}')" title="העתק אימייל">
+                                        <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${contact.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                     </div>
                                 ` : '-'}
                             </td>
                             <td>
                                 <div style="display: flex; gap: 0.5rem;">
                                     <button class="btn btn-sm btn-primary btn-icon" onclick="viewContactDetails('${contact.contact_id}')" title="פרטים">👁️</button>
-                                    <button class="btn btn-sm btn-secondary btn-icon" onclick='editContact(${JSON.stringify(contact).replace(/\'/g, "&apos;")})' title="ערוך">✏️</button>
+                                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editContactById('${contact.contact_id}')" title="ערוך">✏️</button>
                                     <button class="btn btn-sm btn-danger btn-icon" onclick="deleteContact('${contact.contact_id}')" title="מחק">🗑️</button>
                                 </div>
                             </td>
@@ -2748,7 +2836,7 @@ function filterContacts(preservePage = false) {
                             ${contact.email ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <a href="mailto:${contact.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${contact.email}</a>
-                                    <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${contact.email}')" title="העתק אימייל">
+                                    <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${contact.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                 </div>
                             ` : '-'}
                         </span>
@@ -2761,7 +2849,7 @@ function filterContacts(preservePage = false) {
                     ` : ''}
                 </div>
                 <div class="deal-card-footer">
-                    <button class="btn btn-sm btn-secondary" onclick='editContact(${JSON.stringify(contact).replace(/\'/g, "&apos;")})'>✏️ ערוך</button>
+                    <button class="btn btn-sm btn-secondary" onclick="editContactById('${contact.contact_id}')">✏️ ערוך</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteContact('${contact.contact_id}')">🗑️ מחק</button>
                 </div>
             `;
@@ -2927,6 +3015,18 @@ function closeContactModal() {
     const modal = document.getElementById('contact-modal');
     if (modal) {
         modal.classList.remove('active');
+    }
+}
+
+function editContactById(contactId) {
+    const contact = contacts.find(c => c.contact_id === contactId);
+    if (contact) {
+        editContact(contact);
+    } else {
+        supabaseClient.from('contacts').select('*').eq('contact_id', contactId).single()
+            .then(({data}) => {
+                if (data) editContact(data);
+            });
     }
 }
 
@@ -3131,7 +3231,7 @@ async function viewContactDetails(contactId) {
                             ${contact.email ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <a href="mailto:${contact.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${contact.email}</a>
-                                    <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${contact.email}')" title="העתק אימייל">
+                                    <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${contact.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                 </div>
                             ` : '-'}
                         </span>
@@ -3513,7 +3613,7 @@ function filterProducts(preservePage = false) {
                         <tr>
                             <td>
                                 ${product.image_url ? 
-                                    `<img src="${product.image_url}" alt="${product.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" onclick="openImageModal('${product.image_url}', '${product.product_name.replace(/'/g, "\\'")}')" onerror="this.outerHTML='<span style=\\'font-size: 1.5rem;\\'>📦</span>'">` : 
+                                    `<img src="${product.image_url}" alt="${product.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" data-url="${product.image_url}" data-name="${product.product_name.replace(/"/g, '&quot;')}" onclick="openImageModal(this.dataset.url, this.dataset.name)" onerror="this.outerHTML='<span style=\\'font-size: 1.5rem;\\'>📦</span>'">` : 
                                     '<span style="font-size: 1.5rem;">📦</span>'}
                             </td>
                             <td><strong>${product.product_name}</strong></td>
@@ -3529,7 +3629,7 @@ function filterProducts(preservePage = false) {
                             </td>
                             <td>
                                 <div style="display: flex; gap: 0.5rem;">
-                                    <button class="btn btn-sm btn-secondary btn-icon" onclick='editProduct(${JSON.stringify(product).replace(/'/g, "&apos;")})' title="ערוך">✏️</button>
+                                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editProductById('${product.product_id}')" title="ערוך">✏️</button>
                                     <button class="btn btn-sm btn-danger btn-icon" onclick="deleteProduct('${product.product_id}')" title="מחק">🗑️</button>
                                 </div>
                             </td>
@@ -3549,7 +3649,7 @@ function filterProducts(preservePage = false) {
             
             // Check if product has an image URL
             const imageSection = product.image_url 
-                ? `<div class="product-card-image" onclick="openImageModal('${product.image_url}', '${product.product_name.replace(/'/g, "\\'")}')" style="cursor: pointer;">
+                ? `<div class="product-card-image" data-url="${product.image_url}" data-name="${product.product_name.replace(/"/g, '&quot;')}" onclick="openImageModal(this.dataset.url, this.dataset.name)" style="cursor: pointer;">
                        <img src="${product.image_url}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='<span class=\\'product-card-image-placeholder\\'>📦</span>'">
                    </div>`
                 : `<div class="product-card-image">
@@ -3570,7 +3670,7 @@ function filterProducts(preservePage = false) {
                         ${product.requires_size ? '<span>📏 מידה</span>' : ''}
                     </div>
                     <div class="product-card-actions">
-                        <button class="btn btn-secondary btn-icon" onclick='editProduct(${JSON.stringify(product).replace(/'/g, "&apos;")})' title="ערוך">
+                        <button class="btn btn-secondary btn-icon" onclick="editProductById('${product.product_id}')" title="ערוך">
                             ✏️
                         </button>
                         <button class="btn btn-danger btn-icon" onclick="deleteProduct('${product.product_id}')" title="מחק">
@@ -3662,6 +3762,18 @@ function closeImageModal() {
     const modal = document.getElementById('image-lightbox-modal');
     if (modal) {
         modal.classList.remove('active');
+    }
+}
+
+function editProductById(productId) {
+    const product = products.find(p => p.product_id === productId);
+    if (product) {
+        editProduct(product);
+    } else {
+        supabaseClient.from('products').select('*').eq('product_id', productId).single()
+            .then(({data}) => {
+                if (data) editProduct(data);
+            });
     }
 }
 
@@ -4114,7 +4226,7 @@ async function viewDealDetails(dealId) {
                         <strong>אימייל:</strong> 
                         ${deal.customers.email ? `
                             <a href="mailto:${deal.customers.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${deal.customers.email}</a>
-                            <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${deal.customers.email}')" title="העתק אימייל">
+                            <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${deal.customers.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                         ` : '-'}
                     </div>
                     <p><strong>כתובת:</strong> ${deal.customers.city || '-'}</p>
@@ -5594,7 +5706,8 @@ async function loadThisWeek() {
                         business_name,
                         contact_name,
                         phone,
-                        email
+                        email,
+                        city
                     )
                 ),
                 customers (
@@ -5602,7 +5715,8 @@ async function loadThisWeek() {
                     business_name,
                     contact_name,
                     phone,
-                    email
+                    email,
+                    city
                 )
             `)
             .neq('activity_type', 'הערה')
@@ -5827,6 +5941,10 @@ function renderThisWeekActivityCard(activity) {
                     </div>
                     <div class="deal-card-date" style="font-size: 0.9rem;">
                         🏢 ${customerName}${contactName ? ` • ${contactName}` : ''}
+                        ${customer?.city ? (() => {
+                            const cityName = getCityFromAddress(customer.city);
+                            return cityName ? ` • 📍 ${cityName} ${renderNavigationIcon(customer.city)}` : '';
+                        })() : ''}
                     </div>
                 </div>
                 <span class="badge ${statusClass}">${statusText}</span>
@@ -5857,7 +5975,7 @@ function renderThisWeekActivityCard(activity) {
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <strong>📧</strong> 
                             <a href="mailto:${customer.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${customer.email}</a>
-                            <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${customer.email}')" title="העתק אימייל">
+                            <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${customer.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                         </div>
                     ` : ''}
                     ${dealId ? `<span style="color: var(--primary-color);">💼 עסקה${dealAmount ? ` • ₪${dealAmount.toFixed(0)}` : ''}</span>` : ''}
@@ -6510,7 +6628,7 @@ async function loadActivities(preservePage = false) {
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <strong>מייל:</strong> 
                                     <a href="mailto:${email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${email}</a>
-                                    <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${email}')" title="העתק אימייל">
+                                    <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                 </div>
                             ` : ''}
                             ${phone ? `
@@ -8723,7 +8841,7 @@ function populateCityFilter() {
     const cityCounts = {};
     
     customers.forEach(c => {
-        const city = c.city ? c.city.trim() : '';
+        const city = getCityFromAddress(c.city);
         if (city) {
              cityCounts[city] = (cityCounts[city] || 0) + 1;
         }

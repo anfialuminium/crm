@@ -2093,3 +2093,39 @@ div.swal2-container {
     color: var(--error-color);
     font-weight: 700;
 }
+/* Navigation Menu Dropdown */
+.nav-menu-dropdown {
+    position: absolute;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 10000;
+    min-width: 120px;
+    overflow: hidden;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.nav-menu-item {
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nav-menu-item:last-child {
+    border-bottom: none;
+}
+
+.nav-menu-item:hover {
+    background: var(--bg-secondary);
+}
+
+.nav-menu-item img {
+    width: 20px;
+    height: 20px;
+}
