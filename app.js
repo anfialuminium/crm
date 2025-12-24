@@ -962,17 +962,8 @@ function isMeshProduct(product) {
 
 function calculateTotal() {
     const subtotal = dealItems.reduce((sum, item) => {
-        const product = products.find(p => p.product_id === item.product_id);
-        let quantityMultiplier = 1;
-        
-        if (product && isMeshProduct(product)) {
-            const sizeVal = parseFloat(item.size);
-            if (!isNaN(sizeVal) && sizeVal > 0) {
-                quantityMultiplier = sizeVal;
-            }
-        }
-        
-        return sum + (item.quantity * quantityMultiplier * item.unit_price);
+        // Price = quantity × unit_price (size is for documentation only)
+        return sum + (item.quantity * item.unit_price);
     }, 0);
     
     const discountPercentage = parseFloat(document.getElementById('discount-percentage').value) || 0;
@@ -983,6 +974,7 @@ function calculateTotal() {
     document.getElementById('discount-amount').textContent = `₪${discountAmount.toFixed(2)}`;
     document.getElementById('final-total').textContent = `₪${finalTotal.toFixed(2)}`;
 }
+
 
 // ============================================
 // Save Deal
