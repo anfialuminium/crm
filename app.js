@@ -5692,12 +5692,53 @@ async function loadThisWeek() {
         
         // Build HTML
         let html = '';
-        const sortedDays = Object.keys(groupedByDay).sort();
-        const today = new Date().toISOString().split('T')[0];
+        const sortedDateKeys = Object.keys(groupedByDay).sort();
+        const todayKey = new Date().toISOString().split('T')[0];
         
-        sortedDays.forEach(dateKey => {
+        // Filter keys into past and current/future
+        const pastKeys = sortedDateKeys.filter(k => k < todayKey);
+        const currentAndFutureKeys = sortedDateKeys.filter(k => k >= todayKey);
+
+        // 1. Render Past Days (Summaries only, expandable)
+        if (pastKeys.length > 0) {
+            html += `<h4 style="margin-bottom: 1rem; color: var(--text-secondary);">🗓️ סיכום ימים קודמים בשבוע</h4>`;
+            
+            pastKeys.forEach(dateKey => {
+                const dayData = groupedByDay[dateKey];
+                const total = dayData.activities.length;
+                const completed = dayData.activities.filter(a => a.completed).length;
+                const pending = total - completed;
+
+                html += `
+                    <div class="thisweek-day-section-summary" 
+                         onclick="toggleThisWeekDay('${dateKey}')"
+                         style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; cursor: pointer; transition: all 0.2s ease;">
+                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <span style="font-weight: 600; color: var(--text-secondary);">${dayData.dayName}</span>
+                                <span style="color: var(--text-tertiary); font-size: 0.85rem;">${dayData.formattedDate}</span>
+                                <span style="font-size: 0.8rem; color: var(--primary-color);">▼ לחץ להרחבה</span>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; font-size: 0.85rem;">
+                                <span class="badge" style="background: #e2e8f0; color: #475569;">${total} פעילויות</span>
+                                <span class="badge badge-won">${completed} הושלמו</span>
+                                ${pending > 0 ? `<span class="badge badge-lost" style="background: #fee2e2; color: #dc2626;">${pending} באיחור</span>` : '<span class="badge badge-won">אין איחורים</span>'}
+                            </div>
+                         </div>
+                         
+                         <div id="day-activities-${dateKey}" class="deals-grid" style="display: none; margin-top: 1.5rem; gap: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+                            ${dayData.activities.map(activity => renderThisWeekActivityCard(activity)).join('')}
+                         </div>
+                    </div>
+                `;
+            });
+            html += `<hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border-color);">`;
+        }
+
+        // 2. Render Current & Future Days (Full details)
+        currentAndFutureKeys.forEach(dateKey => {
             const dayData = groupedByDay[dateKey];
-            const isToday = dateKey === today;
+            const isToday = dateKey === todayKey;
             
             html += `
                 <div class="thisweek-day-section" style="margin-bottom: 2rem;">
@@ -5712,108 +5753,7 @@ async function loadThisWeek() {
                         </span>
                     </div>
                     <div class="deals-grid" style="gap: 1rem;">
-            `;
-            
-            dayData.activities.forEach(activity => {
-                const customer = activity.deals?.customers || activity.customers;
-                const customerName = customer?.business_name || 'ללא לקוח';
-                const contactName = customer?.contact_name || '';
-                const phone = customer?.phone || '';
-                const dealId = activity.deal_id;
-                const dealStatus = activity.deals?.deal_status || '';
-                const dealAmount = activity.deals?.final_amount;
-                
-                const activityTime = new Date(activity.activity_date).toLocaleTimeString('he-IL', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                
-                const typeIcons = {
-                    'שיחה': '📞',
-                    'פגישה': '📅',
-                    'מייל': '📧',
-                    'משימה': '✅'
-                };
-                const icon = typeIcons[activity.activity_type] || '📝';
-                
-                const isCompleted = activity.completed === true;
-                const statusClass = isCompleted ? 'badge-won' : 'badge-pending';
-                const statusText = isCompleted ? 'בוצע' : 'ממתין';
-                
-                html += `
-                    <div class="deal-card" style="padding: 1rem; ${isCompleted ? 'opacity: 0.7;' : ''}">
-                        <div class="deal-card-header" style="margin-bottom: 0.75rem; padding-bottom: 0.75rem;">
-                            <div>
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                                    <span style="font-size: 1.2rem;">${icon}</span>
-                                    <span class="deal-card-title" style="font-size: 1rem;">${activity.activity_type}</span>
-                                    <span style="color: var(--text-tertiary); font-size: 0.85rem;">⏰ ${activityTime}</span>
-                                </div>
-                                <div class="deal-card-date" style="font-size: 0.9rem;">
-                                    🏢 ${customerName}${contactName ? ` • ${contactName}` : ''}
-                                </div>
-                            </div>
-                            <span class="badge ${statusClass}">${statusText}</span>
-                        </div>
-                        
-                        ${activity.description ? `
-                            <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9rem;">
-                                ${formatActivityText(activity.description)}
-                            </div>
-                        ` : ''}
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-                            <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem;">
-                                ${phone ? `
-                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <span style="color: var(--text-secondary);">📱</span>
-                                        <span style="color: var(--text-primary);">${phone}</span>
-                                        <a href="tel:${phone}" title="התקשר">
-                                            <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
-                                        </a>
-                                        ${isMobileNumber(phone) ? `
-                                        <a href="https://wa.me/${phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
-                                            <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
-                                        </a>` : ''}
-                                    </div>
-                                ` : ''}
-                                ${customer?.email ? `
-                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <strong>📧</strong> 
-                                        <a href="mailto:${customer.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${customer.email}</a>
-                                        <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${customer.email}')" title="העתק אימייל">
-                                    </div>
-                                ` : ''}
-                                ${dealId ? `<span style="color: var(--primary-color);">💼 עסקה${dealAmount ? ` • ₪${dealAmount.toFixed(0)}` : ''}</span>` : ''}
-                            </div>
-                            <div style="display: flex; gap: 0.5rem;">
-                                ${!isCompleted ? `
-                                    <button class="btn btn-success btn-icon" style="width: 32px; height: 32px;" 
-                                            onclick="markActivityComplete('${activity.activity_id}')" title="סמן כבוצע">
-                                        ✓
-                                    </button>
-                                ` : ''}
-                                ${dealId ? `
-                                    <button class="btn btn-primary btn-icon" style="width: 32px; height: 32px;" 
-                                            onclick="openDealModal('${dealId}')" title="פתח עסקה">
-                                        💼
-                                    </button>
-                                ` : ''}
-                                    <button class="btn btn-info btn-icon" style="width: 32px; height: 32px;" 
-                                            onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">
-                                        👁️
-                                    </button>
-                                    <button class="btn btn-secondary btn-icon" style="width: 32px; height: 32px;" 
-                                            onclick="editActivity('${activity.activity_id}')" title="ערוך">
-                                        ✏️
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += `
+                        ${dayData.activities.map(activity => renderThisWeekActivityCard(activity)).join('')}
                     </div>
                 </div>
             `;
@@ -5848,6 +5788,122 @@ async function loadThisWeek() {
         container.innerHTML = `
             <div class="alert alert-error">שגיאה בטעינת פעילויות השבוע: ${error.message}</div>
         `;
+    }
+}
+
+function renderThisWeekActivityCard(activity) {
+    const customer = activity.deals?.customers || activity.customers;
+    const customerName = customer?.business_name || 'ללא לקוח';
+    const contactName = customer?.contact_name || '';
+    const phone = customer?.phone || '';
+    const dealId = activity.deal_id;
+    const dealAmount = activity.deals?.final_amount;
+    
+    const activityTime = new Date(activity.activity_date).toLocaleTimeString('he-IL', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    
+    const typeIcons = {
+        'שיחה': '📞',
+        'פגישה': '📅',
+        'מייל': '📧',
+        'משימה': '✅'
+    };
+    const icon = typeIcons[activity.activity_type] || '📝';
+    
+    const isCompleted = activity.completed === true;
+    const statusClass = isCompleted ? 'badge-won' : 'badge-pending';
+    const statusText = isCompleted ? 'בוצע' : 'ממתין';
+    
+    return `
+        <div class="deal-card" style="padding: 1rem; ${isCompleted ? 'opacity: 0.7;' : ''}">
+            <div class="deal-card-header" style="margin-bottom: 0.75rem; padding-bottom: 0.75rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                        <span style="font-size: 1.2rem;">${icon}</span>
+                        <span class="deal-card-title" style="font-size: 1rem;">${activity.activity_type}</span>
+                        <span style="color: var(--text-tertiary); font-size: 0.85rem;">⏰ ${activityTime}</span>
+                    </div>
+                    <div class="deal-card-date" style="font-size: 0.9rem;">
+                        🏢 ${customerName}${contactName ? ` • ${contactName}` : ''}
+                    </div>
+                </div>
+                <span class="badge ${statusClass}">${statusText}</span>
+            </div>
+            
+            ${activity.description ? `
+                <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9rem;">
+                    ${formatActivityText(activity.description)}
+                </div>
+            ` : ''}
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem;">
+                    ${phone ? `
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: var(--text-secondary);">📱</span>
+                            <span style="color: var(--text-primary);">${phone}</span>
+                            <a href="tel:${phone}" title="התקשר">
+                                <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
+                            </a>
+                            ${isMobileNumber(phone) ? `
+                            <a href="https://wa.me/${phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
+                                <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
+                            </a>` : ''}
+                        </div>
+                    ` : ''}
+                    ${customer?.email ? `
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <strong>📧</strong> 
+                            <a href="mailto:${customer.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${customer.email}</a>
+                            <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" onclick="copyToClipboard('${customer.email}')" title="העתק אימייל">
+                        </div>
+                    ` : ''}
+                    ${dealId ? `<span style="color: var(--primary-color);">💼 עסקה${dealAmount ? ` • ₪${dealAmount.toFixed(0)}` : ''}</span>` : ''}
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    ${!isCompleted ? `
+                        <button class="btn btn-success btn-icon" style="width: 32px; height: 32px;" 
+                                onclick="markActivityComplete('${activity.activity_id}')" title="סמן כבוצע">
+                            ✓
+                        </button>
+                    ` : ''}
+                    ${dealId ? `
+                        <button class="btn btn-primary btn-icon" style="width: 32px; height: 32px;" 
+                                onclick="openDealModal('${dealId}')" title="פתח עסקה">
+                            💼
+                        </button>
+                    ` : ''}
+                        <button class="btn btn-info btn-icon" style="width: 32px; height: 32px;" 
+                                onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">
+                            👁️
+                        </button>
+                        <button class="btn btn-secondary btn-icon" style="width: 32px; height: 32px;" 
+                                onclick="editActivity('${activity.activity_id}')" title="ערוך">
+                            ✏️
+                    </button>
+                    <button class="btn btn-danger btn-icon" style="width: 32px; height: 32px;" 
+                            onclick="deleteActivity('${activity.activity_id}')" title="מחק">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function toggleThisWeekDay(dateKey) {
+    const container = document.getElementById(`day-activities-${dateKey}`);
+    if (container) {
+        const isHidden = container.style.display === 'none';
+        container.style.display = isHidden ? 'grid' : 'none';
+        
+        // Update the arrow/text if desired
+        const headerText = container.previousElementSibling.querySelector('span[style*="color: var(--primary-color)"]');
+        if (headerText) {
+            headerText.textContent = isHidden ? '▲ לחץ לסגירה' : '▼ לחץ להרחבה';
+        }
     }
 }
 
