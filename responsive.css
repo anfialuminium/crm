@@ -245,6 +245,37 @@
         flex-direction: column;
         gap: 0.4rem !important;
     }
+
+    /* This Week Mobile Improvements */
+    .thisweek-day-section-summary {
+        padding: 0.6rem !important;
+    }
+    
+    .thisweek-day-section-summary > div:first-child {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+
+    .thisweek-day-section-summary .badge {
+        font-size: 0.75rem !important;
+        padding: 2px 6px !important;
+    }
+
+    .thisweek-day-section-summary span[style*="font-size: 0.8rem"] {
+        display: block;
+        margin-top: 0.2rem;
+    }
+    
+    #thisweek-list > div:first-child {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    
+    #thisweek-list .summary-card {
+        min-width: 100% !important;
+        margin: 0 !important;
+    }
 }
 
 /* Default state for toggle button (visible) */
