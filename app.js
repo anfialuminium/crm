@@ -1262,9 +1262,9 @@ async function saveDeal(status = null) {
             return dealData.deal_id;
         }
         
-        // Reload deals history to reflect changes
-        const currentTab = document.querySelector('.nav-tab.active')?.dataset.tab;
-        if (currentTab === 'history') {
+        // Reload deals history to reflect changes if visible
+        const historyTab = document.getElementById('history-tab');
+        if (historyTab && !historyTab.classList.contains('hidden')) {
             await loadDealsHistory();
         }
 
@@ -1463,16 +1463,24 @@ async function saveCustomer(event) {
         showAlert(customerId ? '✅ הלקוח עודכן בהצלחה!' : '✅ הלקוח נשמר בהצלחה!', 'success');
         
         // Reload customers and select the new/updated one if on deals tab
-        await loadCustomers();
         
-        const currentTab = document.querySelector('.nav-tab.active')?.dataset.tab;
-        if (currentTab === 'customers') {
+        // Check if customers tab is active (visible)
+        const customersTab = document.getElementById('customers-tab');
+        const isCustomersTabActive = customersTab && !customersTab.classList.contains('hidden');
+        
+        if (isCustomersTabActive) {
+            // This will reload and render
             displayCustomers();
-        } else if (!customerId) {
-            // Only select if it's a new customer and we're on deals tab
-            document.getElementById('customer-select').value = savedCustomer.customer_id;
-            const searchInput = document.getElementById('customer-search-input');
-            if (searchInput) searchInput.value = savedCustomer.business_name;
+        } else {
+             // Just reload data in background
+             await loadCustomers();
+             
+             if (!customerId) {
+                // Only select if it's a new customer and we're NOT on customers tab (likely deals tab)
+                document.getElementById('customer-select').value = savedCustomer.customer_id;
+                const searchInput = document.getElementById('customer-search-input');
+                if (searchInput) searchInput.value = savedCustomer.business_name;
+             }
         }
         closeCustomerModal();
     } catch (e) {
@@ -5807,7 +5815,14 @@ async function loadThisWeek() {
 
         // 1. Render Past Days (Summaries only, expandable)
         if (pastKeys.length > 0) {
-            html += `<h4 style="margin-bottom: 1rem; color: var(--text-secondary);">🗓️ סיכום ימים קודמים בשבוע</h4>`;
+            html += `
+                <div style="display: flex; justify-content: flex-start; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                    <h4 style="margin: 0; color: var(--text-secondary);">🗓️ סיכום ימים קודמים בשבוע</h4>
+                    <button class="btn btn-sm btn-secondary" onclick="toggleAllPastDays(this)" data-state="collapsed" style="font-size: 0.8rem; padding: 0.25rem 0.75rem;">
+                         הרחב הכל
+                    </button>
+                </div>
+            `;
             
             pastKeys.forEach(dateKey => {
                 const dayData = groupedByDay[dateKey];
@@ -5832,7 +5847,7 @@ async function loadThisWeek() {
                             </div>
                          </div>
                          
-                         <div id="day-activities-${dateKey}" class="deals-grid" style="display: none; margin-top: 1.5rem; gap: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+                         <div id="day-activities-${dateKey}" class="deals-grid past-day-container" style="display: none; margin-top: 1.5rem; gap: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
                             ${dayData.activities.map(activity => renderThisWeekActivityCard(activity)).join('')}
                          </div>
                     </div>
@@ -6015,6 +6030,28 @@ function toggleThisWeekDay(dateKey) {
             headerText.textContent = isHidden ? '▲ לחץ לסגירה' : '▼ לחץ להרחבה';
         }
     }
+}
+
+function toggleAllPastDays(btn) {
+    // Prevent event bubbling if button is clicked inside a container (though here it's separate)
+    if (event) event.stopPropagation();
+
+    const isCollapsed = btn.dataset.state === 'collapsed';
+    const containers = document.querySelectorAll('.past-day-container');
+    
+    containers.forEach(container => {
+        container.style.display = isCollapsed ? 'grid' : 'none';
+        
+        // Update individual toggle status text
+        const headerText = container.previousElementSibling.querySelector('span[style*="color: var(--primary-color)"]');
+        if (headerText) {
+            headerText.textContent = isCollapsed ? '▲ לחץ לסגירה' : '▼ לחץ להרחבה';
+        }
+    });
+    
+    // Update button state
+    btn.dataset.state = isCollapsed ? 'expanded' : 'collapsed';
+    btn.textContent = isCollapsed ? 'סגור הכל' : 'הרחב הכל';
 }
 
 async function markActivityComplete(activityId) {
