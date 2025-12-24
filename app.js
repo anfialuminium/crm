@@ -1369,6 +1369,7 @@ function addCustomerAddressRow(address = '', description = '') {
     row.style.gap = '0.5rem';
     row.style.alignItems = 'center';
     
+    row.innerHTML = `
         <input type="text" class="form-input additional-address-input" placeholder="כתובת נוספת" value="${address.replace(/"/g, '&quot;')}" style="flex: 1;">
         <input type="text" class="form-input additional-address-desc" placeholder="תיאור (למשל: סניף צפון)" value="${description.replace(/"/g, '&quot;')}" style="flex: 1;">
         <button type="button" class="btn btn-danger btn-icon" onclick="this.parentElement.remove()" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">🗑️</button>
