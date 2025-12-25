@@ -1741,7 +1741,11 @@ function filterCustomers(preservePage = false) {
                     <div>
                         <div class="deal-card-title">${customer.business_name}</div>
                         <div class="deal-card-date">
-                            👤 ${contactName}${contactRole ? ` (${contactRole})` : ''}
+                            👤 ${
+                                (customer.primary_contact_id || customer.contact_id) && contactName !== 'ללא איש קשר'
+                                    ? `<a href="javascript:void(0)" onclick="viewContactDetails('${customer.primary_contact_id || customer.contact_id}')" style="color: inherit; text-decoration: underline;">${contactName}</a>`
+                                    : contactName
+                            }${contactRole ? ` (${contactRole})` : ''}
                         </div>
                     </div>
                     ${customer.customer_type ? `<span class="badge ${typeBadgeClass}">${customer.customer_type}</span>` : ''}
