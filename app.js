@@ -4193,7 +4193,11 @@ function createDealCard(deal) {
         <div class="deal-card-body">
             <div class="deal-card-info">
                 <span class="deal-card-label">איש קשר:</span>
-                <span class="deal-card-value">${deal.customers.contact_name || '-'}</span>
+                <span class="deal-card-value">
+                    ${deal.customers.primary_contact_id ? 
+                        `<a href="javascript:void(0)" onclick="viewContactDetails('${deal.customers.primary_contact_id}')" style="font-weight: 500; color: inherit; text-decoration: underline;">${deal.customers.contact_name || '-'}</a>` 
+                        : (deal.customers.contact_name || '-')}
+                </span>
             </div>
             <div class="deal-card-info">
                 <span class="deal-card-label">טלפון:</span>
@@ -4345,7 +4349,9 @@ async function viewDealDetails(dealId) {
                             <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${deal.customers.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                         ` : '-'}
                     </div>
-                    <p><strong>כתובת:</strong> ${deal.customers.city || '-'}</p>
+                    <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <strong>כתובת:</strong> ${deal.customers.city || '-'} ${deal.customers.city ? renderNavigationIcon(deal.customers.city) : ''}
+                    </div>
                 </div>
             </div>
             
@@ -5823,7 +5829,8 @@ async function loadThisWeek() {
                         contact_name,
                         phone,
                         email,
-                        city
+                        city,
+                        primary_contact_id
                     )
                 ),
                 customers (
@@ -5832,7 +5839,8 @@ async function loadThisWeek() {
                     contact_name,
                     phone,
                     email,
-                    city
+                    city,
+                    primary_contact_id
                 )
             `)
             .neq('activity_type', 'הערה')
@@ -6063,7 +6071,10 @@ function renderThisWeekActivityCard(activity) {
                         <span style="color: var(--text-tertiary); font-size: 0.85rem;">⏰ ${activityTime}</span>
                     </div>
                     <div class="deal-card-date" style="font-size: 0.9rem;">
-                        🏢 ${customer ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customer.customer_id}')" style="color: inherit; text-decoration: underline; font-weight: 500;">${customerName}</a>` : customerName}${contactName ? ` • ${contactName}` : ''}
+                        🏢 ${customer ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customer.customer_id}')" style="color: inherit; text-decoration: underline; font-weight: 500;">${customerName}</a>` : customerName}
+                        ${(contactName && customer?.primary_contact_id) 
+                            ? ` • <a href="javascript:void(0)" onclick="viewContactDetails('${customer.primary_contact_id}')" style="color: inherit; text-decoration: underline;">${contactName}</a>` 
+                            : (contactName ? ` • ${contactName}` : '')}
                         ${customer?.city ? (() => {
                             const cityName = getCityFromAddress(customer.city);
                             return cityName ? ` • 📍 ${cityName} ${renderNavigationIcon(customer.city)}` : '';
@@ -6479,7 +6490,8 @@ async function loadActivities(preservePage = false) {
                         business_name,
                         contact_name,
                         phone,
-                        email
+                        email,
+                        primary_contact_id
                     )
                 ),
                 customers (
@@ -6487,7 +6499,8 @@ async function loadActivities(preservePage = false) {
                     business_name,
                     contact_name,
                     phone,
-                    email
+                    email,
+                    primary_contact_id
                 )
             `)
             .neq('activity_type', 'הערה');
@@ -6643,6 +6656,13 @@ async function loadActivities(preservePage = false) {
                             const rowStyle = activity.completed ? 'opacity: 0.6; background: #f0fdf4;' : '';
                             const textStyle = activity.completed ? 'text-decoration: line-through;' : '';
                             
+                            const contactNameRaw = activity.deals?.customers?.contact_name || activity.customers?.contact_name || '-';
+                            const primaryContactId = activity.deals?.customers?.primary_contact_id || activity.customers?.primary_contact_id;
+                            
+                            const contactDisplay = (primaryContactId && contactNameRaw !== '-')
+                                ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500;">${contactNameRaw}</a>`
+                                : contactNameRaw;
+
                             return `
                                 <tr style="${rowStyle}">
                                     <td>${icon} ${activity.activity_type}</td>
@@ -6657,6 +6677,7 @@ async function loadActivities(preservePage = false) {
                                             ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customerId}')" style="font-weight: 500;">${businessName}</a>`
                                             : businessName
                                         }
+                                        <div style="font-size: 0.8em; color: var(--text-tertiary);">${contactDisplay}</div>
                                     </td>
                                     <td style="color: var(--primary-color);">${activityDate}</td>
                                     <td>${activity.created_by || 'מערכת'}</td>
@@ -6719,18 +6740,25 @@ async function loadActivities(preservePage = false) {
                 let contactName = '';
                 let phone = '';
                 let email = '';
+                let primaryContactId = null;
                 
                 if (activity.deals?.customers) {
                     businessName = activity.deals.customers.business_name || 'לא משויך';
                     contactName = activity.deals.customers.contact_name || '';
                     phone = activity.deals.customers.phone || '';
                     email = activity.deals.customers.email || '';
+                    primaryContactId = activity.deals.customers.primary_contact_id;
                 } else if (activity.customers) {
                     businessName = activity.customers.business_name || 'לא משויך';
                     contactName = activity.customers.contact_name || '';
                     phone = activity.customers.phone || '';
                     email = activity.customers.email || '';
+                    primaryContactId = activity.customers.primary_contact_id;
                 }
+                
+                const contactDisplay = (primaryContactId && contactName)
+                    ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500; color: inherit; text-decoration: underline;">${contactName}</a>`
+                    : contactName;
                 
                 // Format phone for WhatsApp (remove dashes, ensure +972)
                 let whatsappLink = '';
@@ -6768,7 +6796,7 @@ async function loadActivities(preservePage = false) {
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 1rem; font-size: 0.8rem; color: var(--text-secondary);">
                             ${activityDate ? `<div><strong>תאריך:</strong> <span style="color: var(--primary-color);">${activityDate}</span></div>` : ''}
                             <div><strong>לקוח:</strong> ${businessName}</div>
-                            ${contactName ? `<div><strong>איש קשר:</strong> ${contactName}</div>` : ''}
+                            ${contactName ? `<div><strong>איש קשר:</strong> ${contactDisplay}</div>` : ''}
                             ${email ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <strong>מייל:</strong> 
