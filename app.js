@@ -9318,8 +9318,13 @@ function renderGlobalSearchResults(results, query) {
                 <td>${a.activity_type}</td>
                 <td>${date}</td>
                 <td>${client}</td>
-                <td>${highlight(a.description || '-', query)}</td>
-                <td><button class="btn btn-sm btn-secondary" onclick="editActivity('${a.activity_id}')">✏️ ערוך</button></td>
+                <td>${formatActivityText(highlight(a.description || '-', query))}</td>
+                <td>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-sm btn-info" onclick="viewActivityDetails('${a.activity_id}')">👁️ צפה</button>
+                        <button class="btn btn-sm btn-secondary" onclick="editActivity('${a.activity_id}')">✏️ ערוך</button>
+                    </div>
+                </td>
              </tr>`;
         });
         html += `</tbody></table></div>`;
@@ -11545,13 +11550,16 @@ function formatActivityText(text) {
     // Avoid replacing URLs that might be inside the mention format if that ever happens (unlikely for now)
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     text = text.replace(urlRegex, (url) => {
+        // Simple check to avoid double-linking if the URL is already in an anchor tag (naive check)
+        if (text.includes(`"${url}"`)) return url;
         return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${url}</a>`;
     });
 
     // Bold: **text** -> <strong>text</strong>
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-    return text.replace(/@\[(Deal|Order|Contact):([^\|]+)\|([^\]]+)\]/g, (match, type, id, label) => {
+    // Handle existing format @[Type:ID|Label]
+    text = text.replace(/@\[(Deal|Order|Contact):([^\|]+)\|([^\]]+)\]/g, (match, type, id, label) => {
         let onclick = '';
         let color = '';
         
@@ -11568,6 +11576,27 @@ function formatActivityText(text) {
         
         return `<a href="javascript:void(0)" onclick="${onclick}" style="color: ${color}; font-weight: 500; text-decoration: underline; background: #f1f5f9; padding: 0 4px; border-radius: 4px;">${label}</a>`;
     });
+
+    // Handle new format [Label|Type:ID@]
+    text = text.replace(/\[(.*?)\|([A-Za-z]+):([^@]+)@\]/g, (match, label, type, id) => {
+        let onclick = '';
+        let color = '';
+        
+        if (type === 'Deal') {
+            onclick = `viewDealDetails('${id}')`;
+            color = '#1e40af'; // Blue-ish
+        } else if (type === 'Order') {
+            onclick = `viewSupplierOrder('${id}')`;
+            color = '#9d174d'; // Pink-ish
+        } else if (type === 'Contact') {
+            onclick = `viewContactDetails('${id}')`;
+            color = '#065f46'; // Green-ish
+        }
+        
+        return `<a href="javascript:void(0)" onclick="${onclick}" style="color: ${color}; font-weight: 500; text-decoration: underline; background: #f1f5f9; padding: 0 4px; border-radius: 4px;">${label}</a>`;
+    });
+
+    return text;
 }
 
 
