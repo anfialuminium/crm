@@ -3841,7 +3841,7 @@ function openImageModal(imageUrl, imageName) {
         modal.className = 'modal';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 90vw; max-height: 90vh; background: transparent; box-shadow: none; padding: 0; overflow: visible; position: relative;">
-                <button onclick="closeImageModal()" style="position: fixed; top: 20px; right: 20px; background: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 1.5rem; cursor: pointer; z-index: 10001; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;">✕</button>
+                <button onclick="closeImageModal()" style="position: fixed; top: 20px; right: 20px; background: white; color: #333; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 24px; padding: 0; line-height: 1; cursor: pointer; z-index: 10001; box-shadow: 0 4px 12px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transition: transform 0.2s;">&times;</button>
                 <div id="image-lightbox-content" style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
                     <img id="image-lightbox-img" src="" alt="" style="max-width: 100%; max-height: 80vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
                     <div id="image-lightbox-title" style="color: white; font-size: 1.1rem; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"></div>

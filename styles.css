@@ -576,17 +576,30 @@ body {
 }
 
 .modal-close {
-    background: none;
-    border: none;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 1.5rem;
     cursor: pointer;
     color: var(--text-secondary);
-    transition: color var(--transition-base);
-    padding: var(--spacing-sm);
+    transition: all var(--transition-base);
+    padding: 0;
+    line-height: 1;
+    box-shadow: var(--shadow-sm);
+    margin-left: -10px; /* Adjust positioning slightly if needed */
 }
 
 .modal-close:hover {
-    color: var(--error-color);
+    background: var(--error-color);
+    color: white;
+    border-color: var(--error-color);
+    transform: rotate(90deg);
+    box-shadow: var(--shadow-md);
 }
 
 .modal-footer {
