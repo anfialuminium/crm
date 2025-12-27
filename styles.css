@@ -329,6 +329,17 @@ body {
     box-shadow: var(--shadow-lg);
 }
 
+.btn-warning {
+    background: var(--warning-color);
+    color: white;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
 .btn-sm {
     padding: var(--spacing-xs) var(--spacing-sm);
     font-size: 0.85rem;

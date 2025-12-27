@@ -6124,7 +6124,12 @@ function renderThisWeekActivityCard(activity) {
                                 onclick="markActivityComplete('${activity.activity_id}')" title="סמן כבוצע">
                             ✓
                         </button>
-                    ` : ''}
+                    ` : `
+                        <button class="btn btn-warning btn-icon" style="width: 32px; height: 32px;" 
+                                onclick="toggleActivityCompletion('${activity.activity_id}', false)" title="בטל סימון כבוצע">
+                            ↩️
+                        </button>
+                    `}
                     ${dealId ? `
                         <button class="btn btn-primary btn-icon" style="width: 32px; height: 32px;" 
                                 onclick="openDealModal('${dealId}')" title="פתח עסקה">
@@ -6868,6 +6873,9 @@ async function toggleActivityCompletion(activityId, completed) {
         
         // Reload activities
         loadActivities();
+        if (typeof loadThisWeek === 'function') {
+            loadThisWeek();
+        }
 
         // Check for follow-up if completed
         if (completed && updatedActivity) {
