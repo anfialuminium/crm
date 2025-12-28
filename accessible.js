@@ -14,6 +14,7 @@ let products = [];
 let customers = [];
 let currentDealItems = [];
 let itemCounter = 0;
+let orderColors = []; // Supplier order colors
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -55,6 +56,15 @@ async function loadData() {
             .order('business_name');
         if (cError) throw cError;
         customers = cData || [];
+
+        // Load Supplier Order Colors
+        const { data: colorData, error: colorError } = await supabaseClient
+            .from('product_colors')
+            .select('*')
+            .eq('active', true)
+            .order('color_name');
+        if (colorError) throw colorError;
+        orderColors = colorData || [];
 
         setupCustomerSearch();
         console.log('✅ נתונים נטענו בהצלחה');
@@ -199,6 +209,15 @@ function updateItemProduct(id, productId) {
                 </select>
             `;
             item.size = ''; // Reset size when changing product
+        } else if (product.product_name.includes('רשת')) {
+            const screenSizes = ['0.50', '0.60', '0.70', '0.80', '0.90', '1.00', '1.10', '1.20', '1.50', '1.80', '2.00', '2.50'];
+            sizeContainer.innerHTML = `
+                <select class="input-big" onchange="updateItemSize('${id}', this.value)">
+                    <option value="">מידה</option>
+                    ${screenSizes.map(s => `<option value="${s}">${s}</option>`).join('')}
+                </select>
+            `;
+            item.size = '';
         } else {
             sizeContainer.innerHTML = `
                 <input type="text" class="input-big" oninput="updateItemSize('${id}', this.value)" placeholder="מידה">
@@ -211,17 +230,27 @@ function updateItemProduct(id, productId) {
         item.size = '';
     }
 
-    // Check if color is required (specifically for handles or based on DB)
+    // Check if color is required
     const colorContainer = document.getElementById(`color-container-${id}`);
-    const isHandle = product && (product.product_name.includes('ידית משיכה בודדת') || product.product_name.includes('ידית משיכה כפולה'));
+    const isPullHandle = product && product.product_name.includes('ידית משיכה');
+    const isRegularHandle = product && product.product_name.includes('ידית') && !isPullHandle;
     
-    if (isHandle || (product && product.requires_color)) {
+    if (isPullHandle) {
         colorContainer.classList.remove('hidden');
-        const colors = ['נירוסטה', 'שחור'];
+        const pullColors = ['נירוסטה', 'שחור'];
         colorContainer.innerHTML = `
             <select class="input-big" onchange="updateItemColor('${id}', this.value)">
                 <option value="">צבע</option>
-                ${colors.map(c => `<option value="${c}">${c}</option>`).join('')}
+                ${pullColors.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+        `;
+        item.color = '';
+    } else if (isRegularHandle || (product && product.requires_color)) {
+        colorContainer.classList.remove('hidden');
+        colorContainer.innerHTML = `
+            <select class="input-big" onchange="updateItemColor('${id}', this.value)">
+                <option value="">צבע</option>
+                ${orderColors.map(c => `<option value="${c.color_name}">${c.color_name}</option>`).join('')}
             </select>
         `;
         item.color = '';

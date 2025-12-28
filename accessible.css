@@ -254,7 +254,7 @@ label {
 
 .item-row input[placeholder="כמות"] {
     flex: 1;
-    max-width: 80px;
+    max-width: 100px;
     text-align: center;
     padding-left: 8px;
     padding-right: 8px;
