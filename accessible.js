@@ -163,6 +163,13 @@ function updateItemProduct(id, productId) {
     item.product_id = productId;
     item.price = product ? (product.price || 0) : 0;
     
+    // If quantity is currently empty or 0, set to 1
+    if (!item.quantity) {
+        item.quantity = 1;
+        const qtyInput = document.querySelector(`#${id} input[type="number"][placeholder="כמות"]`);
+        if (qtyInput) qtyInput.value = 1;
+    }
+    
     // Update price input
     const priceInput = document.getElementById(`price-${id}`);
     if (priceInput) priceInput.value = item.price;
