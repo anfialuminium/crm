@@ -21,6 +21,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     showScreen('main');
 });
 
+function formatAccDate(dateStr) {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    
+    // Format: "יום א', 28.12.25"
+    const weekday = d.toLocaleDateString('he-IL', { weekday: 'short' });
+    const date = d.toLocaleDateString('he-IL', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: '2-digit' 
+    });
+    return `${weekday}, ${date}`;
+}
+
 async function loadData() {
     try {
         // Load Products
@@ -290,7 +305,7 @@ async function loadAccDeals(containerId, searchQuery = '') {
         }
 
         container.innerHTML = filtered.map(d => {
-            const date = new Date(d.created_at).toLocaleDateString('he-IL');
+            const date = formatAccDate(d.created_at);
             return `
                 <div class="deal-card">
                     <div class="deal-info">

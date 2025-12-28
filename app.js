@@ -7779,6 +7779,10 @@ async function loadAuditLog() {
                         'supplier_id': 'ספק',
                         'order_status': 'סטטוס הזמנה',
                         'expected_date': 'תאריך צפוי',
+                        'total_amount': 'סכום כולל',
+                        'final_amount': 'סכום סופי',
+                        'discount_amount': 'סכום הנחה',
+                        'discount_percentage': 'אחוז הנחה',
                         'notes': 'הערות',
                         'business_name': 'שם עסק',
                         'city': 'עיר',
@@ -7799,6 +7803,36 @@ async function loadAuditLog() {
                         if (v === true) return 'כן';
                         if (v === false) return 'לא';
                         if (v === null || v === undefined || v === '') return '-';
+                        
+                        // Check if it's an ISO date string
+                        if (typeof v === 'string' && v.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+                            const d = new Date(v);
+                            if (!isNaN(d.getTime())) {
+                                return d.toLocaleDateString('he-IL', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                });
+                            }
+                        }
+                        
+                        // Check for YYYY-MM-DD
+                        if (typeof v === 'string' && v.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                            const [y, m, d] = v.split('-');
+                            return `${d}/${m}/${y}`;
+                        }
+
+                        // Check if it's a number
+                        if (typeof v === 'number') {
+                             return v.toLocaleString('he-IL', { maximumFractionDigits: 2 });
+                        }
+
+                        // Check if it's a string that looks like a number
+                        if (typeof v === 'string' && v.trim() !== '' && !isNaN(v) && !v.startsWith('0') || v === '0') {
+                             const n = parseFloat(v);
+                             return n.toLocaleString('he-IL', { maximumFractionDigits: 2 });
+                        }
+
                         return v;
                     };
 
