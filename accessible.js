@@ -226,7 +226,8 @@ async function saveAccDeal() {
                 final_amount: subtotal,
                 discount_percentage: 0,
                 discount_amount: 0,
-                notes: 'נוצר דרך הממשק הנגיש'
+                notes: 'נוצר דרך הממשק הנגיש',
+                created_by: 'עופר'
             })
             .select()
             .single();
