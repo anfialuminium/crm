@@ -166,6 +166,9 @@ function addAccItem() {
         <div id="size-container-${id}" class="hidden size-field">
             <!-- Dynamically populated by updateItemProduct -->
         </div>
+        <div id="color-container-${id}" class="hidden color-field">
+            <!-- Dynamically populated by updateItemProduct -->
+        </div>
         <input type="number" class="input-big" value="" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
         <input type="number" class="input-big" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
         <button onclick="removeAccItem('${id}')" class="btn-remove">×</button>
@@ -186,8 +189,8 @@ function updateItemProduct(id, productId) {
     if (product && product.requires_size) {
         sizeContainer.classList.remove('hidden');
         
-        // Check for specific product "ידית משיכה בודדת"
-        if (product.product_name.includes('ידית משיכה בודדת')) {
+        // Check for pull handles (ידית משיכה)
+        if (product.product_name.includes('ידית משיכה')) {
             const sizes = ['35/50', '50/70', '70/100', '90/120'];
             sizeContainer.innerHTML = `
                 <select class="input-big" onchange="updateItemSize('${id}', this.value)">
@@ -208,6 +211,26 @@ function updateItemProduct(id, productId) {
         item.size = '';
     }
 
+    // Check if color is required (specifically for handles or based on DB)
+    const colorContainer = document.getElementById(`color-container-${id}`);
+    const isHandle = product && (product.product_name.includes('ידית משיכה בודדת') || product.product_name.includes('ידית משיכה כפולה'));
+    
+    if (isHandle || (product && product.requires_color)) {
+        colorContainer.classList.remove('hidden');
+        const colors = ['נירוסטה', 'שחור'];
+        colorContainer.innerHTML = `
+            <select class="input-big" onchange="updateItemColor('${id}', this.value)">
+                <option value="">צבע</option>
+                ${colors.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+        `;
+        item.color = '';
+    } else {
+        colorContainer.classList.add('hidden');
+        colorContainer.innerHTML = '';
+        item.color = '';
+    }
+
     // If quantity is currently empty or 0, set to 1
     if (!item.quantity) {
         item.quantity = 1;
@@ -225,6 +248,11 @@ function updateItemProduct(id, productId) {
 function updateItemSize(id, size) {
     const item = currentDealItems.find(i => i.id === id);
     if (item) item.size = size;
+}
+
+function updateItemColor(id, color) {
+    const item = currentDealItems.find(i => i.id === id);
+    if (item) item.color = color;
 }
 
 function updateItemQty(id, qty) {
@@ -290,7 +318,8 @@ async function saveAccDeal() {
             product_id: i.product_id,
             quantity: i.quantity,
             unit_price: i.price,
-            size: i.size || null
+            size: i.size || null,
+            color: i.color || null
         }));
 
         const { error: iError } = await supabaseClient

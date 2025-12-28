@@ -238,8 +238,10 @@ label {
     flex: 4;
 }
 
-.item-row .size-field {
+.item-row .size-field,
+.item-row .color-field {
     flex: 2;
+    min-width: 90px;
 }
 
 .item-row input[placeholder="כמות"] {
@@ -273,8 +275,9 @@ label {
         width: 100%;
     }
     
-    .item-row .size-field {
-        grid-column: span 2;
+    .item-row .size-field,
+    .item-row .color-field {
+        grid-column: span 1;
         width: 100%;
     }
     
