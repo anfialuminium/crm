@@ -160,9 +160,12 @@ function addAccItem() {
     div.id = id;
     div.innerHTML = `
         <select class="input-big" onchange="updateItemProduct('${id}', this.value)">
-            <option value="">-- בחר מוצר --</option>
-            ${products.map(p => `<option value="${p.product_id}" data-price="${p.price}">${p.product_name}</option>`).join('')}
+            <option value="">מוצר</option>
+            ${products.map(p => `<option value="${p.product_id}">${p.product_name}</option>`).join('')}
         </select>
+        <div id="size-container-${id}" class="hidden size-field">
+            <!-- Dynamically populated by updateItemProduct -->
+        </div>
         <input type="number" class="input-big" value="" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
         <input type="number" class="input-big" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
         <button onclick="removeAccItem('${id}')" class="btn-remove">×</button>
@@ -178,6 +181,33 @@ function updateItemProduct(id, productId) {
     item.product_id = productId;
     item.price = product ? (product.price || 0) : 0;
     
+    // Check if size is required
+    const sizeContainer = document.getElementById(`size-container-${id}`);
+    if (product && product.requires_size) {
+        sizeContainer.classList.remove('hidden');
+        
+        // Check for specific product "ידית משיכה בודדת"
+        if (product.product_name.includes('ידית משיכה בודדת')) {
+            const sizes = ['35/50', '50/70', '70/100', '90/120'];
+            sizeContainer.innerHTML = `
+                <select class="input-big" onchange="updateItemSize('${id}', this.value)">
+                    <option value="">מידה</option>
+                    ${sizes.map(s => `<option value="${s}">${s}</option>`).join('')}
+                </select>
+            `;
+            item.size = ''; // Reset size when changing product
+        } else {
+            sizeContainer.innerHTML = `
+                <input type="text" class="input-big" oninput="updateItemSize('${id}', this.value)" placeholder="מידה">
+            `;
+            item.size = '';
+        }
+    } else {
+        sizeContainer.classList.add('hidden');
+        sizeContainer.innerHTML = '';
+        item.size = '';
+    }
+
     // If quantity is currently empty or 0, set to 1
     if (!item.quantity) {
         item.quantity = 1;
@@ -190,6 +220,11 @@ function updateItemProduct(id, productId) {
     if (priceInput) priceInput.value = item.price;
     
     updateTotal();
+}
+
+function updateItemSize(id, size) {
+    const item = currentDealItems.find(i => i.id === id);
+    if (item) item.size = size;
 }
 
 function updateItemQty(id, qty) {
@@ -254,7 +289,8 @@ async function saveAccDeal() {
             deal_id: deal.deal_id,
             product_id: i.product_id,
             quantity: i.quantity,
-            unit_price: i.price
+            unit_price: i.price,
+            size: i.size || null
         }));
 
         const { error: iError } = await supabaseClient

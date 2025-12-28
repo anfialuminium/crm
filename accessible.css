@@ -38,7 +38,7 @@ body {
 }
 
 .container {
-    max-width: 800px;
+    max-width: 1000px;
     margin: 0 auto;
 }
 
@@ -221,44 +221,75 @@ label {
 /* Items List in New Deal */
 .item-row {
     background: var(--bg-secondary);
-    padding: 16px;
+    padding: 12px;
     border-radius: 12px;
     margin-bottom: 12px;
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr auto;
-    gap: 12px;
+    display: flex;
+    gap: 10px;
     align-items: center;
+}
+
+.item-row select, 
+.item-row input {
+    min-width: 0; /* Allow shrinking */
+}
+
+.item-row select.input-big {
+    flex: 4;
+}
+
+.item-row .size-field {
+    flex: 2;
+}
+
+.item-row input[placeholder="כמות"] {
+    flex: 1;
+    max-width: 80px;
+    text-align: center;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.item-row input[placeholder="מחיר"] {
+    flex: 1.5;
+    max-width: 120px;
+    text-align: center;
+}
+
+.item-row .btn-remove {
+    flex: 0 0 44px;
 }
 
 @media (max-width: 600px) {
     .item-row {
+        display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 16px;
+        padding-top: 32px;
     }
     
-    .item-row select {
+    .item-row select.input-big {
         grid-column: span 2;
+        width: 100%;
     }
     
-    .item-row input {
+    .item-row .size-field {
+        grid-column: span 2;
+        width: 100%;
+    }
+    
+    .item-row input[placeholder="כמות"],
+    .item-row input[placeholder="מחיר"] {
+        flex: 1;
+        width: 100%;
         grid-column: span 1;
     }
     
     .btn-remove {
         position: absolute;
-        top: -10px;
-        left: -10px;
-        box-shadow: var(--shadow-md);
-    }
-    
-    .item-row {
-        position: relative;
-        padding-top: 24px;
-    }
-
-    .input-big {
-        padding: 12px;
-        font-size: 1rem;
+        top: 8px;
+        left: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 }
 
