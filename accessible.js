@@ -137,19 +137,19 @@ function resetNewDealForm() {
 
 function addAccItem() {
     const id = `item-${itemCounter++}`;
-    const item = { id, product_id: '', quantity: 1, price: 0 };
+    const item = { id, product_id: '', quantity: '', price: '' };
     currentDealItems.push(item);
 
     const div = document.createElement('div');
     div.className = 'item-row';
     div.id = id;
     div.innerHTML = `
-        <select class="input-big" onchange="updateItemProduct('${id}', this.value)" style="padding: 10px;">
+        <select class="input-big" onchange="updateItemProduct('${id}', this.value)">
             <option value="">-- בחר מוצר --</option>
             ${products.map(p => `<option value="${p.product_id}" data-price="${p.price}">${p.product_name}</option>`).join('')}
         </select>
-        <input type="number" class="input-big" value="1" min="1" oninput="updateItemQty('${id}', this.value)" style="padding: 10px;" placeholder="כמות">
-        <input type="number" class="input-big" value="0" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" style="padding: 10px;" placeholder="מחיר">
+        <input type="number" class="input-big" value="" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
+        <input type="number" class="input-big" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
         <button onclick="removeAccItem('${id}')" class="btn-remove">×</button>
     `;
     document.getElementById('acc-items-list').appendChild(div);

@@ -133,6 +133,12 @@ label {
     border: 3px solid var(--border-color);
     border-radius: 12px;
     font-family: inherit;
+    text-overflow: ellipsis;
+}
+
+.input-big::placeholder {
+    color: #999;
+    opacity: 1;
 }
 
 .input-big:focus {
@@ -224,6 +230,38 @@ label {
     align-items: center;
 }
 
+@media (max-width: 600px) {
+    .item-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+    
+    .item-row select {
+        grid-column: span 2;
+    }
+    
+    .item-row input {
+        grid-column: span 1;
+    }
+    
+    .btn-remove {
+        position: absolute;
+        top: -10px;
+        left: -10px;
+        box-shadow: var(--shadow-md);
+    }
+    
+    .item-row {
+        position: relative;
+        padding-top: 24px;
+    }
+
+    .input-big {
+        padding: 12px;
+        font-size: 1rem;
+    }
+}
+
 .btn-remove {
     background: var(--error-color);
     color: white;
@@ -233,6 +271,9 @@ label {
     border-radius: 50%;
     font-size: 20px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Search results */
