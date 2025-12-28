@@ -221,12 +221,20 @@ label {
 /* Items List in New Deal */
 .item-row {
     background: var(--bg-secondary);
-    padding: 12px;
-    border-radius: 12px;
-    margin-bottom: 12px;
+    padding: 16px;
+    border-radius: 16px;
+    margin-bottom: 16px;
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
+    position: relative; /* Fixed: allows absolute positioning of remove button inside */
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.item-row:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .item-row select, 
@@ -290,24 +298,34 @@ label {
     
     .btn-remove {
         position: absolute;
-        top: 8px;
-        left: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        top: -12px;
+        left: -12px;
+        box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+        z-index: 5;
     }
 }
 
 .btn-remove {
-    background: var(--error-color);
-    color: white;
-    border: none;
-    width: 40px;
-    height: 40px;
+    background: #fee2e2;
+    color: var(--error-color);
+    border: 1px solid #fecaca;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    font-size: 20px;
+    font-size: 22px;
+    font-weight: bold;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-remove:hover {
+    background: var(--error-color);
+    color: white;
+    transform: scale(1.1) rotate(90deg);
 }
 
 /* Search results */
