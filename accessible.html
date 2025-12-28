@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת נגישה - עסקאות</title>
+    <link rel="stylesheet" href="accessible.css">
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>💼 עסקאות - גרסה פשוטה</h1>
+            <a href="index.html" style="font-size: 1.1rem; color: var(--text-secondary); text-decoration: none;">🏠 חזור למערכת המלאה</a>
+        </header>
+
+        <!-- Main Screen -->
+        <div id="screen-main">
+            <div class="card">
+                <h2 class="section-title">פעולות נפוצות</h2>
+                <button onclick="showScreen('new-deal')" class="btn-big btn-success">
+                    <span>➕ עסקה חדשה</span>
+                </button>
+                <button onclick="showScreen('history')" class="btn-big btn-primary">
+                    <span>📋 היסטוריית עסקאות</span>
+                </button>
+                <button onclick="showScreen('search')" class="btn-big btn-outline">
+                    <span>🔍 חפש עסקה</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- New Deal Screen -->
+        <div id="screen-new-deal" class="hidden">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="section-title" style="margin-bottom: 0;">עסקה חדשה</h2>
+                    <button onclick="showScreen('main')" class="btn-big btn-outline" style="width: auto; padding: 10px 20px; font-size: 1rem;">❌ ביטול וחזרה</button>
+                </div>
+
+                <div class="form-group" style="position: relative;">
+                    <label for="acc-customer-search">בחר לקוח</label>
+                    <input type="text" id="acc-customer-search" class="input-big" placeholder="הקלד שם לקוח..." autocomplete="off">
+                    <div id="acc-customer-results" class="search-results hidden"></div>
+                    <input type="hidden" id="acc-customer-id">
+                    <p id="selected-customer-name" style="margin-top: 8px; font-weight: 700; color: var(--primary-color);" class="hidden"></p>
+                </div>
+
+                <div id="acc-items-container">
+                    <label>מוצרים בעסקה</label>
+                    <div id="acc-items-list">
+                        <!-- Items will be added here -->
+                    </div>
+                    <button onclick="addAccItem()" class="btn-big btn-outline" style="padding: 12px; margin-top: 10px;">
+                        <span>➕ הוסף מוצר</span>
+                    </button>
+                </div>
+
+                <div class="total-display">
+                    סה"כ לתשלום: <span id="acc-total-amount">₪0.00</span>
+                </div>
+
+                <div style="margin-top: 32px;">
+                    <button onclick="saveAccDeal()" class="btn-big btn-success">
+                        <span>💾 שמור וסיים</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Screen -->
+        <div id="screen-history" class="hidden">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="section-title" style="margin-bottom: 0;">📋 היסטוריית עסקאות</h2>
+                    <button onclick="showScreen('main')" class="btn-big btn-outline" style="width: auto; padding: 10px 20px; font-size: 1rem;">🏠 חזור</button>
+                </div>
+
+                <div id="acc-deals-list">
+                    <!-- Deals will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Screen -->
+        <div id="screen-search" class="hidden">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="section-title" style="margin-bottom: 0;">🔍 חפש עסקאות</h2>
+                    <button onclick="showScreen('main')" class="btn-big btn-outline" style="width: auto; padding: 10px 20px; font-size: 1rem;">🏠 חזור</button>
+                </div>
+
+                <div class="form-group">
+                    <input type="text" id="acc-history-search" class="input-big" placeholder="חפש לפי שם לקוח..." onkeyup="loadAccDeals('acc-search-list', this.value)">
+                </div>
+
+                <div id="acc-search-list">
+                    <!-- Search results will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="acc-modal" class="modal">
+        <div class="modal-content">
+            <button onclick="closeAccModal()" class="close-modal">×</button>
+            <div id="acc-modal-body"></div>
+        </div>
+    </div>
+
+    <script src="accessible.js"></script>
+</body>
+</html>
