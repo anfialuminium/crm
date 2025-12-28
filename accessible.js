@@ -405,9 +405,14 @@ async function viewDealDetails(dealId) {
 
         let html = '<h2 class="section-title">פרטי עסקה</h2><div style="font-size:1.2rem; margin-top:20px;">';
         items.forEach(item => {
+            const parts = [];
+            if (item.size) parts.push(`מידה: ${item.size}`);
+            if (item.color) parts.push(`צבע: ${item.color}`);
+            const detailsStr = parts.length > 0 ? `<br><span style="color:var(--text-secondary); font-size:1.1rem;">${parts.join(' | ')}</span>` : '';
+
             html += `
                 <div style="border-bottom:1px solid #eee; padding:12px 0;">
-                    <strong>${item.products.product_name}</strong><br>
+                    <strong>${item.products.product_name}</strong>${detailsStr}<br>
                     כמות: ${item.quantity} | מחיר: ₪${item.unit_price} | סה"כ: ₪${(item.quantity * item.unit_price).toFixed(2)}
                 </div>
             `;
