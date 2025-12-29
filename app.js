@@ -7473,7 +7473,8 @@ async function sendNotificationEmail(action, email, url) {
             'unit_price': 'מחיר יחידה',
             'discount_percentage': 'אחוז הנחה',
             'role': 'תפקיד',
-            'sku': 'מק"ט'
+            'sku': 'מק"ט',
+            'active': 'פעיל'
         };
 
         const actionHeb = actionTranslations[action.action_type] || action.action_type;

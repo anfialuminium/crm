@@ -456,7 +456,8 @@ async function sendNotificationEmail(action, email, url) {
             'description': 'תיאור',
             'quantity': 'כמות',
             'unit_price': 'מחיר יחידה',
-            'items_count': 'מספר פריטים'
+            'items_count': 'מספר פריטים',
+            'active': 'פעיל'
         };
 
         const actionHeb = actionTranslations[action.action_type] || action.action_type;
