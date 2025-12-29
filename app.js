@@ -7532,6 +7532,21 @@ async function sendNotificationEmail(action, email, url) {
             });
             detailsHtml += '</table></div>';
         }
+        // Handle CREATE logic (Object Details)
+        else if (action.action_type === 'create' && action.new_value && typeof action.new_value === 'object') {
+            detailsHtml += '<div style="margin-top: 15px;"><strong>פרטים:</strong><table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">';
+            Object.keys(action.new_value).forEach(key => {
+                if (['updated_at', 'created_at', 'id', 'customer_id', 'deal_id', 'product_id', 'contact_id', 'activity_id'].some(ignore => key.toLowerCase().includes(ignore))) return;
+                const val = action.new_value[key];
+                if (val === null || val === undefined || val === '') return;
+                
+                detailsHtml += `<tr>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0; width: 30%; background: #f8fafc; font-weight: bold;">${fieldTranslations[key] || key}</td>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">${formatVal(val)}</td>
+                </tr>`;
+            });
+            detailsHtml += '</table></div>';
+        }
         // Fallback for simple values
         else {
             if (action.new_value) detailsHtml += `<p style="margin: 5px 0;"><strong>ערך חדש:</strong> ${formatVal(action.new_value)}</p>`;

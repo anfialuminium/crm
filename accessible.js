@@ -446,10 +446,17 @@ async function sendNotificationEmail(action, email, url) {
             'contact_name': 'איש קשר',
             'phone': 'טלפון',
             'email': 'אימייל',
-            'total_amount': 'סכום כולל',
+            'city': 'עיר',
+            'address': 'כתובת',
+            'notes': 'הערות',
+            'price': 'מחיר',
+            'total_amount': 'סה"כ',
+            'final_amount': 'סכום סופי',
             'deal_status': 'סטטוס',
             'description': 'תיאור',
-            'quantity': 'כמות'
+            'quantity': 'כמות',
+            'unit_price': 'מחיר יחידה',
+            'items_count': 'מספר פריטים'
         };
 
         const actionHeb = actionTranslations[action.action_type] || action.action_type;
@@ -464,8 +471,59 @@ async function sendNotificationEmail(action, email, url) {
         };
 
         let detailsHtml = '';
-        if (action.new_value) detailsHtml += `<p style="margin: 5px 0;"><strong>ערך חדש:</strong> ${formatVal(action.new_value)}</p>`;
-        if (action.old_value) detailsHtml += `<p style="margin: 5px 0;"><strong>ערך קודם:</strong> ${formatVal(action.old_value)}</p>`;
+
+        // Handle UPDATE logic (Diff)
+        if (action.action_type === 'update' && action.old_value && action.new_value && typeof action.old_value === 'object' && typeof action.new_value === 'object') {
+            detailsHtml += '<div style="margin-top: 15px;"><strong>שינויים שבוצעו:</strong><table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">';
+            detailsHtml += '<tr style="background: #f1f5f9;"><th style="padding: 8px; border: 1px solid #e0e0e0; text-align: right;">שדה</th><th style="padding: 8px; border: 1px solid #e0e0e0; text-align: right;">ערך קודם</th><th style="padding: 8px; border: 1px solid #e0e0e0; text-align: right;">ערך חדש</th></tr>';
+            
+            const keys = new Set([...Object.keys(action.old_value), ...Object.keys(action.new_value)]);
+            let hasChanges = false;
+            
+            keys.forEach(key => {
+                if (['updated_at', 'created_at', 'id', 'customer_id', 'deal_id', 'product_id', 'contact_id', 'activity_id'].some(ignore => key.toLowerCase().includes(ignore))) return;
+                
+                const oldV = action.old_value[key];
+                const newV = action.new_value[key];
+                
+                if (JSON.stringify(oldV) !== JSON.stringify(newV)) {
+                    hasChanges = true;
+                    detailsHtml += `<tr>
+                        <td style="padding: 8px; border: 1px solid #e0e0e0; font-weight: bold;">${fieldTranslations[key] || key}</td>
+                        <td style="padding: 8px; border: 1px solid #e0e0e0; color: #dc2626; text-decoration: line-through;">${formatVal(oldV)}</td>
+                        <td style="padding: 8px; border: 1px solid #e0e0e0; color: #16a34a; font-weight: bold;">${formatVal(newV)}</td>
+                    </tr>`;
+                }
+            });
+            
+            if (!hasChanges) detailsHtml = '<p style="margin-top: 15px;">בוצע עדכון כללי.</p>';
+            else detailsHtml += '</table></div>';
+        }
+        // Handle DELETE/CREATE logic (Object Details)
+        else if ((action.action_type === 'delete' || action.action_type === 'create') && 
+                 (action.action_type === 'delete' ? action.old_value : action.new_value) && 
+                 typeof (action.action_type === 'delete' ? action.old_value : action.new_value) === 'object') {
+            
+            const targetObj = action.action_type === 'delete' ? action.old_value : action.new_value;
+            detailsHtml += `<div style="margin-top: 15px;"><strong>${action.action_type === 'delete' ? 'פרטי הישות שנמחקה' : 'פרטים'}:</strong><table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">`;
+            
+            Object.keys(targetObj).forEach(key => {
+                if (['updated_at', 'created_at', 'id', 'customer_id', 'deal_id', 'product_id', 'contact_id', 'activity_id'].some(ignore => key.toLowerCase().includes(ignore))) return;
+                const val = targetObj[key];
+                if (val === null || val === undefined || val === '') return;
+                
+                detailsHtml += `<tr>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0; width: 30%; background: #f8fafc; font-weight: bold;">${fieldTranslations[key] || key}</td>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">${formatVal(val)}</td>
+                </tr>`;
+            });
+            detailsHtml += '</table></div>';
+        }
+        // Fallback for simple values
+        else {
+            if (action.new_value) detailsHtml += `<p style="margin: 5px 0;"><strong>ערך חדש:</strong> ${formatVal(action.new_value)}</p>`;
+            if (action.old_value) detailsHtml += `<p style="margin: 5px 0;"><strong>ערך קודם:</strong> ${formatVal(action.old_value)}</p>`;
+        }
 
         const htmlBody = `
             <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
