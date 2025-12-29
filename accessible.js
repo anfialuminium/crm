@@ -209,7 +209,16 @@ function updateItemProduct(id, productId) {
                 </select>
             `;
             item.size = ''; // Reset size when changing product
-        } else if (product.product_name.includes('רשת')) {
+        } else if (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות'))) {
+            const brushSizes = ['רגיל', '12', '15', '20'];
+            sizeContainer.innerHTML = `
+                <select class="input-big" onchange="updateItemSize('${id}', this.value)">
+                    <option value="">מידה</option>
+                    ${brushSizes.map(s => `<option value="${s}">${s}</option>`).join('')}
+                </select>
+            `;
+            item.size = '';
+        } else if (product.product_name.includes('רשת') || (product.category && product.category.includes('רשת'))) {
             const screenSizes = ['0.50', '0.60', '0.70', '0.80', '0.90', '1.00', '1.10', '1.20', '1.50', '1.80', '2.00', '2.50'];
             sizeContainer.innerHTML = `
                 <select class="input-big" onchange="updateItemSize('${id}', this.value)">
@@ -234,6 +243,7 @@ function updateItemProduct(id, productId) {
     const colorContainer = document.getElementById(`color-container-${id}`);
     const isPullHandle = product && product.product_name.includes('ידית משיכה');
     const isRegularHandle = product && product.product_name.includes('ידית') && !isPullHandle;
+    const isBrush = product && (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות')));
     
     if (isPullHandle) {
         colorContainer.classList.remove('hidden');
@@ -242,6 +252,16 @@ function updateItemProduct(id, productId) {
             <select class="input-big" onchange="updateItemColor('${id}', this.value)">
                 <option value="">צבע</option>
                 ${pullColors.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+        `;
+        item.color = '';
+    } else if (isBrush) {
+        colorContainer.classList.remove('hidden');
+        const brushColors = ['שחור', 'לבן'];
+        colorContainer.innerHTML = `
+            <select class="input-big" onchange="updateItemColor('${id}', this.value)">
+                <option value="">צבע</option>
+                ${brushColors.map(c => `<option value="${c}">${c}</option>`).join('')}
             </select>
         `;
         item.color = '';

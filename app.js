@@ -726,17 +726,9 @@ function createItemRow(item, index) {
              colorSelect.className = 'form-select';
              colorSelect.style.width = '100px';
              
-             const standardColors = ['שחור', 'לבן'];
-             const colors = [...standardColors];
+             const colors = ['שחור', 'לבן'];
              
-             // If item has a custom color not in standard list, include it
-             if (item.color && !standardColors.includes(item.color)) {
-                 colors.push(item.color);
-             }
-             
-             colors.push('אחר...');
-             
-             if (!item.color) {
+             if (!item.color || !colors.includes(item.color)) {
                  const defaultOption = document.createElement('option');
                  defaultOption.value = '';
                  defaultOption.textContent = 'בחר';
@@ -748,27 +740,11 @@ function createItemRow(item, index) {
                  option.value = color;
                  option.textContent = color;
                  if (item.color === color) option.selected = true;
-                 if (color === 'אחר...') {
-                     option.style.fontWeight = 'bold';
-                     option.style.color = 'var(--primary-color)';
-                 }
                  colorSelect.appendChild(option);
              });
 
              colorSelect.addEventListener('change', (e) => {
-                 if (e.target.value === 'אחר...') {
-                     const customColor = prompt('הזן צבע חדש:');
-                     if (customColor && customColor.trim()) {
-                         item.color = customColor.trim();
-                         // We need to re-render to show the new custom color in the dropdown
-                         renderDealItems();
-                     } else {
-                         // Reset to previous value if cancelled
-                         e.target.value = item.color || '';
-                     }
-                 } else {
-                     item.color = e.target.value;
-                 }
+                 item.color = e.target.value;
              });
              colorCell.appendChild(colorSelect);
         } else {
@@ -805,7 +781,7 @@ function createItemRow(item, index) {
              sizeSelect.className = 'form-select';
              sizeSelect.style.width = '100px';
              
-             const sizes = ['12', '15', '20'];
+             const sizes = ['רגיל', '12', '15', '20'];
              
              // Add default empty option if no size selected yet
              if (!item.size) {
@@ -1497,7 +1473,10 @@ async function saveCustomer(event) {
                     // Set as primary contact
                     await supabaseClient
                         .from('customers')
-                        .update({ primary_contact_id: newContact.contact_id })
+                        .update({ 
+                            primary_contact_id: newContact.contact_id,
+                            contact_name: newContact.contact_name 
+                        })
                         .eq('customer_id', savedCustomer.customer_id);
                     
                     loadContacts(); // Refresh contacts list
@@ -2364,9 +2343,23 @@ async function savePrimaryContact(customerId) {
     const contactId = document.getElementById('customer-primary-contact').value || null;
     
     try {
+        // Get contact name to sync it
+        let contactName = null;
+        if (contactId) {
+            const { data: contact } = await supabaseClient
+                .from('contacts')
+                .select('contact_name')
+                .eq('contact_id', contactId)
+                .single();
+            if (contact) contactName = contact.contact_name;
+        }
+
         const { error } = await supabaseClient
             .from('customers')
-            .update({ primary_contact_id: contactId })
+            .update({ 
+                primary_contact_id: contactId,
+                contact_name: contactName
+            })
             .eq('customer_id', customerId);
         
         if (error) throw error;
@@ -3167,6 +3160,13 @@ async function saveContact(event) {
                 .eq('contact_id', contactId);
             
             if (error) throw error;
+
+            // Sync contact name to customers table if this is the primary contact
+            await supabaseClient
+                .from('customers')
+                .update({ contact_name: contactData.contact_name })
+                .eq('primary_contact_id', contactId);
+
             showAlert('✅ איש הקשר עודכן בהצלחה', 'success');
         } else {
             // Insert
@@ -4010,7 +4010,10 @@ async function loadDealsHistory(preservePage = false) {
                     business_name,
                     contact_name,
                     phone,
-                    primary_contact_id
+                    primary_contact_id,
+                    primary_contact:contacts!customers_primary_contact_id_fkey (
+                        contact_name
+                    )
                 )
             `);
         
@@ -4115,7 +4118,7 @@ async function loadDealsHistory(preservePage = false) {
                                 </td>
                                 <td>
                                     ${deal.customers.primary_contact_id ? 
-                                        `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500;" onclick="viewContactDetails('${deal.customers.primary_contact_id}')">${deal.customers.contact_name || 'איש קשר'}</span>` 
+                                        `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500;" onclick="viewContactDetails('${deal.customers.primary_contact_id}')">${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || 'איש קשר'}</span>` 
                                         : (deal.customers.contact_name || '-')}
                                 </td>
                                 <td><span class="badge ${statusBadgeClass}">${statusDisplay}</span></td>
@@ -4197,7 +4200,7 @@ function createDealCard(deal) {
                 <span class="deal-card-label">איש קשר:</span>
                 <span class="deal-card-value">
                     ${deal.customers.primary_contact_id ? 
-                        `<a href="javascript:void(0)" onclick="viewContactDetails('${deal.customers.primary_contact_id}')" style="font-weight: 500; color: inherit; text-decoration: underline;">${deal.customers.contact_name || '-'}</a>` 
+                        `<a href="javascript:void(0)" onclick="viewContactDetails('${deal.customers.primary_contact_id}')" style="font-weight: 500; color: inherit; text-decoration: underline;">${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || '-'}</a>` 
                         : (deal.customers.contact_name || '-')}
                 </span>
             </div>
@@ -4256,7 +4259,11 @@ async function viewDealDetails(dealId) {
                     contact_name,
                     phone,
                     email,
-                    city
+                    city,
+                    primary_contact_id,
+                    primary_contact:contacts!customers_primary_contact_id_fkey (
+                        contact_name
+                    )
                 )
             `)
             .eq('deal_id', dealId)
@@ -4328,7 +4335,7 @@ async function viewDealDetails(dealId) {
                 <h3 style="margin-bottom: 1rem;">פרטי לקוח</h3>
                 <div class="customer-details">
                     <p><strong>שם העסק:</strong> ${deal.customers.business_name}</p>
-                    <p><strong>איש קשר:</strong> ${deal.customers.contact_name || '-'}</p>
+                    <p><strong>איש קשר:</strong> ${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || '-'}</p>
                     <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; direction: rtl;">
                         <strong>טלפון:</strong> 
                         ${deal.customers.phone ? `
@@ -5874,7 +5881,10 @@ async function loadThisWeek() {
                         phone,
                         email,
                         city,
-                        primary_contact_id
+                        primary_contact_id,
+                        primary_contact:contacts!customers_primary_contact_id_fkey (
+                            contact_name
+                        )
                     )
                 ),
                 customers (
@@ -5884,7 +5894,10 @@ async function loadThisWeek() {
                     phone,
                     email,
                     city,
-                    primary_contact_id
+                    primary_contact_id,
+                    primary_contact:contacts!customers_primary_contact_id_fkey (
+                        contact_name
+                    )
                 )
             `)
             .neq('activity_type', 'הערה')
@@ -6082,8 +6095,10 @@ async function loadThisWeek() {
 
 function renderThisWeekActivityCard(activity) {
     const customer = activity.deals?.customers || activity.customers;
-    const customerName = customer?.business_name || 'ללא לקוח';
-    const contactName = customer?.contact_name || '';
+    const customerName = customer?.business_name || 
+                                    activity.customers?.business_name || 'ללא לקוח';
+    const primaryContact = customer?.primary_contact;
+    const contactName = primaryContact?.contact_name || customer?.contact_name || '';
     const phone = customer?.phone || '';
     const dealId = activity.deal_id;
     const dealAmount = activity.deals?.final_amount;
@@ -6298,7 +6313,10 @@ async function viewActivityDetails(activityId) {
                         contact_name,
                         phone,
                         email,
-                        primary_contact_id
+                        primary_contact_id,
+                        primary_contact:contacts!customers_primary_contact_id_fkey (
+                            contact_name
+                        )
                     )
                 ),
                 customers (
@@ -6307,7 +6325,10 @@ async function viewActivityDetails(activityId) {
                     contact_name,
                     phone,
                     email,
-                    primary_contact_id
+                    primary_contact_id,
+                    primary_contact:contacts!customers_primary_contact_id_fkey (
+                        contact_name
+                    )
                 )
             `)
             .eq('activity_id', activityId)
@@ -6364,7 +6385,7 @@ async function viewActivityDetails(activityId) {
                  contactHtml = `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500; text-decoration: underline;" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewContactDetails('${linkedContact.contact_id}')">${linkedContact.contact_name} ${linkedContact.role ? `(${linkedContact.role})` : ''}</span>`;
             } else if (customer.primary_contact_id) {
                 // Fallback to primary
-                contactHtml = `<span style="color: var(--text-tertiary); cursor: pointer; text-decoration: underline;" title="איש קשר ראשי (לא שויך ספציפית)" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewContactDetails('${customer.primary_contact_id}')">${customer.contact_name || '-'} (ראשי)</span>`;
+                contactHtml = `<span style="color: var(--text-tertiary); cursor: pointer; text-decoration: underline;" title="איש קשר ראשי (לא שויך ספציפית)" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewContactDetails('${customer.primary_contact_id}')">${customer.primary_contact?.contact_name || customer.contact_name || '-'} (ראשי)</span>`;
             } else {
                 contactHtml = customer.contact_name || '-';
             }
@@ -6540,7 +6561,10 @@ async function loadActivities(preservePage = false) {
                         contact_name,
                         phone,
                         email,
-                        primary_contact_id
+                        primary_contact_id,
+                        primary_contact:contacts!customers_primary_contact_id_fkey (
+                            contact_name
+                        )
                     )
                 ),
                 customers (
@@ -6549,7 +6573,10 @@ async function loadActivities(preservePage = false) {
                     contact_name,
                     phone,
                     email,
-                    primary_contact_id
+                    primary_contact_id,
+                    primary_contact:contacts!customers_primary_contact_id_fkey (
+                        contact_name
+                    )
                 )
             `)
             .neq('activity_type', 'הערה');
@@ -6693,20 +6720,25 @@ async function loadActivities(preservePage = false) {
                             
                             let businessName = 'לא משויך';
                             let customerId = null;
-                            
-                            if (activity.deals?.customers) {
-                                businessName = activity.deals.customers.business_name || 'לא משויך';
-                                customerId = activity.deals.customers.customer_id;
-                            } else if (activity.customers) {
-                                businessName = activity.customers.business_name || 'לא משויך';
-                                customerId = activity.customers.customer_id;
-                            }
-                            
+                            let contactNameRaw = '-';
+                            let primaryContactId = null;
+
                             const rowStyle = activity.completed ? 'opacity: 0.6; background: #f0fdf4;' : '';
                             const textStyle = activity.completed ? 'text-decoration: line-through;' : '';
-                            
-                            const contactNameRaw = activity.deals?.customers?.contact_name || activity.customers?.contact_name || '-';
-                            const primaryContactId = activity.deals?.customers?.primary_contact_id || activity.customers?.primary_contact_id;
+
+                            if (activity.deals?.customers) {
+                                const cust = activity.deals.customers;
+                                businessName = cust.business_name || 'לא משויך';
+                                customerId = cust.customer_id;
+                                contactNameRaw = cust.primary_contact?.contact_name || cust.contact_name || '-';
+                                primaryContactId = cust.primary_contact_id;
+                            } else if (activity.customers) {
+                                const cust = activity.customers;
+                                businessName = cust.business_name || 'לא משויך';
+                                customerId = cust.customer_id;
+                                contactNameRaw = cust.primary_contact?.contact_name || cust.contact_name || '-';
+                                primaryContactId = cust.primary_contact_id;
+                            }
                             
                             const contactDisplay = (primaryContactId && contactNameRaw !== '-')
                                 ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500;">${contactNameRaw}</a>`
@@ -6792,17 +6824,19 @@ async function loadActivities(preservePage = false) {
                 let primaryContactId = null;
                 
                 if (activity.deals?.customers) {
-                    businessName = activity.deals.customers.business_name || 'לא משויך';
-                    contactName = activity.deals.customers.contact_name || '';
-                    phone = activity.deals.customers.phone || '';
-                    email = activity.deals.customers.email || '';
-                    primaryContactId = activity.deals.customers.primary_contact_id;
+                    const cust = activity.deals.customers;
+                    businessName = cust.business_name || 'לא משויך';
+                    contactName = cust.primary_contact?.contact_name || cust.contact_name || '';
+                    phone = cust.phone || '';
+                    email = cust.email || '';
+                    primaryContactId = cust.primary_contact_id;
                 } else if (activity.customers) {
-                    businessName = activity.customers.business_name || 'לא משויך';
-                    contactName = activity.customers.contact_name || '';
-                    phone = activity.customers.phone || '';
-                    email = activity.customers.email || '';
-                    primaryContactId = activity.customers.primary_contact_id;
+                    const cust = activity.customers;
+                    businessName = cust.business_name || 'לא משויך';
+                    contactName = cust.primary_contact?.contact_name || cust.contact_name || '';
+                    phone = cust.phone || '';
+                    email = cust.email || '';
+                    primaryContactId = cust.primary_contact_id;
                 }
                 
                 const contactDisplay = (primaryContactId && contactName)
@@ -6955,7 +6989,11 @@ async function generateQuotePDF(specificDealId = null) {
                     contact_name,
                     phone,
                     email,
-                    city
+                    city,
+                    primary_contact_id,
+                    primary_contact:contacts!customers_primary_contact_id_fkey (
+                        contact_name
+                    )
                 )
             `)
             .eq('deal_id', dealId)
@@ -7060,7 +7098,7 @@ async function generateQuotePDF(specificDealId = null) {
                 <h3 style="color: #1e293b; margin-bottom: 1rem; font-size: 1.2rem; font-weight: 600;">פרטי לקוח</h3>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
                     <p style="color: #475569; margin: 0.25rem 0;"><strong style="color: #1e293b;">שם העסק:</strong> ${deal.customers.business_name}</p>
-                    <p style="color: #475569; margin: 0.25rem 0;"><strong style="color: #1e293b;">איש קשר:</strong> ${deal.customers.contact_name || '-'}</p>
+                    <p style="color: #475569; margin: 0.25rem 0;"><strong style="color: #1e293b;">איש קשר:</strong> ${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || '-'}</p>
                     <p style="color: #475569; margin: 0.25rem 0;"><strong style="color: #1e293b;">טלפון:</strong> ${deal.customers.phone || '-'}</p>
                     <p style="color: #475569; margin: 0.25rem 0;"><strong style="color: #1e293b;">כתובת:</strong> ${deal.customers.city || '-'}</p>
                 </div>
@@ -9519,7 +9557,7 @@ async function performGlobalSearch() {
     if (includeCustomers) {
         const custPromise = supabaseClient
             .from('customers')
-            .select('*')
+            .select('*, primary_contact:contacts!customers_primary_contact_id_fkey(contact_name)')
             .or(`business_name.ilike.%${query}%,contact_name.ilike.%${query}%,phone.ilike.%${query}%,city.ilike.%${query}%,email.ilike.%${query}%`)
             .limit(20)
             .then(({data}) => {
@@ -9639,7 +9677,7 @@ function renderGlobalSearchResults(results, query) {
         results.customers.forEach(c => {
              html += `<tr>
                 <td><strong>${highlight(c.business_name, query)}</strong></td>
-                <td>${highlight(c.contact_name || '-', query)}</td>
+                <td>${highlight(c.primary_contact?.contact_name || c.contact_name || '-', query)}</td>
                 <td>${highlight(c.phone || '-', query)}</td>
                 <td>${highlight(c.city || '-', query)}</td>
                 <td><button class="btn btn-sm btn-secondary" onclick="viewCustomerDetails('${c.customer_id}')">👁️ צפה</button></td>
