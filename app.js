@@ -131,6 +131,7 @@ let supplierOrders = [];
 let dealItems = [];
 let itemCounter = 0;
 let orderColors = []; // Global state for colors
+let globalCategories = [];
 
 // Pagination Global State
 // Pagination Global State
@@ -424,18 +425,30 @@ async function loadProducts() {
         if (error) throw error;
         
         products = (data || []).map(p => {
-            if (p.image_url && !p.image_url.startsWith('http') && !p.image_url.startsWith('data:')) {
-                // Ensure we don't duplicate 'images/' if it's already in the path and the base might have it (though base is catalog/)
-                // Just Clean leading slash
-                const cleanPath = p.image_url.startsWith('/') ? p.image_url.substring(1) : p.image_url;
-                return {
-                    ...p,
-                    image_url: `https://anfialuminium.github.io/catalog/${cleanPath}`
-                };
+            let category = p.category ? p.category.trim() : '';
+            const productName = p.product_name ? p.product_name.trim() : '';
+            
+            // Auto-categorize brushes if category is missing
+            if (!category && (productName.includes('מברשת') || (p.description && p.description.includes('מברשת')))) {
+                category = 'מברשות';
             }
-            return p;
+            
+            let imageUrl = p.image_url;
+            if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('data:')) {
+                const cleanPath = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
+                imageUrl = `https://anfialuminium.github.io/catalog/${cleanPath}`;
+            }
+            
+            return {
+                ...p,
+                category: category || 'אחר',
+                image_url: imageUrl
+            };
         });
-        console.log(`✅ Loaded ${products.length} products`);
+        
+        globalCategories = [...new Set(products.map(p => p.category))].sort();
+        
+        console.log(`✅ Loaded ${products.length} products, ${globalCategories.length} categories`);
         
     } catch (error) {
         console.error('❌ Error loading products:', error);
@@ -652,39 +665,83 @@ function createItemRow(item, index) {
     // Find the full product object once for checks
     const product = products.find(p => p.product_id === item.product_id);
     
-    // Product selection
+    // Categorized Product selection
     const productCell = document.createElement('td');
+    const selectorContainer = document.createElement('div');
+    selectorContainer.className = 'product-selector-container';
+    
+    // 1. Category Pills (Rubrics)
+    const pillsContainer = document.createElement('div');
+    pillsContainer.className = 'category-pills';
+    
+    const currentProduct = products.find(p => p.product_id === item.product_id);
+    let activeCategory = currentProduct ? (currentProduct.category || 'אחר') : '';
+    
+    globalCategories.forEach(cat => {
+        const pill = document.createElement('div');
+        pill.className = `category-pill ${activeCategory === cat ? 'active' : ''}`;
+        pill.textContent = cat;
+        pill.onclick = (e) => {
+            e.stopPropagation();
+            // Toggle active pill
+            pillsContainer.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            activeCategory = cat;
+            updateProductList();
+        };
+        pillsContainer.appendChild(pill);
+    });
+    
+    selectorContainer.appendChild(pillsContainer);
+    
+    // 2. Product Dropdown (Filtered)
     const productSelect = document.createElement('select');
     productSelect.className = 'form-select';
-    productSelect.innerHTML = '<option value="">-- בחר מוצר --</option>';
     
-    products.forEach(product => {
-        const option = document.createElement('option');
-        option.value = product.product_id;
-        option.textContent = product.product_name;
-        option.dataset.price = product.price || 0;
-        option.dataset.requiresColor = product.requires_color;
-        option.dataset.requiresSize = product.requires_size;
+    function updateProductList() {
+        productSelect.innerHTML = '<option value="">-- בחר מוצר --</option>';
         
-        if (product.product_id === item.product_id) {
-            option.selected = true;
-        }
+        const filteredProducts = products.filter(p => {
+            const cat = p.category || 'אחר';
+            return !activeCategory || cat === activeCategory;
+        });
         
-        productSelect.appendChild(option);
-    });
+        filteredProducts.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p.product_id;
+            option.textContent = p.product_name;
+            option.dataset.price = p.price || 0;
+            option.dataset.requiresColor = p.requires_color;
+            option.dataset.requiresSize = p.requires_size;
+            
+            if (p.product_id === item.product_id) {
+                option.selected = true;
+            }
+            productSelect.appendChild(option);
+        });
+    }
+    
+    // Initialize list
+    updateProductList();
     
     productSelect.addEventListener('change', (e) => {
         const selectedOption = e.target.options[e.target.selectedIndex];
         item.product_id = e.target.value;
-        item.unit_price = parseFloat(selectedOption.dataset.price) || 0;
-        item.requires_color = selectedOption.dataset.requiresColor === 'true';
-        item.requires_size = selectedOption.dataset.requiresSize === 'true';
-        item.is_fin_brush = false; // Reset fin option on product change
-        
+        if (selectedOption && e.target.value) {
+            item.unit_price = parseFloat(selectedOption.dataset.price) || 0;
+            item.requires_color = selectedOption.dataset.requiresColor === 'true';
+            item.requires_size = selectedOption.dataset.requiresSize === 'true';
+        } else {
+            item.unit_price = 0;
+            item.requires_color = false;
+            item.requires_size = false;
+        }
+        item.is_fin_brush = false;
         renderDealItems();
     });
     
-    productCell.appendChild(productSelect);
+    selectorContainer.appendChild(productSelect);
+    productCell.appendChild(selectorContainer);
     
     // Brush Fin Option
     const isBrushRow = product && (
