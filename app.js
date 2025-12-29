@@ -878,21 +878,20 @@ function createItemRow(item, index) {
             (product.category && product.category.includes('מברשות')) || 
             (product.product_name && product.product_name.includes('מברשת'))
         );
+        const isPullHandle = product && product.product_name.includes('ידית משיכה');
+        const isMesh = isMeshProduct(product);
 
-        if (isBrush) {
+        if (isBrush || isPullHandle || isMesh) {
              const colorSelect = document.createElement('select');
              colorSelect.className = 'form-select';
              colorSelect.style.width = '100px';
              
-             const colors = ['שחור', 'לבן'];
+             let colors = [];
+             if (isBrush) colors = ['שחור', 'לבן'];
+             else if (isPullHandle) colors = ['נירוסטה', 'שחור'];
+             else if (isMesh) colors = ['שחור', 'אפור'];
              
-             if (!item.color || !colors.includes(item.color)) {
-                 const defaultOption = document.createElement('option');
-                 defaultOption.value = '';
-                 defaultOption.textContent = 'בחר';
-                 colorSelect.appendChild(defaultOption);
-             }
-
+             colorSelect.innerHTML = '<option value="">צבע</option>';
              colors.forEach(color => {
                  const option = document.createElement('option');
                  option.value = color;
@@ -909,7 +908,7 @@ function createItemRow(item, index) {
             const colorInput = document.createElement('input');
             colorInput.type = 'text';
             colorInput.className = 'form-input';
-            colorInput.value = item.color;
+            colorInput.value = item.color || '';
             colorInput.placeholder = 'צבע';
             colorInput.style.width = '100px';
             colorInput.addEventListener('input', (e) => {
