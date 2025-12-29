@@ -107,6 +107,7 @@ CREATE TABLE deal_items (
     total_price DECIMAL(12, 2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
     color VARCHAR(100), -- Optional, based on product requirements
     size VARCHAR(100), -- Optional, based on product requirements
+    is_fin_brush BOOLEAN DEFAULT FALSE,
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

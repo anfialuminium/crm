@@ -623,7 +623,8 @@ function addDealItem() {
         color: '',
         size: '',
         requires_color: false,
-        requires_size: false
+        requires_size: false,
+        is_fin_brush: false
     };
     
     dealItems.push(item);
@@ -647,6 +648,9 @@ function createItemRow(item, index) {
     const tr = document.createElement('tr');
     tr.className = 'item-row';
     tr.id = item.id;
+    
+    // Find the full product object once for checks
+    const product = products.find(p => p.product_id === item.product_id);
     
     // Product selection
     const productCell = document.createElement('td');
@@ -675,11 +679,44 @@ function createItemRow(item, index) {
         item.unit_price = parseFloat(selectedOption.dataset.price) || 0;
         item.requires_color = selectedOption.dataset.requiresColor === 'true';
         item.requires_size = selectedOption.dataset.requiresSize === 'true';
+        item.is_fin_brush = false; // Reset fin option on product change
         
         renderDealItems();
     });
     
     productCell.appendChild(productSelect);
+    
+    // Brush Fin Option
+    const isBrushRow = product && (
+        (product.category && product.category.includes('מברשות')) || 
+        (product.product_name && product.product_name.includes('מברשת'))
+    );
+    
+    if (isBrushRow) {
+        const finDiv = document.createElement('div');
+        finDiv.style.marginTop = '0.5rem';
+        finDiv.style.display = 'flex';
+        finDiv.style.alignItems = 'center';
+        finDiv.style.gap = '0.5rem';
+        finDiv.style.fontSize = '0.85rem';
+        
+        const finCheckbox = document.createElement('input');
+        finCheckbox.type = 'checkbox';
+        finCheckbox.id = `fin-brush-${item.id}`;
+        finCheckbox.checked = !!item.is_fin_brush;
+        finCheckbox.addEventListener('change', (e) => {
+            item.is_fin_brush = e.target.checked;
+        });
+        
+        const finLabel = document.createElement('label');
+        finLabel.htmlFor = `fin-brush-${item.id}`;
+        finLabel.textContent = 'מברשת סנפיר';
+        finLabel.style.cursor = 'pointer';
+        
+        finDiv.appendChild(finCheckbox);
+        finDiv.appendChild(finLabel);
+        productCell.appendChild(finDiv);
+    }
     
     // Quantity
     const quantityCell = document.createElement('td');
@@ -714,8 +751,6 @@ function createItemRow(item, index) {
     // Color
     const colorCell = document.createElement('td');
     if (item.requires_color) {
-        // Find the full product object to check category/name
-        const product = products.find(p => p.product_id === item.product_id);
         const isBrush = product && (
             (product.category && product.category.includes('מברשות')) || 
             (product.product_name && product.product_name.includes('מברשת'))
@@ -768,8 +803,6 @@ function createItemRow(item, index) {
     // Size
     const sizeCell = document.createElement('td');
     if (item.requires_size) {
-        // Find the full product object to check category/name
-        const product = products.find(p => p.product_id === item.product_id);
         const isBrush = product && (
             (product.category && product.category.includes('מברשות')) || 
             (product.product_name && product.product_name.includes('מברשת'))
@@ -781,7 +814,10 @@ function createItemRow(item, index) {
              sizeSelect.className = 'form-select';
              sizeSelect.style.width = '100px';
              
-             const sizes = ['רגיל', '12', '15', '20'];
+             let sizes = ['רגיל', '12', '15', '20'];
+             if (product && product.product_name && product.product_name.includes('הדבקה')) {
+                 sizes = ['5 מטר', '200 מטר'];
+             }
              
              // Add default empty option if no size selected yet
              if (!item.size) {
@@ -867,7 +903,6 @@ function createItemRow(item, index) {
     
     // Calculate total with mesh logic
     let quantityMultiplier = 1;
-    const product = products.find(p => p.product_id === item.product_id);
     
     if (product && isMeshProduct(product)) {
         const sizeVal = parseFloat(item.size);
@@ -1057,7 +1092,8 @@ async function saveDeal(status = null) {
                 quantity: item.quantity,
                 unit_price: item.unit_price,
                 color: item.color || null,
-                size: item.size || null
+                size: item.size || null,
+                is_fin_brush: !!item.is_fin_brush
             }));
             
             const { error: itemsError } = await supabaseClient
@@ -1216,7 +1252,8 @@ async function saveDeal(status = null) {
                 quantity: item.quantity,
                 unit_price: item.unit_price,
                 color: item.color || null,
-                size: item.size || null
+                size: item.size || null,
+                is_fin_brush: !!item.is_fin_brush
             }));
             
             const { error: itemsError } = await supabaseClient
@@ -4412,7 +4449,10 @@ async function viewDealDetails(dealId) {
                                     <td>${item.quantity}</td>
                                     <td>₪${item.unit_price.toFixed(2)}</td>
                                     <td>${item.color || '-'}</td>
-                                    <td>${item.size || '-'}</td>
+                                    <td>
+                                        ${item.size || '-'}
+                                        ${item.is_fin_brush ? '<br><span class="badge badge-success" style="font-size: 0.75rem; margin-top: 0.25rem;">מברשת סנפיר</span>' : ''}
+                                    </td>
                                     <td><strong>₪${item.total_price.toFixed(2)}</strong></td>
                                 </tr>
                             `).join('')}
@@ -5687,6 +5727,7 @@ async function editDeal(dealId) {
                 unit_price: item.unit_price,
                 color: item.color || '',
                 size: item.size || '',
+                is_fin_brush: !!item.is_fin_brush,
                 requires_color: item.products.requires_color,
                 requires_size: item.products.requires_size
             };
@@ -7126,7 +7167,10 @@ async function generateQuotePDF(specificDealId = null) {
                                 <td style="padding: 1rem;">${item.quantity}</td>
                                 <td style="padding: 1rem;">₪${item.unit_price.toFixed(2)}</td>
                                 <td style="padding: 1rem;">${item.color || '-'}</td>
-                                <td style="padding: 1rem;">${item.size || '-'}</td>
+                                <td style="padding: 1rem;">
+                                    ${item.size || '-'}
+                                    ${item.is_fin_brush ? '<br><span style="color: #059669; font-size: 0.8rem; font-weight: 600;">מברשת סנפיר</span>' : ''}
+                                </td>
                                 <td style="padding: 1rem;">₪${item.total_price.toFixed(2)}</td>
                             </tr>
                         `).join('')}

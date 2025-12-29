@@ -162,7 +162,7 @@ function resetNewDealForm() {
 
 function addAccItem() {
     const id = `item-${itemCounter++}`;
-    const item = { id, product_id: '', quantity: '', price: '' };
+    const item = { id, product_id: '', quantity: '', price: '', is_fin_brush: false };
     currentDealItems.push(item);
 
     const div = document.createElement('div');
@@ -179,6 +179,9 @@ function addAccItem() {
         <div id="color-container-${id}" class="hidden color-field">
             <!-- Dynamically populated by updateItemProduct -->
         </div>
+        <div id="fin-container-${id}" class="hidden fin-field" style="margin: 0.5rem 0; padding: 0.5rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+            <!-- Dynamically populated by updateItemProduct -->
+        </div>
         <input type="number" class="input-big" value="" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
         <input type="number" class="input-big" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
         <button onclick="removeAccItem('${id}')" class="btn-remove">×</button>
@@ -193,6 +196,7 @@ function updateItemProduct(id, productId) {
     const product = products.find(p => p.product_id === productId);
     item.product_id = productId;
     item.price = product ? (product.price || 0) : 0;
+    item.is_fin_brush = false; // Reset fin option on product change
     
     // Check if size is required
     const sizeContainer = document.getElementById(`size-container-${id}`);
@@ -210,7 +214,10 @@ function updateItemProduct(id, productId) {
             `;
             item.size = ''; // Reset size when changing product
         } else if (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות'))) {
-            const brushSizes = ['רגיל', '12', '15', '20'];
+            let brushSizes = ['רגיל', '12', '15', '20'];
+            if (product.product_name.includes('הדבקה')) {
+                brushSizes = ['5 מטר', '200 מטר'];
+            }
             sizeContainer.innerHTML = `
                 <select class="input-big" onchange="updateItemSize('${id}', this.value)">
                     <option value="">מידה</option>
@@ -275,9 +282,24 @@ function updateItemProduct(id, productId) {
         `;
         item.color = '';
     } else {
-        colorContainer.classList.add('hidden');
-        colorContainer.innerHTML = '';
         item.color = '';
+    }
+
+    // Check for fin brush option
+    const finContainer = document.getElementById(`fin-container-${id}`);
+    if (isBrush) {
+        finContainer.classList.remove('hidden');
+        finContainer.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
+                <input type="checkbox" id="fin-${id}" style="width: 24px; height: 24px;" onchange="updateItemFin('${id}', this.checked)">
+                <label for="fin-${id}" style="font-size: 1.1rem; font-weight: 600; cursor: pointer;">מברשת סנפיר</label>
+            </div>
+        `;
+        item.is_fin_brush = false;
+    } else {
+        finContainer.classList.add('hidden');
+        finContainer.innerHTML = '';
+        item.is_fin_brush = false;
     }
 
     // If quantity is currently empty or 0, set to 1
@@ -297,6 +319,11 @@ function updateItemProduct(id, productId) {
 function updateItemSize(id, size) {
     const item = currentDealItems.find(i => i.id === id);
     if (item) item.size = size;
+}
+
+function updateItemFin(id, isFin) {
+    const item = currentDealItems.find(i => i.id === id);
+    if (item) item.is_fin_brush = isFin;
 }
 
 function updateItemColor(id, color) {
@@ -368,7 +395,8 @@ async function saveAccDeal() {
             quantity: i.quantity,
             unit_price: i.price,
             size: i.size || null,
-            color: i.color || null
+            color: i.color || null,
+            is_fin_brush: !!i.is_fin_brush
         }));
 
         const { error: iError } = await supabaseClient
