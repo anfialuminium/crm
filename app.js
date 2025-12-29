@@ -931,6 +931,7 @@ function createItemRow(item, index) {
             (product.product_name && product.product_name.includes('מברשת'))
         );
         const isMesh = isMeshProduct(product);
+        const isPullHandle = product && product.product_name.includes('ידית משיכה');
 
         if (isBrush) {
              const sizeSelect = document.createElement('select');
@@ -942,7 +943,6 @@ function createItemRow(item, index) {
                  sizes = ['5 מטר', '200 מטר'];
              }
              
-             // Add default empty option if no size selected yet
              if (!item.size) {
                  const defaultOption = document.createElement('option');
                  defaultOption.value = '';
@@ -960,48 +960,87 @@ function createItemRow(item, index) {
 
              sizeSelect.addEventListener('change', (e) => {
                  item.size = e.target.value;
-                 renderDealItems(); // Re-render to update total
+                 renderDealItems();
              });
              sizeCell.appendChild(sizeSelect);
-        } else if (isMesh && item.is_roll) {
-            sizeCell.textContent = `${(30 * item.quantity).toFixed(2)} מ' (גליל)`;
-            sizeCell.style.fontWeight = '600';
-            sizeCell.style.color = 'var(--primary-color)';
+        } else if (isPullHandle) {
+            const sizeSelect = document.createElement('select');
+            sizeSelect.className = 'form-select';
+            sizeSelect.style.width = '100px';
+            const sizes = ['35/50', '50/70', '70/100', '90/120'];
+            sizeSelect.innerHTML = '<option value="">בחר</option>';
+            sizes.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                if (item.size === s) opt.selected = true;
+                sizeSelect.appendChild(opt);
+            });
+            sizeSelect.addEventListener('change', (e) => {
+                item.size = e.target.value;
+                renderDealItems();
+            });
+            sizeCell.appendChild(sizeSelect);
         } else if (isMesh) {
-             const sizeInput = document.createElement('input');
-             sizeInput.type = 'number';
-             sizeInput.className = 'form-input';
-             sizeInput.value = item.size;
-             sizeInput.placeholder = 'אורך';
-             sizeInput.min = '0.01';
-             sizeInput.step = '0.01';
-             sizeInput.style.width = '100px';
-             sizeInput.addEventListener('input', (e) => {
-                 item.size = e.target.value;
-                 calculateTotal();
-             });
-             sizeInput.addEventListener('change', () => {
-                 renderDealItems(); // Re-render to update total if size affects quantity multiplier
-             });
-             sizeCell.appendChild(sizeInput);
+            // Mesh width AND length
+            const meshContainer = document.createElement('div');
+            meshContainer.style.display = 'flex';
+            meshContainer.style.flexDirection = 'column';
+            meshContainer.style.gap = '8px';
+
+            // Width Select
+            const widthSelect = document.createElement('select');
+            widthSelect.className = 'form-select';
+            widthSelect.style.width = '100%';
+            const screenWidths = ['0.50', '0.60', '0.70', '0.80', '0.90', '1.00', '1.10', '1.20', '1.50', '1.80', '2.00', '2.50'];
+            
+            widthSelect.innerHTML = '<option value="">רוחב</option>';
+            screenWidths.forEach(w => {
+                const opt = document.createElement('option');
+                opt.value = w;
+                opt.textContent = w;
+                if (item.size === w) opt.selected = true;
+                widthSelect.appendChild(opt);
+            });
+            widthSelect.addEventListener('change', (e) => {
+                item.size = e.target.value;
+                renderDealItems();
+            });
+
+            // Length Display/Input
+            const lengthDiv = document.createElement('div');
+            if (item.is_roll) {
+                lengthDiv.innerHTML = `<span style="font-size: 0.8rem; font-weight: 700; color: var(--primary-color);">אורך: ${(30 * item.quantity).toFixed(1)}מ' (גליל)</span>`;
+            } else {
+                const lengthInput = document.createElement('input');
+                lengthInput.type = 'number';
+                lengthInput.className = 'form-input';
+                lengthInput.value = item.length || 1;
+                lengthInput.placeholder = 'אורך מ\'';
+                lengthInput.step = '0.1';
+                lengthInput.style.width = '100%';
+                lengthInput.addEventListener('input', (e) => {
+                    item.length = parseFloat(e.target.value) || 0;
+                    calculateTotal();
+                });
+                lengthInput.addEventListener('change', () => renderDealItems());
+                lengthDiv.appendChild(lengthInput);
+            }
+
+            meshContainer.appendChild(widthSelect);
+            meshContainer.appendChild(lengthDiv);
+            sizeCell.appendChild(meshContainer);
         } else {
             const sizeInput = document.createElement('input');
             sizeInput.type = 'text';
             sizeInput.className = 'form-input';
-            sizeInput.value = item.size;
+            sizeInput.value = item.size || '';
             sizeInput.placeholder = 'מידה';
             sizeInput.style.width = '100px';
             sizeInput.addEventListener('input', (e) => {
                 item.size = e.target.value;
-                // If it becomes a mesh product somehow (dynamic?), we should re-render?
-                // But generally text input means no special calculation unless we parse numbers from text.
-                // For now, only dropdown triggers the mesh logic confidently.
-                // But the helper `isMeshProduct` checks the PRODUCT, not the input type.
-                // So if user types "0.80" in text input for a Mesh (if logic fails to show dropdown), it should work.
-                // We should add `renderDealItems` on blur or change to update totals.
-                calculateTotal(); // Update global total at least
+                calculateTotal();
             });
-            // Update row total on change?
             sizeInput.addEventListener('change', () => {
                  renderDealItems();
             });
@@ -1099,9 +1138,9 @@ function calculateTotal() {
             if (item.is_roll) {
                 quantityMultiplier = 30;
             } else {
-                const sizeVal = parseFloat(item.size);
-                if (!isNaN(sizeVal) && sizeVal > 0) {
-                    quantityMultiplier = sizeVal;
+                const lengthVal = parseFloat(item.length);
+                if (!isNaN(lengthVal) && lengthVal > 0) {
+                    quantityMultiplier = lengthVal;
                 }
             }
         }
