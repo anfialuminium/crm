@@ -1893,8 +1893,8 @@ async function loadCustomerNotesHistory(customerId, containerId = 'customer-note
         }
         
         container.innerHTML = activities.map(activity => {
-            const createdDate = new Date(activity.created_at).toLocaleString('he-IL');
-            const activityDate = activity.activity_date ? new Date(activity.activity_date).toLocaleString('he-IL') : null;
+            const createdDate = new Date(activity.created_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' });
+            const activityDate = activity.activity_date ? new Date(activity.activity_date).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' }) : null;
             const type = activity.activity_type || 'כללי';
             
             // Determine source label and icon based on type
@@ -2430,7 +2430,7 @@ async function loadCustomerNotes(customerId) {
             
             const editedInfo = note.edited_at ? `
                 <small style="color: var(--text-tertiary); display: block; margin-top: 0.25rem;">
-                    נערך ב-${new Date(note.edited_at).toLocaleString('he-IL')} על ידי ${note.edited_by || 'לא ידוע'}
+                    נערך ב-${new Date(note.edited_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' })} על ידי ${note.edited_by || 'לא ידוע'}
                 </small>
             ` : '';
             
@@ -3424,7 +3424,7 @@ async function addContactNote(contactId) {
             
         if (fetchError) throw fetchError;
         
-        const timestamp = new Date().toLocaleString('he-IL');
+        const timestamp = new Date().toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' });
         const author = localStorage.getItem('crm_username') || 'משתמש מערכת';
         
         const noteEntry = `[${timestamp} - ${author}]\n${newNote}\n`;
@@ -4497,10 +4497,10 @@ async function loadDealNotes(dealId) {
         };
 
         container.innerHTML = notes.map(note => {
-            const createdDate = new Date(note.created_at).toLocaleString();
-            const activityDate = note.activity_date ? new Date(note.activity_date).toLocaleString() : null;
+            const createdDate = new Date(note.created_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' });
+            const activityDate = note.activity_date ? new Date(note.activity_date).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' }) : null;
             const icon = typeIcons[note.activity_type] || '📝';
-            const editedInfo = note.edited_at ? `<div class="note-edited">עריכה על ידי ${note.edited_by || 'לא ידוע'} ב-${new Date(note.edited_at).toLocaleString()}</div>` : '';
+            const editedInfo = note.edited_at ? `<div class="note-edited">עריכה על ידי ${note.edited_by || 'לא ידוע'} ב-${new Date(note.edited_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' })}</div>` : '';
             
             return `
                 <div class="note-item">
@@ -4658,7 +4658,7 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
                      </div>
                 </div>
                 <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem;">
-                    ${note.created_by} • ${new Date(note.created_at).toLocaleString('he-IL')}
+                    ${note.created_by} • ${new Date(note.created_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                 </div>
             </div>
         `}).join('');
@@ -6387,7 +6387,7 @@ async function viewActivityDetails(activityId) {
                     </div>
                     <div class="deal-card-info">
                         <span class="deal-card-label">תאריך:</span>
-                        <span class="deal-card-value">${activity.activity_date ? new Date(activity.activity_date).toLocaleString('he-IL') : '-'}</span>
+                        <span class="deal-card-value">${activity.activity_date ? new Date(activity.activity_date).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
                     </div>
                     <div class="deal-card-info">
                         <span class="deal-card-label">סטטוס:</span>
@@ -8803,7 +8803,7 @@ async function exportThisWeek() {
             ...item,
             'customers': { business_name: customerName },
              'completed': item.completed ? 'כן' : 'לא',
-             'activity_date': new Date(item.activity_date).toLocaleString('he-IL')
+             'activity_date': new Date(item.activity_date).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' })
         };
     });
 
@@ -8903,7 +8903,7 @@ async function exportActivities() {
     const processedData = filtered.map(item => ({
         ...item,
         customer_name: item.customers?.business_name || item.deals?.customers?.business_name || 'כללי',
-        activity_date: new Date(item.activity_date).toLocaleString('he-IL'),
+        activity_date: new Date(item.activity_date).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' }),
         completed: item.completed ? 'בוצע' : 'ממתין'
     }));
 
@@ -9122,7 +9122,7 @@ async function exportAuditLog() {
 
     const processedData = filtered.map(log => ({
         ...log,
-        created_at: new Date(log.created_at).toLocaleString('he-IL'),
+        created_at: new Date(log.created_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' }),
         action_type: actionMap[log.action_type] || log.action_type,
         entity_type: entityMap[log.entity_type] || log.entity_type
     }));
@@ -9360,7 +9360,7 @@ async function exportInteractiveReport() {
 </head>
 <body>
     <h1>דוח פעילות ונתונים עסקיים</h1>
-    <div class="date">נכון לתאריך: ${new Date().toLocaleDateString('he-IL')} בשעה ${new Date().toLocaleTimeString('he-IL')}</div>
+    <div class="date">נכון לתאריך: ${new Date().toLocaleDateString('he-IL')} בשעה ${new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</div>
 
     <div class="summary-grid">
         <div class="card">
@@ -11128,7 +11128,7 @@ async function saveSupplierOrder(event) {
 
     if (newNoteContent) {
         const now = new Date();
-        const timestamp = now.toLocaleDateString('he-IL') + ', ' + now.toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+        const timestamp = now.toLocaleDateString('he-IL') + ', ' + now.toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'});
         const userName = sessionStorage.getItem('userName') || 'שחר'; 
         const header = `📅 ${timestamp} | ${userName}:`;
         const newNoteEntry = `${header}\n${newNoteContent}`;
@@ -11593,7 +11593,7 @@ async function exportSupplierOrderHTML() {
         <div class="header">
             <div class="header-title">
                 <h1>הזמנת רכש</h1>
-                <p>אנפי אלומיניום • מערכת ניהול עסק</p>
+                <p>אנפי אלומיניום • מערכת ניהול עסקאות</p>
             </div>
             <div class="order-badge">#${displayOrderId}</div>
         </div>
@@ -11684,7 +11684,7 @@ async function exportSupplierOrderHTML() {
         ` : ''}
 
         <div class="footer">
-            מסמך זה הופק באופן אוטומטי ממערכת ניהול עסק CRM • ${new Date().toLocaleDateString('he-IL')} • ${new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute: '2-digit'})}
+            מסמך זה הופק באופן אוטומטי ממערכת ניהול עסקאות CRM • ${new Date().toLocaleDateString('he-IL')} • ${new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute: '2-digit'})}
         </div>
     </div>
     
