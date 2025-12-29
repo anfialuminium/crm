@@ -207,14 +207,14 @@ function addAccItem() {
             </div>
             <div id="size-container-${id}" class="hidden size-field" style="margin-bottom: 12px;"></div>
             <div id="color-container-${id}" class="hidden color-field" style="margin-bottom: 12px;"></div>
-            <div id="fin-container-${id}" class="hidden fin-field" style="margin: 12px 0; padding: 16px; background: #eff6ff; border-radius: 12px; border: 2px solid #bfdbfe;"></div>
-            <div style="display: flex; gap: 16px; margin-top: 20px;">
-                <div style="flex: 1;">
-                    <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px;">כמות:</label>
+            <div id="fin-container-${id}" class="hidden fin-field" style="margin: 16px 0; padding: 16px; background: #eff6ff; border-radius: 12px; border: 2px solid #bfdbfe;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
+                <div>
+                    <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">כמות:</label>
                     <input type="number" class="input-big" value="" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
                 </div>
-                <div style="flex: 1;">
-                    <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px;">מחיר (₪):</label>
+                <div>
+                    <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">מחיר (₪):</label>
                     <input type="number" class="input-big" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
                 </div>
             </div>
