@@ -45,7 +45,8 @@ async function loadData() {
             .from('products')
             .select('*')
             .eq('active', true)
-            .order('product_name');
+            .order('category', { ascending: true })
+            .order('sku', { ascending: true });
         if (pError) throw pError;
         products = (pData || []).map(p => {
             let category = p.category ? p.category.trim() : '';

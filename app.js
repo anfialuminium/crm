@@ -420,7 +420,7 @@ async function loadProducts() {
             .select('*')
             .eq('active', true)
             .order('category', { ascending: true })
-            .order('product_name', { ascending: true });
+            .order('sku', { ascending: true });
         
         if (error) throw error;
         
