@@ -3620,7 +3620,7 @@ function deleteContact(contactId) {
             
             if (error) throw error;
             
-            logAction('delete', 'contact', contactId, contactName, logDescription);
+            logAction('delete', 'contact', contactId, contactName, logDescription, deletedContact, null);
             showAlert('✅ איש הקשר נמחק בהצלחה', 'success');
             displayContacts();
             
@@ -5100,6 +5100,16 @@ async function saveActivityEdit(event) {
     event.preventDefault();
     
     const activityId = document.getElementById('edit-activity-id').value;
+    
+    // Fetch current state for logging BEFORE update
+    let currentActivity = null;
+    try {
+        const { data } = await supabaseClient.from('activities').select('*').eq('activity_id', activityId).single();
+        currentActivity = data;
+    } catch (e) {
+        console.warn('Could not fetch old activity for logging', e);
+    }
+
     const activityType = document.getElementById('edit-activity-type').value;
     const activityDate = document.getElementById('edit-activity-date').value;
     const description = document.getElementById('edit-activity-description').value;
@@ -5207,8 +5217,14 @@ async function saveActivityEdit(event) {
             showAlert('✅ הפעילות עודכנה בהצלחה', 'success');
         }
 
-        // Log the action
-        logAction('update', 'activity', activityId, activityType, `עדכון פעילות: ${description}`);
+        // Log the action with detailed objects for the improved email notification
+        const newValue = {
+            ...updateData,
+            customer_name: customers.find(c => c.customer_id === (updateData.customer_id || customerId))?.business_name || 'לא ידוע'
+        };
+        const oldValue = currentActivity; // We'll fetch this at the start of the function
+
+        logAction('update', 'activity', activityId, activityType, `עדכון פעילות: ${description}`, oldValue, newValue);
 
         closeEditActivityModal();
 
@@ -5731,6 +5747,13 @@ async function editDeal(dealId) {
 function deleteActivity(activityId) {
     showConfirmModal('מחיקת פעילות', 'האם אתה בטוח שברצונך למחוק פעילות זו? פעולה זו אינה ניתנת לביטול.', async () => {
         try {
+            // Fetch info before delete for detailed logging
+            const { data: oldActivity } = await supabaseClient
+                .from('activities')
+                .select('*, customers(business_name)')
+                .eq('activity_id', activityId)
+                .single();
+
             const { error } = await supabaseClient
                 .from('activities')
                 .delete()
@@ -5738,8 +5761,10 @@ function deleteActivity(activityId) {
             
             if (error) throw error;
             
-            logAction('delete', 'activity', activityId, 'פעילות', 'מחיקת פעילות');
+            const activityType = oldActivity?.activity_type || 'פעילות';
+            const customerName = oldActivity?.customers?.business_name || 'לקוח לא ידוע';
             
+            logAction('delete', 'activity', activityId, activityType, `מחיקת פעילות של ${customerName}`, oldActivity, null);
             showAlert('✅ הפעילות נמחקה בהצלחה', 'success');
             
             // Reload activities
@@ -7398,32 +7423,115 @@ async function sendNotificationEmail(action, email, url) {
             'supplier': 'ספק',
             'supplier_order': 'הזמנת רכש',
             'contact': 'איש קשר',
-            'color': 'צבע'
+            'color': 'צבע',
+            'note': 'הערה',
+            'setting': 'הגדרות'
+        };
+
+        const fieldTranslations = {
+            'business_name': 'שם העסק',
+            'contact_name': 'איש קשר',
+            'phone': 'טלפון',
+            'email': 'אימייל',
+            'city': 'עיר',
+            'address': 'כתובת',
+            'notes': 'הערות',
+            'category': 'קטגוריה',
+            'price': 'מחיר',
+            'total_amount': 'סכום כולל',
+            'deal_status': 'סטטוס',
+            'order_status': 'סטטוס הזמנה',
+            'description': 'תיאור',
+            'quantity': 'כמות',
+            'unit_price': 'מחיר יחידה',
+            'discount_percentage': 'אחוז הנחה',
+            'role': 'תפקיד',
+            'sku': 'מק"ט'
         };
 
         const actionHeb = actionTranslations[action.action_type] || action.action_type;
         const entityHeb = entityTranslations[action.entity_type] || action.entity_type;
         const subject = `מערכת ה-CRM: ${actionHeb} ${entityHeb} - ${action.entity_name}`;
 
+        // Helper to format values
+        const formatVal = (val) => {
+            if (val === null || val === undefined) return '-';
+            if (typeof val === 'boolean') return val ? 'כן' : 'לא';
+            if (typeof val === 'object') return JSON.stringify(val);
+            return val;
+        };
+
+        let detailsHtml = '';
+
+        // Handle UPDATE logic (Diff)
+        if (action.action_type === 'update' && action.old_value && action.new_value && typeof action.old_value === 'object' && typeof action.new_value === 'object') {
+            detailsHtml += '<div style="margin-top: 15px;"><strong>שינויים שבוצעו:</strong><table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">';
+            detailsHtml += '<tr style="background: #f1f5f9;"><th style="padding: 8px; border: 1px solid #e0e0e0; text-align: right;">שדה</th><th style="padding: 8px; border: 1px solid #e0e0e0; text-align: right;">ערך קודם</th><th style="padding: 8px; border: 1px solid #e0e0e0; text-align: right;">ערך חדש</th></tr>';
+            
+            const keys = new Set([...Object.keys(action.old_value), ...Object.keys(action.new_value)]);
+            let hasChanges = false;
+            
+            keys.forEach(key => {
+                if (['updated_at', 'created_at', 'id', 'customer_id', 'deal_id', 'product_id', 'contact_id', 'activity_id'].some(ignore => key.toLowerCase().includes(ignore))) return;
+                
+                const oldV = action.old_value[key];
+                const newV = action.new_value[key];
+                
+                if (JSON.stringify(oldV) !== JSON.stringify(newV)) {
+                    hasChanges = true;
+                    detailsHtml += `<tr>
+                        <td style="padding: 8px; border: 1px solid #e0e0e0; font-weight: bold;">${fieldTranslations[key] || key}</td>
+                        <td style="padding: 8px; border: 1px solid #e0e0e0; color: #dc2626; text-decoration: line-through;">${formatVal(oldV)}</td>
+                        <td style="padding: 8px; border: 1px solid #e0e0e0; color: #16a34a; font-weight: bold;">${formatVal(newV)}</td>
+                    </tr>`;
+                }
+            });
+            
+            if (!hasChanges) detailsHtml = '<p style="margin-top: 15px;">בוצע עדכון כללי ללא שינוי בשדות המרכזיים.</p>';
+            else detailsHtml += '</table></div>';
+        }
+        // Handle DELETE logic (Object Details)
+        else if (action.action_type === 'delete' && action.old_value && typeof action.old_value === 'object') {
+            detailsHtml += '<div style="margin-top: 15px;"><strong>פרטי הישות שנמחקה:</strong><table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">';
+            Object.keys(action.old_value).forEach(key => {
+                if (['updated_at', 'created_at', 'id', 'customer_id', 'deal_id', 'product_id', 'contact_id', 'activity_id'].some(ignore => key.toLowerCase().includes(ignore))) return;
+                const val = action.old_value[key];
+                if (val === null || val === undefined || val === '') return;
+                
+                detailsHtml += `<tr>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0; width: 30%; background: #f8fafc; font-weight: bold;">${fieldTranslations[key] || key}</td>
+                    <td style="padding: 8px; border: 1px solid #e0e0e0;">${formatVal(val)}</td>
+                </tr>`;
+            });
+            detailsHtml += '</table></div>';
+        }
+        // Fallback for simple values
+        else {
+            if (action.new_value) detailsHtml += `<p style="margin: 5px 0;"><strong>ערך חדש:</strong> ${formatVal(action.new_value)}</p>`;
+            if (action.old_value) detailsHtml += `<p style="margin: 5px 0;"><strong>ערך קודם:</strong> ${formatVal(action.old_value)}</p>`;
+        }
+
         const htmlBody = `
-            <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-                <div style="background-color: #2563eb; color: white; padding: 20px; text-align: center;">
-                    <h2 style="margin: 0; font-size: 24px;">עדכון ממערכת ה-CRM</h2>
+            <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <div style="background-color: #2563eb; color: white; padding: 25px; text-align: center;">
+                    <h2 style="margin: 0; font-size: 26px; letter-spacing: 1px;">עדכון ממערכת ה-CRM</h2>
                 </div>
                 <div style="padding: 30px; background-color: #ffffff;">
                     <p style="font-size: 18px; margin-bottom: 20px;">שלום,</p>
                     <p style="font-size: 16px;">המערכת עודכנה בפעולה חדשה על ידי <strong>${action.performed_by}</strong>:</p>
                     
-                    <div style="background-color: #f8fafc; border-right: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                        <p style="margin: 5px 0;"><strong>סוג פעולה:</strong> ${actionHeb}</p>
-                        <p style="margin: 5px 0;"><strong>ישות:</strong> ${entityHeb} (${action.entity_name})</p>
-                        <p style="margin: 5px 0;"><strong>תיאור:</strong> ${action.description}</p>
-                        ${action.new_value ? `<p style="margin: 5px 0;"><strong>ערך חדש:</strong> ${action.new_value}</p>` : ''}
-                        ${action.old_value ? `<p style="margin: 5px 0;"><strong>ערך קודם:</strong> ${action.old_value}</p>` : ''}
+                    <div style="background-color: #f8fafc; border-right: 4px solid #2563eb; padding: 20px; margin: 25px 0; border-radius: 6px;">
+                        <p style="margin: 5px 0; font-size: 16px;"><strong>סוג פעולה:</strong> ${actionHeb}</p>
+                        <p style="margin: 5px 0; font-size: 16px;"><strong>ישות:</strong> ${entityHeb} (${action.entity_name})</p>
+                        <p style="margin: 5px 0; font-size: 16px;"><strong>תיאור:</strong> ${action.description}</p>
+                        
+                        ${detailsHtml}
                     </div>
+                    
+                    <p style="font-size: 14px; color: #64748b; margin-top: 30px;">לצפייה בפרטים המלאים היכנס למערכת בכתובת המוכרת לך.</p>
                 </div>
-                <div style="background-color: #f1f5f9; color: #64748b; padding: 15px; text-align: center; font-size: 12px;">
-                    התראה זו נשלחה באופן אוטומטי ממערכת ה-CRM.
+                <div style="background-color: #f1f5f9; color: #64748b; padding: 20px; text-align: center; font-size: 12px; border-top: 1px solid #e2e8f0;">
+                    המייל נשלח באופן אוטומטי ממערכת ה-CRM • ${new Date().toLocaleDateString('he-IL')} ${new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'})}
                 </div>
             </div>
         `;
@@ -7435,13 +7543,10 @@ async function sendNotificationEmail(action, email, url) {
             htmlBody: htmlBody.trim()
         });
 
-        // Use standard POST with form-encoded data for Apps Script
         fetch(url, {
             method: 'POST',
             mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: params.toString()
         });
     } catch (err) {
@@ -11084,7 +11189,7 @@ async function deleteSupplier(supplierId) {
             
             if (error) throw error;
             
-            logAction('delete', 'supplier', supplierId, supplier?.name || 'ספק', 'מחיקת ספק');
+            logAction('delete', 'supplier', supplierId, supplier?.name || 'ספק', 'מחיקת ספק', supplier, null);
 
             showAlert('הספק נמחק בהצלחה', 'success');
             await loadSuppliers();
