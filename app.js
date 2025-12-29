@@ -1262,11 +1262,7 @@ async function saveDeal(status = null) {
             return dealData.deal_id;
         }
         
-        // Reload deals history to reflect changes if visible
-        const historyTab = document.getElementById('history-tab');
-        if (historyTab && !historyTab.classList.contains('hidden')) {
-            await loadDealsHistory();
-        }
+        await refreshAllUI();
 
         // For existing deals, also open details
         if (editDealId) {
@@ -1521,27 +1517,7 @@ async function saveCustomer(event) {
         );
         
         showAlert(customerId ? '✅ הלקוח עודכן בהצלחה!' : '✅ הלקוח נשמר בהצלחה!', 'success');
-        
-        // Reload customers and select the new/updated one if on deals tab
-        
-        // Check if customers tab is active (visible)
-        const customersTab = document.getElementById('customers-tab');
-        const isCustomersTabActive = customersTab && !customersTab.classList.contains('hidden');
-        
-        if (isCustomersTabActive) {
-            // This will reload and render
-            displayCustomers();
-        } else {
-             // Just reload data in background
-             await loadCustomers();
-             
-             if (!customerId) {
-                // Only select if it's a new customer and we're NOT on customers tab (likely deals tab)
-                document.getElementById('customer-select').value = savedCustomer.customer_id;
-                const searchInput = document.getElementById('customer-search-input');
-                if (searchInput) searchInput.value = savedCustomer.business_name;
-             }
-        }
+        await refreshAllUI();
         closeCustomerModal();
     } catch (e) {
         console.error(e);
@@ -1987,9 +1963,7 @@ function deleteCustomer(customerId) {
             logAction('delete', 'customer', customerId, customerName, logDescription, deletedCustomer, null);
             
             showAlert('✅ הלקוח נמחק בהצלחה', 'success');
-            
-            await loadCustomers();
-            displayCustomers();
+            await refreshAllUI();
             
         } catch (error) {
             console.error('❌ Error deleting customer:', error);
@@ -3215,7 +3189,7 @@ async function saveContact(event) {
         );
         
         closeContactModal();
-        displayContacts();
+        await refreshAllUI();
         
     } catch (error) {
         console.error('❌ Error saving contact:', error);
@@ -3622,8 +3596,7 @@ function deleteContact(contactId) {
             
             logAction('delete', 'contact', contactId, contactName, logDescription, deletedContact, null);
             showAlert('✅ איש הקשר נמחק בהצלחה', 'success');
-            displayContacts();
-            
+            await refreshAllUI();
         } catch (error) {
             console.error('❌ Error deleting contact:', error);
             showAlert('שגיאה במחיקת איש הקשר: ' + error.message, 'error');
@@ -3972,10 +3945,8 @@ async function saveProduct(event) {
         );
         
         showAlert(productId ? '✅ המוצר עודכן בהצלחה!' : '✅ המוצר נוסף בהצלחה!', 'success');
-        
         closeProductModal();
-        await loadProducts();
-        displayProducts();
+        await refreshAllUI();
         
     } catch (error) {
         console.error('❌ Error saving product:', error);
@@ -4007,9 +3978,7 @@ function deleteProduct(productId) {
             logAction('delete', 'product', productId, productName, logDescription, deletedProduct, null);
             
             showAlert('✅ המוצר נמחק בהצלחה', 'success');
-            
-            await loadProducts();
-            displayProducts();
+            await refreshAllUI();
             
         } catch (error) {
             console.error('❌ Error deleting product:', error);
@@ -5265,7 +5234,7 @@ async function saveActivityEdit(event) {
              }
         }
 
-        // Reload customer details history if details modal is open
+        // Reload customer details if details modal is open
         const viewCustomerModal = document.getElementById('customer-details-modal');
         if (viewCustomerModal && viewCustomerModal.classList.contains('active')) {
              if (viewCustomerModal.dataset.currentCustomerId) {
@@ -5633,9 +5602,7 @@ function deleteDeal(dealId) {
             logAction('delete', 'deal', dealId, `עסקה - ${customerName}`, logDescription);
             
             showAlert('✅ העסקה נמחקה בהצלחה', 'success');
-            
-            // Reload deals history
-            loadDealsHistory();
+            await refreshAllUI();
             
         } catch (error) {
             console.error('❌ Error deleting deal:', error);
@@ -7401,6 +7368,66 @@ async function logAction(actionType, entityType, entityId, entityName, descripti
             
     } catch (error) {
         console.error('❌ Error logging action:', error);
+    }
+}
+
+/**
+ * Refreshes all active UI components (tabs and modals) 
+ * to ensure data consistency after saving or deleting.
+ */
+async function refreshAllUI() {
+    console.log('🔄 Refreshing UI components...');
+    
+    // 1. Refresh data in memory
+    await Promise.all([
+        loadCustomers(),
+        loadContacts(),
+        loadProducts()
+    ]);
+
+    // 2. Refresh active tab
+    const activeTab = document.querySelector('.tab-content:not(.hidden)');
+    if (activeTab) {
+        if (activeTab.id === 'deals-tab') {
+             if (typeof loadDealsHistory === 'function') loadDealsHistory(true);
+        }
+        else if (activeTab.id === 'customers-tab') {
+             if (typeof displayCustomers === 'function') displayCustomers();
+        }
+        else if (activeTab.id === 'contacts-tab') {
+             if (typeof displayContacts === 'function') displayContacts();
+        }
+        else if (activeTab.id === 'products-tab') {
+             if (typeof displayProducts === 'function') displayProducts();
+        }
+        else if (activeTab.id === 'activities-tab') {
+             if (typeof loadActivities === 'function') loadActivities();
+        }
+        else if (activeTab.id === 'thisweek-tab') {
+             if (typeof loadThisWeek === 'function') loadThisWeek();
+        }
+        else if (activeTab.id === 'suppliers-tab') {
+             if (typeof loadSuppliers === 'function') loadSuppliers();
+        }
+    }
+
+    // 3. Refresh active modals that might depend on updated data
+    const customerDetailsModal = document.getElementById('customer-details-modal');
+    if (customerDetailsModal && customerDetailsModal.classList.contains('active')) {
+        const cid = customerDetailsModal.dataset.currentCustomerId;
+        if (cid) viewCustomerDetails(cid);
+    }
+
+    const contactDetailsModal = document.getElementById('contact-details-modal');
+    if (contactDetailsModal && contactDetailsModal.classList.contains('active')) {
+        const cid = contactDetailsModal.dataset.currentContactId;
+        if (cid) viewContactDetails(cid);
+    }
+
+    const dealDetailsModal = document.getElementById('deal-details-modal');
+    if (dealDetailsModal && dealDetailsModal.classList.contains('active')) {
+        const did = dealDetailsModal.dataset.currentDealId;
+        if (did) viewDealDetails(did);
     }
 }
 
@@ -11120,6 +11147,7 @@ async function saveSupplierOrder(event) {
             
             // Log update
             logAction('update', 'supplier_order', orderId, 'הזמנה', `עדכון הזמנה - סטטוס: ${orderData.order_status}`, oldOrder, orderData);
+            await refreshAllUI();
 
             // Delete existing items (simple replace strategy)
             await supabaseClient.from('supplier_order_items').delete().eq('order_id', orderId);
@@ -11132,6 +11160,7 @@ async function saveSupplierOrder(event) {
 
             // Log creation
             logAction('create', 'supplier_order', savedOrderId, 'הזמנה', `יצירת הזמנה חדשה בסכום ₪${orderData.total_amount.toFixed(0)}`);
+            await refreshAllUI();
         }
         
         // Insert Items
@@ -11235,7 +11264,7 @@ async function deleteSupplierOrder(orderId) {
             logAction('delete', 'supplier_order', orderId, 'הזמנת רכש', description, order, null);
             
             showAlert('ההזמנה נמחקה בהצלחה', 'success');
-            await loadSupplierOrders();
+            await refreshAllUI();
         } catch (e) {
             console.error(e);
             showAlert('שגיאה במחיקת ההזמנה: ' + e.message, 'error');

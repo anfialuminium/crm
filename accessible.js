@@ -356,12 +356,153 @@ async function saveAccDeal() {
             .insert(itemsToInsert);
 
         if (iError) throw iError;
+        
+        // 3. Log the action
+        const customer = customers.find(c => c.customer_id === customerId);
+        const customerName = customer ? customer.business_name : 'לקוח';
+        
+        await logAction(
+            'create', 
+            'deal', 
+            deal.deal_id, 
+            `עסקה - ${customerName}`, 
+            `יצירת עסקה חדשה (ממשק נגיש) בסכום ₪${subtotal.toFixed(0)}`,
+            null,
+            {
+                customer_id: customerId,
+                total_amount: subtotal,
+                items_count: validItems.length,
+                notes: 'נוצר דרך הממשק הנגיש'
+            }
+        );
 
-        alert('✅ העסקה נשמרה בהצלחה!');
+        alert('✅ העסקה נשמר בהצלחה!');
         showScreen('main');
     } catch (err) {
         console.error('❌ שגיאה בשמירת עסקה:', err);
         alert('שגיאה בשמירה. נסה שוב.');
+    }
+}
+
+// ============================================
+// Audit Log & Notifications
+// ============================================
+
+async function logAction(actionType, entityType, entityId, entityName, description, oldValue = null, newValue = null) {
+    try {
+        const performedBy = localStorage.getItem('crm_username') || 'עופר (נגיש)';
+        
+        const record = {
+            action_type: actionType,
+            entity_type: entityType,
+            entity_id: entityId,
+            entity_name: entityName,
+            description: description,
+            old_value: oldValue,
+            new_value: newValue,
+            performed_by: performedBy
+        };
+
+        await supabaseClient
+            .from('audit_log')
+            .insert(record);
+            
+        // Handle Email Notification
+        const notifyEmail = localStorage.getItem('crm_notification_email');
+        const notifyEnabled = localStorage.getItem('crm_notification_enabled') === 'true';
+        const scriptUrl = localStorage.getItem('crm_notification_script_url');
+        const myName = localStorage.getItem('crm_notification_myname') || '';
+
+        if (notifyEnabled && notifyEmail && scriptUrl && performedBy !== myName) {
+            sendNotificationEmail(record, notifyEmail, scriptUrl);
+        }
+    } catch (error) {
+        console.error('❌ Error logging action:', error);
+    }
+}
+
+async function sendNotificationEmail(action, email, url) {
+    try {
+        const actionTranslations = {
+            'create': 'יצירת',
+            'update': 'עדכון',
+            'delete': 'מחיקת',
+            'login': 'התחברות',
+            'export': 'ייצוּא'
+        };
+
+        const entityTranslations = {
+            'deal': 'עסקה',
+            'customer': 'לקוח',
+            'product': 'מוצר',
+            'activity': 'פעילות',
+            'supplier': 'ספק',
+            'supplier_order': 'הזמנת רכש',
+            'contact': 'איש קשר'
+        };
+
+        const fieldTranslations = {
+            'business_name': 'שם העסק',
+            'contact_name': 'איש קשר',
+            'phone': 'טלפון',
+            'email': 'אימייל',
+            'total_amount': 'סכום כולל',
+            'deal_status': 'סטטוס',
+            'description': 'תיאור',
+            'quantity': 'כמות'
+        };
+
+        const actionHeb = actionTranslations[action.action_type] || action.action_type;
+        const entityHeb = entityTranslations[action.entity_type] || action.entity_type;
+        const subject = `מערכת ה-CRM: ${actionHeb} ${entityHeb} - ${action.entity_name}`;
+
+        const formatVal = (val) => {
+            if (val === null || val === undefined) return '-';
+            if (typeof val === 'boolean') return val ? 'כן' : 'לא';
+            if (typeof val === 'object') return JSON.stringify(val);
+            return val;
+        };
+
+        let detailsHtml = '';
+        if (action.new_value) detailsHtml += `<p style="margin: 5px 0;"><strong>ערך חדש:</strong> ${formatVal(action.new_value)}</p>`;
+        if (action.old_value) detailsHtml += `<p style="margin: 5px 0;"><strong>ערך קודם:</strong> ${formatVal(action.old_value)}</p>`;
+
+        const htmlBody = `
+            <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <div style="background-color: #2563eb; color: white; padding: 25px; text-align: center;">
+                    <h2 style="margin: 0; font-size: 26px; letter-spacing: 1px;">עדכון מהממשק הנגיש</h2>
+                </div>
+                <div style="padding: 30px; background-color: #ffffff;">
+                    <p style="font-size: 16px;">המערכת עודכנה בפעולה חדשה על ידי <strong>${action.performed_by}</strong>:</p>
+                    
+                    <div style="background-color: #f8fafc; border-right: 4px solid #2563eb; padding: 20px; margin: 25px 0; border-radius: 6px;">
+                        <p style="margin: 5px 0; font-size: 16px;"><strong>סוג פעולה:</strong> ${actionHeb}</p>
+                        <p style="margin: 5px 0; font-size: 16px;"><strong>ישות:</strong> ${entityHeb} (${action.entity_name})</p>
+                        <p style="margin: 5px 0; font-size: 16px;"><strong>תיאור:</strong> ${action.description}</p>
+                        ${detailsHtml}
+                    </div>
+                </div>
+                <div style="background-color: #f1f5f9; color: #64748b; padding: 20px; text-align: center; font-size: 12px; border-top: 1px solid #e2e8f0;">
+                    המייל נשלח באופן אוטומטי ממערכת ה-CRM • ${new Date().toLocaleDateString('he-IL')}
+                </div>
+            </div>
+        `;
+
+        const params = new URLSearchParams({
+            action: 'sendNotification',
+            email: email,
+            subject: subject,
+            htmlBody: htmlBody.trim()
+        });
+
+        fetch(url, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        });
+    } catch (err) {
+        console.error('Error sending notification email:', err);
     }
 }
 
