@@ -130,10 +130,10 @@ label {
     width: 100%;
     padding: 16px;
     font-size: var(--font-size-lg);
-    border: 3px solid var(--border-color);
     border-radius: 12px;
     font-family: inherit;
     text-overflow: ellipsis;
+    background-color: white;
 }
 
 .input-big::placeholder {
@@ -220,15 +220,16 @@ label {
 
 /* Items List in New Deal */
 .item-row {
-    background: var(--bg-secondary);
-    padding: 16px;
-    border-radius: 16px;
-    margin-bottom: 16px;
+    background: white;
+    padding: 24px;
+    border-radius: 20px;
+    margin-bottom: 24px;
     display: flex;
-    gap: 12px;
-    align-items: center;
-    position: relative; /* Fixed: allows absolute positioning of remove button inside */
-    border: 1px solid var(--border-color);
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    border: 2px solid var(--border-color);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
     transition: all 0.2s ease;
 }
 
@@ -242,28 +243,15 @@ label {
     min-width: 0; /* Allow shrinking */
 }
 
-.item-row select.input-big {
-    flex: 4;
+.item-row select.input-big,
+.item-row input.input-big {
+    width: 100%;
+    margin-bottom: 8px;
 }
 
 .item-row .size-field,
 .item-row .color-field {
-    flex: 2;
-    min-width: 90px;
-}
-
-.item-row input[placeholder="כמות"] {
-    flex: 1;
-    max-width: 100px;
-    text-align: center;
-    padding-left: 8px;
-    padding-right: 8px;
-}
-
-.item-row input[placeholder="מחיר"] {
-    flex: 1.5;
-    max-width: 120px;
-    text-align: center;
+    width: 100%;
 }
 
 .item-row .btn-remove {
@@ -272,36 +260,14 @@ label {
 
 @media (max-width: 600px) {
     .item-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        padding-top: 32px;
-    }
-    
-    .item-row select.input-big {
-        grid-column: span 2;
-        width: 100%;
-    }
-    
-    .item-row .size-field,
-    .item-row .color-field {
-        grid-column: span 1;
-        width: 100%;
-    }
-    
-    .item-row input[placeholder="כמות"],
-    .item-row input[placeholder="מחיר"] {
-        flex: 1;
-        width: 100%;
-        grid-column: span 1;
+        padding: 20px;
     }
     
     .btn-remove {
         position: absolute;
-        top: -12px;
-        left: -12px;
-        box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
-        z-index: 5;
+        top: -10px;
+        left: -10px;
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
     }
 }
 

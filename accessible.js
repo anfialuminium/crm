@@ -198,19 +198,28 @@ function addAccItem() {
 
     div.innerHTML = `
         <div style="width: 100%;">
-            <div id="categories-container-${id}"></div>
-            <select class="input-big" id="product-select-${id}" onchange="updateItemProduct('${id}', this.value)">
-                <option value="">בחר קטגוריה קודם</option>
-            </select>
-            <div id="size-container-${id}" class="hidden size-field"></div>
-            <div id="color-container-${id}" class="hidden color-field"></div>
-            <div id="fin-container-${id}" class="hidden fin-field" style="margin: 0.5rem 0; padding: 0.5rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);"></div>
-            <div style="display: flex; gap: 12px; margin-top: 12px;">
-                <input type="number" class="input-big" value="" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות" style="flex: 1;">
-                <input type="number" class="input-big" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר" style="flex: 1;">
+            <div id="categories-container-${id}" style="margin-bottom: 20px;"></div>
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px;">בחר מוצר:</label>
+                <select class="input-big" id="product-select-${id}" onchange="updateItemProduct('${id}', this.value)">
+                    <option value="">בחר קטגוריה קודם</option>
+                </select>
+            </div>
+            <div id="size-container-${id}" class="hidden size-field" style="margin-bottom: 12px;"></div>
+            <div id="color-container-${id}" class="hidden color-field" style="margin-bottom: 12px;"></div>
+            <div id="fin-container-${id}" class="hidden fin-field" style="margin: 12px 0; padding: 16px; background: #eff6ff; border-radius: 12px; border: 2px solid #bfdbfe;"></div>
+            <div style="display: flex; gap: 16px; margin-top: 20px;">
+                <div style="flex: 1;">
+                    <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px;">כמות:</label>
+                    <input type="number" class="input-big" value="" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
+                </div>
+                <div style="flex: 1;">
+                    <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px;">מחיר (₪):</label>
+                    <input type="number" class="input-big" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
+                </div>
             </div>
         </div>
-        <button onclick="removeAccItem('${id}')" class="btn-remove" style="align-self: flex-start; margin-top: 10px;">×</button>
+        <button onclick="removeAccItem('${id}')" class="btn-remove" style="position: absolute; top: -12px; left: -12px;">×</button>
     `;
     
     document.getElementById('acc-items-list').appendChild(div);
@@ -331,9 +340,9 @@ function updateItemProduct(id, productId) {
     if (isBrush) {
         finContainer.classList.remove('hidden');
         finContainer.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
-                <input type="checkbox" id="fin-${id}" style="width: 24px; height: 24px;" onchange="updateItemFin('${id}', this.checked)">
-                <label for="fin-${id}" style="font-size: 1.1rem; font-weight: 600; cursor: pointer;">מברשת סנפיר</label>
+            <div style="display: flex; align-items: center; gap: 1.5rem; width: 100%;">
+                <input type="checkbox" id="fin-${id}" style="width: 32px; height: 32px; cursor: pointer;" onchange="updateItemFin('${id}', this.checked)">
+                <label for="fin-${id}" style="font-size: 1.2rem; font-weight: 700; cursor: pointer; color: #1e40af; margin-bottom: 0;">מברשת סנפיר</label>
             </div>
         `;
         item.is_fin_brush = false;
