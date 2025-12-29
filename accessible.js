@@ -15,6 +15,7 @@ let customers = [];
 let currentDealItems = [];
 let itemCounter = 0;
 let orderColors = []; // Supplier order colors
+let globalAccCategories = [];
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
@@ -46,7 +47,16 @@ async function loadData() {
             .eq('active', true)
             .order('product_name');
         if (pError) throw pError;
-        products = pData || [];
+        products = (pData || []).map(p => {
+            let category = p.category ? p.category.trim() : '';
+            const productName = p.product_name ? p.product_name.trim() : '';
+            if (!category && (productName.includes('מברשת') || (p.description && p.description.includes('מברשת')))) {
+                category = 'מברשות';
+            }
+            return { ...p, category: category || 'אחר' };
+        });
+        
+        globalAccCategories = [...new Set(products.map(p => p.category))].sort();
 
         // Load Customers
         const { data: cData, error: cError } = await supabaseClient
@@ -168,25 +178,56 @@ function addAccItem() {
     const div = document.createElement('div');
     div.className = 'item-row';
     div.id = id;
+    
+    // Create categories container
+    const categoriesDiv = document.createElement('div');
+    categoriesDiv.className = 'acc-category-pills';
+    
+    globalAccCategories.forEach(cat => {
+        const pill = document.createElement('button');
+        pill.type = 'button';
+        pill.className = 'acc-category-pill';
+        pill.textContent = cat;
+        pill.onclick = () => {
+            categoriesDiv.querySelectorAll('.acc-category-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            updateAccDropdown(id, cat);
+        };
+        categoriesDiv.appendChild(pill);
+    });
+
     div.innerHTML = `
-        <select class="input-big" onchange="updateItemProduct('${id}', this.value)">
-            <option value="">מוצר</option>
-            ${products.map(p => `<option value="${p.product_id}">${p.product_name}</option>`).join('')}
-        </select>
-        <div id="size-container-${id}" class="hidden size-field">
-            <!-- Dynamically populated by updateItemProduct -->
+        <div style="width: 100%;">
+            <div id="categories-container-${id}"></div>
+            <select class="input-big" id="product-select-${id}" onchange="updateItemProduct('${id}', this.value)">
+                <option value="">בחר קטגוריה קודם</option>
+            </select>
+            <div id="size-container-${id}" class="hidden size-field"></div>
+            <div id="color-container-${id}" class="hidden color-field"></div>
+            <div id="fin-container-${id}" class="hidden fin-field" style="margin: 0.5rem 0; padding: 0.5rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);"></div>
+            <div style="display: flex; gap: 12px; margin-top: 12px;">
+                <input type="number" class="input-big" value="" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות" style="flex: 1;">
+                <input type="number" class="input-big" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר" style="flex: 1;">
+            </div>
         </div>
-        <div id="color-container-${id}" class="hidden color-field">
-            <!-- Dynamically populated by updateItemProduct -->
-        </div>
-        <div id="fin-container-${id}" class="hidden fin-field" style="margin: 0.5rem 0; padding: 0.5rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
-            <!-- Dynamically populated by updateItemProduct -->
-        </div>
-        <input type="number" class="input-big" value="" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
-        <input type="number" class="input-big" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
-        <button onclick="removeAccItem('${id}')" class="btn-remove">×</button>
+        <button onclick="removeAccItem('${id}')" class="btn-remove" style="align-self: flex-start; margin-top: 10px;">×</button>
     `;
+    
     document.getElementById('acc-items-list').appendChild(div);
+    document.getElementById(`categories-container-${id}`).appendChild(categoriesDiv);
+}
+
+function updateAccDropdown(id, category) {
+    const select = document.getElementById(`product-select-${id}`);
+    const filtered = products.filter(p => p.category === category);
+    
+    select.innerHTML = `<option value="">בחר ${category}</option>`;
+    filtered.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.product_id;
+        option.textContent = p.product_name;
+        select.appendChild(option);
+    });
 }
 
 function updateItemProduct(id, productId) {

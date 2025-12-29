@@ -360,3 +360,35 @@ label {
     padding-top: 16px;
     border-top: 2px dashed var(--border-color);
 }
+
+/* Category Rubrics for Accessible Version */
+.acc-category-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+.acc-category-pill {
+    padding: 12px 20px;
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: 30px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+}
+
+.acc-category-pill:hover {
+    background: var(--bg-secondary);
+    border-color: var(--primary-color);
+}
+
+.acc-category-pill.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
