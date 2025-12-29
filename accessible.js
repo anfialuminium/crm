@@ -410,7 +410,7 @@ async function saveAccDeal() {
 
 async function logAction(actionType, entityType, entityId, entityName, description, oldValue = null, newValue = null) {
     try {
-        const performedBy = localStorage.getItem('crm_username') || 'עופר (נגיש)';
+        const performedBy = 'עופר';
         
         const record = {
             action_type: actionType,
