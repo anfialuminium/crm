@@ -7493,7 +7493,7 @@ function loadNotificationSettings() {
     const enabled = localStorage.getItem('crm_notification_enabled') === 'true' || true;
     const email = localStorage.getItem('crm_notification_email') || 'anfialuminium@gmail.com';
     const myName = localStorage.getItem('crm_notification_myname') || 'שחר';
-    const scriptUrl = localStorage.getItem('crm_notification_script_url') || 'https://script.google.com/macros/s/AKfycbxROjsBkrN-KgUxIg1xZD44Gl7nTzb0VEYeM52J3ALKdki_5UBelj3JI4E0nCu4VCNCWg/exec';
+    const scriptUrl = localStorage.getItem('crm_notification_script_url') || 'https://script.google.com/macros/s/AKfycbxx8T4slSNPW5nIoRG-uwH94C3Dh_fo8iReuhfCPWVvi6geSx4CQNYF4nJI4T90klY02w/exec';
 
     const elEnabled = document.getElementById('settings-notifications-enabled');
     const elEmail = document.getElementById('settings-notifications-email');
@@ -7512,7 +7512,7 @@ function loadNotificationSettings() {
         localStorage.setItem('crm_notification_enabled', 'true');
         localStorage.setItem('crm_notification_email', 'anfialuminium@gmail.com');
         localStorage.setItem('crm_notification_myname', 'שחר');
-        localStorage.setItem('crm_notification_script_url', 'https://script.google.com/macros/s/AKfycbxROjsBkrN-KgUxIg1xZD44Gl7nTzb0VEYeM52J3ALKdki_5UBelj3JI4E0nCu4VCNCWg/exec');
+        localStorage.setItem('crm_notification_script_url', 'https://script.google.com/macros/s/AKfycbxx8T4slSNPW5nIoRG-uwH94C3Dh_fo8iReuhfCPWVvi6geSx4CQNYF4nJI4T90klY02w/exec');
     }
 }
 
