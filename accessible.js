@@ -172,7 +172,7 @@ function resetNewDealForm() {
 
 function addAccItem() {
     const id = `item-${itemCounter++}`;
-    const item = { id, product_id: '', quantity: '', price: '', is_fin_brush: false, is_roll: false };
+    const item = { id, product_id: '', quantity: '', price: '', is_fin_brush: false, is_roll: false, length: 1 };
     currentDealItems.push(item);
 
     const div = document.createElement('div');
@@ -215,7 +215,7 @@ function addAccItem() {
                     <input type="number" class="input-big" value="" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
                 </div>
                 <div>
-                    <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">מחיר (₪):</label>
+                    <label id="price-label-${id}" style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">מחיר (₪):</label>
                     <input type="number" class="input-big" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
                 </div>
             </div>
@@ -268,9 +268,19 @@ function updateItemProduct(id, productId) {
             `;
             item.size = ''; // Reset size when changing product
         } else if (isMesh) {
+            const screenWidths = ['0.50', '0.60', '0.70', '0.80', '0.90', '1.00', '1.10', '1.20', '1.50', '1.80', '2.00', '2.50'];
             sizeContainer.innerHTML = `
-                <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">אורך (מטר):</label>
-                <input type="number" step="0.1" class="input-big" id="size-input-${id}" oninput="updateItemSize('${id}', this.value)" placeholder="אורך">
+                <div style="margin-bottom: 8px;">
+                    <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 4px; display: block;">רוחב:</label>
+                    <select class="input-big" onchange="updateItemSize('${id}', this.value)">
+                        <option value="">בחר רוחב</option>
+                        ${screenWidths.map(w => `<option value="${w}" ${item.size === w ? 'selected' : ''}>${w}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 4px; display: block;">אורך (מטר):</label>
+                    <input type="number" step="0.1" class="input-big" id="size-input-${id}" oninput="updateItemLength('${id}', this.value)" value="${item.length || 1}" placeholder="אורך">
+                </div>
             `;
         } else if (isBrush) {
             let brushSizes = ['רגיל', '12', '15', '20'];
@@ -301,7 +311,17 @@ function updateItemProduct(id, productId) {
     const isPullHandle = product && product.product_name.includes('ידית משיכה');
     const isRegularHandle = product && product.product_name.includes('ידית') && !isPullHandle;
     
-    if (isPullHandle) {
+    if (isMesh) {
+        colorContainer.classList.remove('hidden');
+        colorContainer.innerHTML = `
+            <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">צבע:</label>
+            <select class="input-big" onchange="updateItemColor('${id}', this.value)">
+                <option value="">בחר צבע</option>
+                <option value="שחור" ${item.color === 'שחור' ? 'selected' : ''}>שחור</option>
+                <option value="אפור" ${item.color === 'אפור' ? 'selected' : ''}>אפור</option>
+            </select>
+        `;
+    } else if (isPullHandle) {
         colorContainer.classList.remove('hidden');
         const pullColors = ['נירוסטה', 'שחור'];
         colorContainer.innerHTML = `
@@ -336,7 +356,9 @@ function updateItemProduct(id, productId) {
 
     // Check for fin brush option
     const finContainer = document.getElementById(`fin-container-${id}`);
-    if (isBrush) {
+    const canHaveFin = isBrush && product && !product.product_name.includes('אינסרט') && !product.product_name.includes('הדבקה');
+    
+    if (canHaveFin) {
         finContainer.classList.remove('hidden');
         finContainer.innerHTML = `
             <div style="display: flex; align-items: center; gap: 1.5rem; width: 100%;">
@@ -353,7 +375,9 @@ function updateItemProduct(id, productId) {
 
     // Check for mesh roll option
     const rollContainer = document.getElementById(`roll-container-${id}`);
-    if (isMesh) {
+    const isRollableMesh = isMesh && product && !product.product_name.includes('גלילה');
+    
+    if (isRollableMesh) {
         rollContainer.classList.remove('hidden');
         rollContainer.innerHTML = `
             <div style="display: flex; align-items: center; gap: 1.5rem; width: 100%;">
@@ -375,6 +399,12 @@ function updateItemProduct(id, productId) {
         if (qtyInput) qtyInput.value = 1;
     }
     
+    // Update price label if brush
+    const priceLabel = document.getElementById(`price-label-${id}`);
+    if (priceLabel) {
+        priceLabel.textContent = isBrush ? 'מחיר למטר (₪):' : 'מחיר (₪):';
+    }
+
     // Update price input
     const priceInput = document.getElementById(`price-${id}`);
     if (priceInput) priceInput.value = item.price;
@@ -385,7 +415,14 @@ function updateItemProduct(id, productId) {
 function updateItemSize(id, size) {
     const item = currentDealItems.find(i => i.id === id);
     if (item) item.size = size;
-    updateTotal(); // Recalculate total if size changes (relevant for mesh)
+}
+
+function updateItemLength(id, len) {
+    const item = currentDealItems.find(i => i.id === id);
+    if (item) {
+        item.length = parseFloat(len) || 0;
+        updateTotal();
+    }
 }
 
 function updateItemFin(id, isFin) {
@@ -399,13 +436,13 @@ function updateItemRoll(id, isRoll) {
         item.is_roll = isRoll;
         if (isRoll) {
             const qty = parseFloat(item.quantity) || 1;
-            item.size = '30';
+            item.length = 30;
             const sizeInp = document.getElementById(`size-input-${id}`);
             if (sizeInp) sizeInp.value = (30 * qty).toFixed(2);
         } else {
-            item.size = ''; 
+            item.length = 1; 
             const sizeInp = document.getElementById(`size-input-${id}`);
-            if (sizeInp) sizeInp.value = '';
+            if (sizeInp) sizeInp.value = '1';
         }
         updateTotal();
     }
@@ -457,7 +494,7 @@ function updateTotal() {
             if (i.is_roll) {
                 multiplier = 30;
             } else {
-                multiplier = parseFloat(i.size) || 1;
+                multiplier = parseFloat(i.length) || 1;
             }
         }
         
@@ -510,6 +547,7 @@ async function saveAccDeal() {
             quantity: i.quantity,
             unit_price: i.price,
             size: i.size || null,
+            length: i.length || 1,
             color: i.color || null,
             is_fin_brush: !!i.is_fin_brush,
             is_roll: !!i.is_roll

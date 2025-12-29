@@ -851,6 +851,20 @@ function createItemRow(item, index) {
     });
     priceCell.appendChild(priceInput);
     
+    const isBrushProduct = product && (
+        (product.category && product.category.includes('מברשות')) || 
+        (product.product_name && product.product_name.includes('מברשת'))
+    );
+    
+    if (isBrushProduct) {
+        const perMeterNote = document.createElement('div');
+        perMeterNote.textContent = '(מחיר למטר)';
+        perMeterNote.style.fontSize = '0.75rem';
+        perMeterNote.style.color = 'var(--text-tertiary)';
+        perMeterNote.style.marginTop = '4px';
+        priceCell.appendChild(perMeterNote);
+    }
+    
     // Color
     const colorCell = document.createElement('td');
     if (item.requires_color) {
@@ -4562,7 +4576,7 @@ async function viewDealDetails(dealId) {
                                         <small style="color: var(--text-tertiary);">${item.products.category || ''}</small>
                                     </td>
                                     <td>${item.quantity}</td>
-                                    <td>₪${item.unit_price.toFixed(2)}</td>
+                                    <td>₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(למטר)</small>' : ''}</td>
                                     <td>${item.color || '-'}</td>
                                     <td>
                                         ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : (item.size || '-')}
@@ -7282,7 +7296,7 @@ async function generateQuotePDF(specificDealId = null) {
                                 <td style="padding: 1rem;">${index + 1}</td>
                                 <td style="padding: 1rem;"><strong>${item.products.product_name}</strong></td>
                                 <td style="padding: 1rem;">${item.quantity}</td>
-                                <td style="padding: 1rem;">₪${item.unit_price.toFixed(2)}</td>
+                                <td style="padding: 1rem;">₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(למטר)</small>' : ''}</td>
                                 <td style="padding: 1rem;">${item.color || '-'}</td>
                                 <td style="padding: 1rem;">
                                     ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : (item.size || '-')}
