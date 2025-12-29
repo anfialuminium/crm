@@ -1011,6 +1011,15 @@
                                     <input type="url" id="settings-notifications-script-url" class="form-input" placeholder="https://script.google.com/macros/s/..." onchange="saveNotificationSettings()">
                                     <small style="color: var(--text-tertiary); margin-top: 4px; display: block;">הדבק כאן את כתובת ה-Web App שפרסת מהקוד ב-apps_script_code.js</small>
                                 </div>
+
+                                <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); display: flex; gap: 10px;">
+                                    <button class="btn btn-primary" onclick="testEmailNotification()" style="flex: 1;">
+                                        🔔 בדיקת משלוח מייל
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="saveNotificationSettings()" style="flex: 1;">
+                                        💾 שמירת הגדרות
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <!-- Lead Sources Card -->

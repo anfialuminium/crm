@@ -1971,6 +1971,11 @@ async function loadCustomerNotesHistory(customerId, containerId = 'customer-note
 function deleteCustomer(customerId) {
     showConfirmModal('מחיקת לקוח', 'האם אתה בטוח שברצונך למחוק לקוח זה? פעולה זו תמחק גם את כל העסקאות הקשורות אליו.', async () => {
         try {
+            // Fetch info before delete
+            const deletedCustomer = customers.find(c => c.customer_id === customerId) || {};
+            const customerName = deletedCustomer.business_name || 'לא ידוע';
+            const logDescription = `מחיקת לקוח: ${customerName}. טלפון: ${deletedCustomer.phone || '-'}. עיר: ${deletedCustomer.city || '-'}`;
+
             const { error } = await supabaseClient
                 .from('customers')
                 .delete()
@@ -1979,8 +1984,7 @@ function deleteCustomer(customerId) {
             if (error) throw error;
             
             // Log the action
-            const deletedCustomer = customers.find(c => c.customer_id === customerId);
-            logAction('delete', 'customer', customerId, deletedCustomer?.business_name || 'לקוח', 'מחיקת לקוח', deletedCustomer, null);
+            logAction('delete', 'customer', customerId, customerName, logDescription, deletedCustomer, null);
             
             showAlert('✅ הלקוח נמחק בהצלחה', 'success');
             
@@ -3598,6 +3602,17 @@ async function saveContactNoteEdit(contactId, index) {
 function deleteContact(contactId) {
     showConfirmModal('מחיקת איש קשר', 'האם אתה בטוח שברצונך למחוק איש קשר זה?', async () => {
         try {
+            // Fetch info before delete
+            const { data: deletedContact } = await supabaseClient
+                .from('contacts')
+                .select('*, customers(business_name)')
+                .eq('contact_id', contactId)
+                .single();
+            
+            const contactName = deletedContact?.contact_name || 'לא ידוע';
+            const customerName = deletedContact?.customers?.business_name || 'ללא שיוך';
+            const logDescription = `מחיקת איש קשר: ${contactName}. תפקיד: ${deletedContact?.role || '-'}. שייך ללקוח: ${customerName}`;
+
             const { error } = await supabaseClient
                 .from('contacts')
                 .delete()
@@ -3605,8 +3620,7 @@ function deleteContact(contactId) {
             
             if (error) throw error;
             
-            logAction('delete', 'contact', contactId, 'איש קשר', 'מחיקת איש קשר');
-            
+            logAction('delete', 'contact', contactId, contactName, logDescription);
             showAlert('✅ איש הקשר נמחק בהצלחה', 'success');
             displayContacts();
             
@@ -3977,6 +3991,11 @@ async function saveProduct(event) {
 function deleteProduct(productId) {
     showConfirmModal('מחיקת מוצר', 'האם אתה בטוח שברצונך למחוק מוצר זה? פעולה זו אינה ניתנת לביטול.', async () => {
         try {
+            // Fetch info before delete
+            const deletedProduct = products.find(p => p.product_id === productId) || {};
+            const productName = deletedProduct.product_name || 'מוצר';
+            const logDescription = `מחיקת מוצר: ${productName}. קטגוריה: ${deletedProduct.category || '-'}. מחיר: ₪${deletedProduct.price || 0}`;
+
             const { error } = await supabaseClient
                 .from('products')
                 .delete()
@@ -3985,8 +4004,7 @@ function deleteProduct(productId) {
             if (error) throw error;
             
             // Log the action
-            const deletedProduct = products.find(p => p.product_id === productId);
-            logAction('delete', 'product', productId, deletedProduct?.product_name || 'מוצר', 'מחיקת מוצר', deletedProduct, null);
+            logAction('delete', 'product', productId, productName, logDescription, deletedProduct, null);
             
             showAlert('✅ המוצר נמחק בהצלחה', 'success');
             
@@ -5568,6 +5586,18 @@ async function updateDealPaymentTerms(dealId, paymentTerms) {
 function deleteDeal(dealId) {
     showConfirmModal('מחיקת עסקה', 'האם אתה בטוח שברצונך למחוק עסקה זו? פעולה זו אינה ניתנת לביטול.', async () => {
         try {
+            // Fetch deal info before deleting for logging
+            const { data: deal } = await supabaseClient
+                .from('deals')
+                .select('*, customers(business_name)')
+                .eq('deal_id', dealId)
+                .single();
+
+            const customerName = deal?.customers?.business_name || 'לא ידוע';
+            const dealAmount = deal?.total_amount ? `₪${deal.total_amount.toLocaleString()}` : '';
+            const dealNotes = deal?.notes || 'ללא הערות';
+            const logDescription = `מחיקת עסקה של ${customerName} בסך ${dealAmount}. הערות: ${dealNotes}`;
+
             // Delete deal items first (cascade should handle this, but being explicit)
             const { error: itemsError } = await supabaseClient
                 .from('deal_items')
@@ -5584,7 +5614,7 @@ function deleteDeal(dealId) {
             
             if (dealError) throw dealError;
             
-            logAction('delete', 'deal', dealId, 'עסקה', 'מחיקת עסקה');
+            logAction('delete', 'deal', dealId, `עסקה - ${customerName}`, logDescription);
             
             showAlert('✅ העסקה נמחקה בהצלחה', 'success');
             
@@ -7327,8 +7357,21 @@ async function logAction(actionType, entityType, entityId, entityName, descripti
         const scriptUrl = localStorage.getItem('crm_notification_script_url');
         const myName = localStorage.getItem('crm_notification_myname') || '';
 
+        console.log('--- Email Check ---');
+        console.log('Enabled:', notifyEnabled);
+        console.log('Recipient:', notifyEmail);
+        console.log('PerformedBy:', performedBy);
+        console.log('MyName (exclude):', myName);
+
         if (notifyEnabled && notifyEmail && scriptUrl && performedBy !== myName) {
+            console.log('Triggering email send...');
             sendNotificationEmail(record, notifyEmail, scriptUrl);
+        } else {
+            console.log('Email skipped. Reason:', 
+                !notifyEnabled ? 'Notifications disabled' :
+                !notifyEmail ? 'Missing email' :
+                !scriptUrl ? 'Missing script URL' :
+                performedBy === myName ? 'Action by self (excluded)' : 'Generic skip');
         }
             
     } catch (error) {
@@ -7404,6 +7447,32 @@ async function sendNotificationEmail(action, email, url) {
     } catch (err) {
         console.error('Error sending notification email:', err);
     }
+}
+
+async function testEmailNotification() {
+    const email = document.getElementById('settings-notifications-email').value;
+    const url = document.getElementById('settings-notifications-script-url').value;
+    
+    if (!email || !url) {
+        showAlert('יש להזין מייל וכתובת סקריפט', 'error');
+        return;
+    }
+
+    showAlert('שולח מייל בדיקה...', 'info');
+    
+    const fakeAction = {
+        performed_by: 'בדיקה',
+        action_type: 'ייצוּא',
+        entity_type: 'מערכת',
+        entity_name: 'מייל בדיקה',
+        description: 'זהו מייל בדיקה לווידוא תקינות ההגדרות.'
+    };
+
+    await sendNotificationEmail(fakeAction, email, url);
+    
+    setTimeout(() => {
+        showAlert('פעולת הבדיקה נשלחה. בדוק את המייל שלך (כולל ספאם)', 'success');
+    }, 1500);
 }
 
 function saveNotificationSettings() {
