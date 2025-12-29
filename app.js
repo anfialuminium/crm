@@ -8155,7 +8155,7 @@ async function loadAuditLog() {
                             <div class="audit-changes-list">
                                 ${log.new_value.itemChanges.map(change => `
                                     <div class="audit-change-line">
-                                        <span>🔹</span> ${formatAuditText(change)}
+                                        ${formatAuditText(change)}
                                     </div>
                                 `).join('')}
                             </div>
@@ -8191,7 +8191,15 @@ async function loadAuditLog() {
                         'sku': 'מק"ט',
                         'description': 'תיאור',
                         'requires_color': 'דורש צבע',
-                        'requires_size': 'דורש מידה'
+                        'requires_size': 'דורש מידה',
+                        'edited_at': 'תאריך עדכון',
+                        'edited_by': 'עודכן ע"י',
+                        'activity_date': 'תאריך פעילות',
+                        'customer_name': 'שם לקוח',
+                        'activity_type': 'סוג פעילות',
+                        'completed': 'בוצע',
+                        'primary_contact_id': 'איש קשר ראשי',
+                        'deal_status': 'סטטוס עסקה'
                     };
 
                     const formatVal = (v) => {
@@ -8232,7 +8240,7 @@ async function loadAuditLog() {
                     };
 
                     for (const key in log.new_value) {
-                        if (['itemChanges', 'items', 'updated_at', 'created_at', 'created_by', 'active', 'customer_id', 'product_id', 'order_id'].includes(key)) continue;
+                        if (['itemChanges', 'items', 'updated_at', 'created_at', 'created_by', 'edited_at', 'edited_by', 'performed_by', 'active', 'customer_id', 'product_id', 'order_id', 'activity_id'].includes(key)) continue;
                         
                         let oldVal = log.old_value[key];
                         let newVal = log.new_value[key];
@@ -8259,7 +8267,11 @@ async function loadAuditLog() {
 
                         if (String(oldVal) !== String(newVal)) {
                             const label = fieldLabels[key] || key;
-                            changes.push(`${label}: ${formatVal(oldVal)} ← ${formatVal(newVal)}`);
+                            changes.push({
+                                label: label,
+                                old: formatVal(oldVal),
+                                new: formatVal(newVal)
+                            });
                         }
                     }
 
@@ -8270,9 +8282,14 @@ async function loadAuditLog() {
                                     <span>📋</span> פירוט שינויים
                                 </div>
                                 <div class="audit-changes-list">
-                                    ${changes.map(change => `
+                                    ${changes.map(c => `
                                         <div class="audit-change-line">
-                                            <span>🔹</span> ${formatAuditText(change)}
+                                            <div class="audit-change-label" style="min-width: 120px;">${c.label}</div>
+                                            <div class="audit-change-values" style="display: flex; align-items: center; gap: 0.75rem; flex: 1; justify-content: flex-start;">
+                                                <span class="audit-change-old" style="color: var(--text-tertiary);" title="${c.old}">${c.old}</span>
+                                                <span class="audit-change-arrow" style="color: var(--primary-color);">←</span>
+                                                <span class="audit-change-new" style="color: var(--success-color); font-weight: 600;" title="${c.new}">${c.new}</span>
+                                            </div>
                                         </div>
                                     `).join('')}
                                 </div>

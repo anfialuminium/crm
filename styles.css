@@ -2048,13 +2048,52 @@ div.swal2-container {
 .audit-change-line {
     font-size: 0.85rem;
     color: var(--text-secondary);
-    padding: 0.5rem 0.75rem;
+    padding: 0.6rem 0.8rem;
     background: white;
     border-radius: 6px;
     border: 1px solid var(--border-color);
+    border-right: 3px solid var(--primary-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    direction: rtl;
+    gap: 1rem;
+}
+
+.audit-change-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 100px;
+}
+
+.audit-change-values {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.audit-change-old {
+    color: var(--text-tertiary);
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.audit-change-arrow {
+    color: var(--primary-color);
+}
+
+.audit-change-new {
+    color: var(--success-color);
+    font-weight: 600;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 @media (max-width: 768px) {
