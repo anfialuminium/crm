@@ -7,17 +7,42 @@ function doPost(e) {
 }
 
 function handleRequest(e) {
+  var action = e.parameter.action;
+
+  // Notification action - does NOT require a sheet
+  if (action == "sendNotification") {
+    var recipient = e.parameter.email;
+    var subject = e.parameter.subject;
+    var body = e.parameter.body;
+    
+    if (!recipient || !body) {
+      return ContentService.createTextOutput(JSON.stringify({ error: "Missing recipient or body" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    try {
+      MailApp.sendEmail(recipient, subject || "CRM Notification", body);
+      return ContentService.createTextOutput(JSON.stringify({ success: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({ error: err.toString() }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  // Row-based actions (Pricing) - DO require a sheet
   var sheetName = "מחירון"; 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(sheetName);
+  if (!ss) {
+     return ContentService.createTextOutput(JSON.stringify({ error: "No spreadsheet bound to this script" }))
+       .setMimeType(ContentService.MimeType.JSON);
+  }
   
-  // If no sheet found, return error
+  var sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
      return ContentService.createTextOutput(JSON.stringify({ error: "Sheet 'מחירון' not found" }))
        .setMimeType(ContentService.MimeType.JSON);
   }
-
-  var action = e.parameter.action;
 
   if (action == "getProducts" || !action) {
     // Get all data raw
@@ -76,6 +101,26 @@ function handleRequest(e) {
            .setMimeType(ContentService.MimeType.JSON);
     }
   }
+  if (action == "sendNotification") {
+    var recipient = e.parameter.email;
+    var subject = e.parameter.subject;
+    var body = e.parameter.body;
+    
+    if (!recipient || !body) {
+      return ContentService.createTextOutput(JSON.stringify({ error: "Missing recipient or body" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    try {
+      MailApp.sendEmail(recipient, subject || "CRM Notification", body);
+      return ContentService.createTextOutput(JSON.stringify({ success: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({ error: err.toString() }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   // Default fallback if action not matched
   return ContentService.createTextOutput(JSON.stringify({ error: "Action not recognized" }))
          .setMimeType(ContentService.MimeType.JSON);

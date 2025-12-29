@@ -7288,22 +7288,104 @@ async function logAction(actionType, entityType, entityId, entityName, descripti
     try {
         const performedBy = localStorage.getItem('crm_username') || 'משתמש מערכת';
         
+        const record = {
+            action_type: actionType,
+            entity_type: entityType,
+            entity_id: entityId,
+            entity_name: entityName,
+            description: description,
+            old_value: oldValue,
+            new_value: newValue,
+            performed_by: performedBy
+        };
+
         await supabaseClient
             .from('audit_log')
-            .insert({
-                action_type: actionType,
-                entity_type: entityType,
-                entity_id: entityId,
-                entity_name: entityName,
-                description: description,
-                old_value: oldValue,
-                new_value: newValue,
-                performed_by: performedBy
-            });
+            .insert(record);
+            
+        // Handle Email Notification
+        const notifyEmail = localStorage.getItem('crm_notification_email');
+        const notifyEnabled = localStorage.getItem('crm_notification_enabled') === 'true';
+        const scriptUrl = localStorage.getItem('crm_notification_script_url');
+        const myName = localStorage.getItem('crm_notification_myname') || '';
+
+        if (notifyEnabled && notifyEmail && scriptUrl && performedBy !== myName) {
+            sendNotificationEmail(record, notifyEmail, scriptUrl);
+        }
             
     } catch (error) {
         console.error('❌ Error logging action:', error);
-        // Don't throw - logging should not break the main operation
+    }
+}
+
+async function sendNotificationEmail(action, email, url) {
+    try {
+        const body = `
+המערכת עודכנה בפעולה חדשה על ידי ${action.performed_by}:
+
+• סוג פעולה: ${action.action_type}
+• ישות: ${action.entity_type} (${action.entity_name})
+• תיאור: ${action.description}
+${action.new_value ? `• ערך חדש: ${action.new_value}` : ''}
+${action.old_value ? `• ערך קודם: ${action.old_value}` : ''}
+
+התראה זו נשלחה באופן אוטומטי ממערכת ה-CRM.
+        `;
+
+        const params = new URLSearchParams({
+            action: 'sendNotification',
+            email: email,
+            subject: `CRM: ${action.action_type} - ${action.entity_name} על ידי ${action.performed_by}`,
+            body: body.trim()
+        });
+
+        fetch(`${url}?${params.toString()}`, {
+            method: 'POST',
+            mode: 'no-cors' // Use no-cors to avoid preflight issues with Apps Script
+        });
+    } catch (err) {
+        console.error('Error sending notification email:', err);
+    }
+}
+
+function saveNotificationSettings() {
+    const enabled = document.getElementById('settings-notifications-enabled').checked;
+    const email = document.getElementById('settings-notifications-email').value;
+    const myName = document.getElementById('settings-notifications-myname').value;
+    const scriptUrl = document.getElementById('settings-notifications-script-url').value;
+
+    localStorage.setItem('crm_notification_enabled', enabled);
+    localStorage.setItem('crm_notification_email', email);
+    localStorage.setItem('crm_notification_myname', myName);
+    localStorage.setItem('crm_notification_script_url', scriptUrl);
+
+    showAlert('הגדרות התקבלו בהצלחה', 'success');
+}
+
+function loadNotificationSettings() {
+    const enabled = localStorage.getItem('crm_notification_enabled') === 'true' || true;
+    const email = localStorage.getItem('crm_notification_email') || 'anfialuminium@gmail.com';
+    const myName = localStorage.getItem('crm_notification_myname') || 'שחר';
+    const scriptUrl = localStorage.getItem('crm_notification_script_url') || 'https://script.google.com/macros/s/AKfycbwDBFwbyiVhdrduxKG4BaTAQQHS3cCyR5lo1TUtbax9cGY-kLKvb9vrXTCNtpsA66AKEg/exec';
+
+    const elEnabled = document.getElementById('settings-notifications-enabled');
+    const elEmail = document.getElementById('settings-notifications-email');
+    const elMyName = document.getElementById('settings-notifications-myname');
+    const elScriptUrl = document.getElementById('settings-notifications-script-url');
+
+    if (elEnabled) {
+        elEnabled.checked = localStorage.getItem('crm_notification_enabled') === null ? true : (localStorage.getItem('crm_notification_enabled') === 'true');
+    }
+    if (elEmail) elEmail.value = email;
+    if (elMyName) elMyName.value = myName;
+    if (elScriptUrl) elScriptUrl.value = scriptUrl;
+    
+    // Save defaults to storage if not exists
+    if (localStorage.getItem('crm_notification_script_url') === null) {
+        localStorage.setItem('crm_notification_enabled', 'true');
+        localStorage.setItem('crm_notification_email', 'anfialuminium@gmail.com');
+        localStorage.setItem('crm_notification_myname', 'שחר');
+        localStorage.setItem('crm_notification_script_url', 'https://script.google.com/macros/s/AKfycbwDBFwbyiVhdrduxKG4BaTAQQHS3cCyR5lo1TUtbax9cGY-kLKvb9vrXTCNtpsA66AKEg/exec');
     }
 }
 
@@ -11934,6 +12016,7 @@ async function loadSystemSettings() {
         
         renderAllSystemSettings();
         populateAllDynamicDropdowns();
+        loadNotificationSettings(); // Add this
     } catch (e) {
         console.error('Error loading settings:', e);
     }
