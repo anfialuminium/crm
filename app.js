@@ -3201,6 +3201,15 @@ async function saveContact(event) {
             showAlert('✅ איש הקשר נוסף בהצלחה', 'success');
         }
         
+        // Log action
+        logAction(
+            contactId ? 'update' : 'create',
+            'contact',
+            contactId || 'new',
+            contactData.contact_name,
+            contactId ? 'עדכון איש קשר' : 'הוספת איש קשר חדש'
+        );
+        
         closeContactModal();
         displayContacts();
         
@@ -3595,6 +3604,8 @@ function deleteContact(contactId) {
                 .eq('contact_id', contactId);
             
             if (error) throw error;
+            
+            logAction('delete', 'contact', contactId, 'איש קשר', 'מחיקת איש קשר');
             
             showAlert('✅ איש הקשר נמחק בהצלחה', 'success');
             displayContacts();
@@ -5178,6 +5189,9 @@ async function saveActivityEdit(event) {
             showAlert('✅ הפעילות עודכנה בהצלחה', 'success');
         }
 
+        // Log the action
+        logAction('update', 'activity', activityId, activityType, `עדכון פעילות: ${description}`);
+
         closeEditActivityModal();
 
         // If activity was marked as completed, automatically open new activity modal
@@ -5570,6 +5584,8 @@ function deleteDeal(dealId) {
             
             if (dealError) throw dealError;
             
+            logAction('delete', 'deal', dealId, 'עסקה', 'מחיקת עסקה');
+            
             showAlert('✅ העסקה נמחקה בהצלחה', 'success');
             
             // Reload deals history
@@ -5691,6 +5707,8 @@ function deleteActivity(activityId) {
                 .eq('activity_id', activityId);
             
             if (error) throw error;
+            
+            logAction('delete', 'activity', activityId, 'פעילות', 'מחיקת פעילות');
             
             showAlert('✅ הפעילות נמחקה בהצלחה', 'success');
             
@@ -7320,28 +7338,68 @@ async function logAction(actionType, entityType, entityId, entityName, descripti
 
 async function sendNotificationEmail(action, email, url) {
     try {
-        const body = `
-המערכת עודכנה בפעולה חדשה על ידי ${action.performed_by}:
+        // Translation Maps
+        const actionTranslations = {
+            'create': 'יצירת',
+            'update': 'עדכון',
+            'delete': 'מחיקת',
+            'login': 'התחברות',
+            'export': 'ייצוּא'
+        };
 
-• סוג פעולה: ${action.action_type}
-• ישות: ${action.entity_type} (${action.entity_name})
-• תיאור: ${action.description}
-${action.new_value ? `• ערך חדש: ${action.new_value}` : ''}
-${action.old_value ? `• ערך קודם: ${action.old_value}` : ''}
+        const entityTranslations = {
+            'deal': 'עסקה',
+            'customer': 'לקוח',
+            'product': 'מוצר',
+            'activity': 'פעילות',
+            'supplier': 'ספק',
+            'supplier_order': 'הזמנת רכש',
+            'contact': 'איש קשר',
+            'color': 'צבע'
+        };
 
-התראה זו נשלחה באופן אוטומטי ממערכת ה-CRM.
+        const actionHeb = actionTranslations[action.action_type] || action.action_type;
+        const entityHeb = entityTranslations[action.entity_type] || action.entity_type;
+        const subject = `מערכת ה-CRM: ${actionHeb} ${entityHeb} - ${action.entity_name}`;
+
+        const htmlBody = `
+            <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                <div style="background-color: #2563eb; color: white; padding: 20px; text-align: center;">
+                    <h2 style="margin: 0; font-size: 24px;">עדכון ממערכת ה-CRM</h2>
+                </div>
+                <div style="padding: 30px; background-color: #ffffff;">
+                    <p style="font-size: 18px; margin-bottom: 20px;">שלום,</p>
+                    <p style="font-size: 16px;">המערכת עודכנה בפעולה חדשה על ידי <strong>${action.performed_by}</strong>:</p>
+                    
+                    <div style="background-color: #f8fafc; border-right: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                        <p style="margin: 5px 0;"><strong>סוג פעולה:</strong> ${actionHeb}</p>
+                        <p style="margin: 5px 0;"><strong>ישות:</strong> ${entityHeb} (${action.entity_name})</p>
+                        <p style="margin: 5px 0;"><strong>תיאור:</strong> ${action.description}</p>
+                        ${action.new_value ? `<p style="margin: 5px 0;"><strong>ערך חדש:</strong> ${action.new_value}</p>` : ''}
+                        ${action.old_value ? `<p style="margin: 5px 0;"><strong>ערך קודם:</strong> ${action.old_value}</p>` : ''}
+                    </div>
+                </div>
+                <div style="background-color: #f1f5f9; color: #64748b; padding: 15px; text-align: center; font-size: 12px;">
+                    התראה זו נשלחה באופן אוטומטי ממערכת ה-CRM.
+                </div>
+            </div>
         `;
 
         const params = new URLSearchParams({
             action: 'sendNotification',
             email: email,
-            subject: `CRM: ${action.action_type} - ${action.entity_name} על ידי ${action.performed_by}`,
-            body: body.trim()
+            subject: subject,
+            htmlBody: htmlBody.trim()
         });
 
-        fetch(`${url}?${params.toString()}`, {
+        // Use standard POST with form-encoded data for Apps Script
+        fetch(url, {
             method: 'POST',
-            mode: 'no-cors' // Use no-cors to avoid preflight issues with Apps Script
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: params.toString()
         });
     } catch (err) {
         console.error('Error sending notification email:', err);
@@ -7366,7 +7424,7 @@ function loadNotificationSettings() {
     const enabled = localStorage.getItem('crm_notification_enabled') === 'true' || true;
     const email = localStorage.getItem('crm_notification_email') || 'anfialuminium@gmail.com';
     const myName = localStorage.getItem('crm_notification_myname') || 'שחר';
-    const scriptUrl = localStorage.getItem('crm_notification_script_url') || 'https://script.google.com/macros/s/AKfycbwDBFwbyiVhdrduxKG4BaTAQQHS3cCyR5lo1TUtbax9cGY-kLKvb9vrXTCNtpsA66AKEg/exec';
+    const scriptUrl = localStorage.getItem('crm_notification_script_url') || 'https://script.google.com/macros/s/AKfycbzo9F7bOJMStSd5lSN6ZLjhXdIuzLmiPO5jy7JxbhbA_9FAhKgBHchER7tVZW6EPkpDoQ/exec';
 
     const elEnabled = document.getElementById('settings-notifications-enabled');
     const elEmail = document.getElementById('settings-notifications-email');
@@ -7385,7 +7443,7 @@ function loadNotificationSettings() {
         localStorage.setItem('crm_notification_enabled', 'true');
         localStorage.setItem('crm_notification_email', 'anfialuminium@gmail.com');
         localStorage.setItem('crm_notification_myname', 'שחר');
-        localStorage.setItem('crm_notification_script_url', 'https://script.google.com/macros/s/AKfycbwDBFwbyiVhdrduxKG4BaTAQQHS3cCyR5lo1TUtbax9cGY-kLKvb9vrXTCNtpsA66AKEg/exec');
+        localStorage.setItem('crm_notification_script_url', 'https://script.google.com/macros/s/AKfycbzo9F7bOJMStSd5lSN6ZLjhXdIuzLmiPO5jy7JxbhbA_9FAhKgBHchER7tVZW6EPkpDoQ/exec');
     }
 }
 
@@ -9869,6 +9927,15 @@ async function saveSupplier(event) {
         await loadSuppliers(); 
         filterSuppliers(); // Refresh list UI
         
+        // Log action
+        logAction(
+            supplierId ? 'update' : 'create',
+            'supplier',
+            supplierId || result.data?.[0]?.supplier_id || 'new',
+            name,
+            supplierId ? 'עדכון פרטי ספק' : 'הוספת ספק חדש'
+        );
+        
     } catch (e) {
         console.error(e);
         showAlert('שגיאה בשמירת הספק: ' + e.message, 'error');
@@ -12121,6 +12188,8 @@ async function saveSystemSettings(key) {
             }, { onConflict: 'setting_key' });
         
         if (error) throw error;
+        
+        logAction('update', 'setting', key, key, `עדכון הגדרות מערכת: ${key}`);
         
         renderAllSystemSettings();
         populateAllDynamicDropdowns();

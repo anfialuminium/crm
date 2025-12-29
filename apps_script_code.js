@@ -14,14 +14,18 @@ function handleRequest(e) {
     var recipient = e.parameter.email;
     var subject = e.parameter.subject;
     var body = e.parameter.body;
+    var htmlBody = e.parameter.htmlBody;
     
-    if (!recipient || !body) {
+    if (!recipient || (!body && !htmlBody)) {
       return ContentService.createTextOutput(JSON.stringify({ error: "Missing recipient or body" }))
         .setMimeType(ContentService.MimeType.JSON);
     }
     
     try {
-      MailApp.sendEmail(recipient, subject || "CRM Notification", body);
+      var options = {};
+      if (htmlBody) options.htmlBody = htmlBody;
+      
+      MailApp.sendEmail(recipient, subject || "CRM Notification", body || "", options);
       return ContentService.createTextOutput(JSON.stringify({ success: true }))
         .setMimeType(ContentService.MimeType.JSON);
     } catch (err) {
