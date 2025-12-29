@@ -637,7 +637,8 @@ function addDealItem() {
         size: '',
         requires_color: false,
         requires_size: false,
-        is_fin_brush: false
+        is_fin_brush: false,
+        is_roll: false
     };
     
     dealItems.push(item);
@@ -775,6 +776,40 @@ function createItemRow(item, index) {
         productCell.appendChild(finDiv);
     }
     
+    // Mesh Roll Option
+    const isMeshRow = isMeshProduct(product);
+    if (isMeshRow) {
+        const rollDiv = document.createElement('div');
+        rollDiv.style.marginTop = '0.5rem';
+        rollDiv.style.display = 'flex';
+        rollDiv.style.alignItems = 'center';
+        rollDiv.style.gap = '0.5rem';
+        rollDiv.style.fontSize = '0.85rem';
+        
+        const rollCheckbox = document.createElement('input');
+        rollCheckbox.type = 'checkbox';
+        rollCheckbox.id = `roll-mesh-${item.id}`;
+        rollCheckbox.checked = !!item.is_roll;
+        rollCheckbox.addEventListener('change', (e) => {
+            item.is_roll = e.target.checked;
+            if (item.is_roll) {
+                item.size = '30';
+            }
+            renderDealItems();
+        });
+        
+        const rollLabel = document.createElement('label');
+        rollLabel.htmlFor = `roll-mesh-${item.id}`;
+        rollLabel.textContent = 'גליל (30 מטר)';
+        rollLabel.style.fontWeight = '600';
+        rollLabel.style.color = 'var(--primary-color)';
+        rollLabel.style.cursor = 'pointer';
+        
+        rollDiv.appendChild(rollCheckbox);
+        rollDiv.appendChild(rollLabel);
+        productCell.appendChild(rollDiv);
+    }
+    
     // Quantity
     const quantityCell = document.createElement('td');
     const quantityInput = document.createElement('input');
@@ -786,6 +821,17 @@ function createItemRow(item, index) {
     quantityInput.style.width = '100px';
     quantityInput.addEventListener('input', (e) => {
         item.quantity = parseFloat(e.target.value) || 0;
+        
+        // Update size display if it's a mesh roll
+        if (isMeshRow && item.is_roll) {
+            const sizeDisplay = quantityInput.closest('tr').cells[4]; // Size cell is index 4
+            if (sizeDisplay) {
+                sizeDisplay.textContent = `${(30 * item.quantity).toFixed(2)} מ' (גליל)`;
+                sizeDisplay.style.fontWeight = '600';
+                sizeDisplay.style.color = 'var(--primary-color)';
+            }
+        }
+        
         calculateTotal();
     });
     quantityCell.appendChild(quantityInput);
@@ -897,35 +943,27 @@ function createItemRow(item, index) {
                  renderDealItems(); // Re-render to update total
              });
              sizeCell.appendChild(sizeSelect);
+        } else if (isMesh && item.is_roll) {
+            sizeCell.textContent = `${(30 * item.quantity).toFixed(2)} מ' (גליל)`;
+            sizeCell.style.fontWeight = '600';
+            sizeCell.style.color = 'var(--primary-color)';
         } else if (isMesh) {
-             const sizeSelect = document.createElement('select');
-             sizeSelect.className = 'form-select';
-             sizeSelect.style.width = '100px';
-             
-             // Sizes for meshes
-             const sizes = ['0.50', '0.60', '0.70', '0.80', '0.90', '1.00', '1.10', '1.20', '1.50', '1.80', '2.00', '2.50'];
-             
-             // Add default empty option if no size selected yet
-             if (!item.size) {
-                 const defaultOption = document.createElement('option');
-                 defaultOption.value = '';
-                 defaultOption.textContent = 'בחר';
-                 sizeSelect.appendChild(defaultOption);
-             }
-
-             sizes.forEach(size => {
-                 const option = document.createElement('option');
-                 option.value = size;
-                 option.textContent = size;
-                 if (item.size === size) option.selected = true;
-                 sizeSelect.appendChild(option);
-             });
-
-             sizeSelect.addEventListener('change', (e) => {
+             const sizeInput = document.createElement('input');
+             sizeInput.type = 'number';
+             sizeInput.className = 'form-input';
+             sizeInput.value = item.size;
+             sizeInput.placeholder = 'אורך';
+             sizeInput.min = '0.01';
+             sizeInput.step = '0.01';
+             sizeInput.style.width = '100px';
+             sizeInput.addEventListener('input', (e) => {
                  item.size = e.target.value;
-                 renderDealItems(); // Re-render to update total
+                 calculateTotal();
              });
-             sizeCell.appendChild(sizeSelect);
+             sizeInput.addEventListener('change', () => {
+                 renderDealItems(); // Re-render to update total if size affects quantity multiplier
+             });
+             sizeCell.appendChild(sizeInput);
         } else {
             const sizeInput = document.createElement('input');
             sizeInput.type = 'text';
@@ -962,9 +1000,13 @@ function createItemRow(item, index) {
     let quantityMultiplier = 1;
     
     if (product && isMeshProduct(product)) {
-        const sizeVal = parseFloat(item.size);
-        if (!isNaN(sizeVal) && sizeVal > 0) {
-            quantityMultiplier = sizeVal;
+        if (item.is_roll) {
+            quantityMultiplier = 30;
+        } else {
+            const sizeVal = parseFloat(item.size);
+            if (!isNaN(sizeVal) && sizeVal > 0) {
+                quantityMultiplier = sizeVal;
+            }
         }
     }
     
@@ -1030,8 +1072,21 @@ function isMeshProduct(product) {
 
 function calculateTotal() {
     const subtotal = dealItems.reduce((sum, item) => {
-        // Price = quantity × unit_price (size is for documentation only)
-        return sum + (item.quantity * item.unit_price);
+        const product = products.find(p => p.product_id === item.product_id);
+        let quantityMultiplier = 1;
+        
+        if (product && isMeshProduct(product)) {
+            if (item.is_roll) {
+                quantityMultiplier = 30;
+            } else {
+                const sizeVal = parseFloat(item.size);
+                if (!isNaN(sizeVal) && sizeVal > 0) {
+                    quantityMultiplier = sizeVal;
+                }
+            }
+        }
+        
+        return sum + (item.quantity * quantityMultiplier * item.unit_price);
     }, 0);
     
     const discountPercentage = parseFloat(document.getElementById('discount-percentage').value) || 0;
@@ -1150,7 +1205,8 @@ async function saveDeal(status = null) {
                 unit_price: item.unit_price,
                 color: item.color || null,
                 size: item.size || null,
-                is_fin_brush: !!item.is_fin_brush
+                is_fin_brush: !!item.is_fin_brush,
+                is_roll: !!item.is_roll
             }));
             
             const { error: itemsError } = await supabaseClient
@@ -1310,7 +1366,8 @@ async function saveDeal(status = null) {
                 unit_price: item.unit_price,
                 color: item.color || null,
                 size: item.size || null,
-                is_fin_brush: !!item.is_fin_brush
+                is_fin_brush: !!item.is_fin_brush,
+                is_roll: !!item.is_roll
             }));
             
             const { error: itemsError } = await supabaseClient
@@ -4054,29 +4111,30 @@ async function saveProduct(event) {
 }
 
 function deleteProduct(productId) {
-    showConfirmModal('מחיקת מוצר', 'האם אתה בטוח שברצונך למחוק מוצר זה? פעולה זו אינה ניתנת לביטול.', async () => {
+    showConfirmModal('מחיקת מוצר', 'האם אתה בטוח שברצונך למחוק מוצר זה? אם המוצר נמצא בשימוש בעסקאות קיימות, הוא יועבר לארכיון ולא יופיע יותר לבחירה.', async () => {
         try {
             // Fetch info before delete
             const deletedProduct = products.find(p => p.product_id === productId) || {};
             const productName = deletedProduct.product_name || 'מוצר';
-            const logDescription = `מחיקת מוצר: ${productName}. קטגוריה: ${deletedProduct.category || '-'}. מחיר: ₪${deletedProduct.price || 0}`;
+            const logDescription = `מחיקת מוצר (ארכוב): ${productName}. קטגוריה: ${deletedProduct.category || '-'}. מחיר: ₪${deletedProduct.price || 0}`;
 
+            // We use soft delete because products are often linked to deal_items
             const { error } = await supabaseClient
                 .from('products')
-                .delete()
+                .update({ active: false })
                 .eq('product_id', productId);
             
             if (error) throw error;
             
             // Log the action
-            logAction('delete', 'product', productId, productName, logDescription, deletedProduct, null);
+            logAction('delete', 'product', productId, productName, logDescription, deletedProduct, { active: false });
             
-            showAlert('✅ המוצר נמחק בהצלחה', 'success');
+            showAlert('✅ המוצר הוסר מהרשימה בהצלחה', 'success');
             await refreshAllUI();
             
         } catch (error) {
             console.error('❌ Error deleting product:', error);
-            showAlert('שגיאה במחיקת המוצר: ' + error.message, 'error');
+            showAlert('שגיאה בתהליך המחיקה: ' + (error.message || 'לא ניתן למחוק מוצר זה כרגע'), 'error');
         }
     });
 }
@@ -4507,8 +4565,9 @@ async function viewDealDetails(dealId) {
                                     <td>₪${item.unit_price.toFixed(2)}</td>
                                     <td>${item.color || '-'}</td>
                                     <td>
-                                        ${item.size || '-'}
+                                        ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : (item.size || '-')}
                                         ${item.is_fin_brush ? '<br><span class="badge badge-success" style="font-size: 0.75rem; margin-top: 0.25rem;">מברשת סנפיר</span>' : ''}
+                                        ${item.is_roll ? '<br><span class="badge badge-primary" style="font-size: 0.75rem; margin-top: 0.25rem;">גליל רשת</span>' : ''}
                                     </td>
                                     <td><strong>₪${item.total_price.toFixed(2)}</strong></td>
                                 </tr>
@@ -5785,6 +5844,7 @@ async function editDeal(dealId) {
                 color: item.color || '',
                 size: item.size || '',
                 is_fin_brush: !!item.is_fin_brush,
+                is_roll: !!item.is_roll,
                 requires_color: item.products.requires_color,
                 requires_size: item.products.requires_size
             };
@@ -7225,8 +7285,9 @@ async function generateQuotePDF(specificDealId = null) {
                                 <td style="padding: 1rem;">₪${item.unit_price.toFixed(2)}</td>
                                 <td style="padding: 1rem;">${item.color || '-'}</td>
                                 <td style="padding: 1rem;">
-                                    ${item.size || '-'}
+                                    ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : (item.size || '-')}
                                     ${item.is_fin_brush ? '<br><span style="color: #059669; font-size: 0.8rem; font-weight: 600;">מברשת סנפיר</span>' : ''}
+                                    ${item.is_roll ? '<br><span style="color: #2563eb; font-size: 0.8rem; font-weight: 600;">גליל רשת (30 מ\')</span>' : ''}
                                 </td>
                                 <td style="padding: 1rem;">₪${item.total_price.toFixed(2)}</td>
                             </tr>
@@ -8299,6 +8360,8 @@ async function loadAuditLog() {
                         'customer_name': 'שם לקוח',
                         'activity_type': 'סוג פעילות',
                         'completed': 'בוצע',
+                        'is_fin_brush': 'מברשת סנפיר',
+                        'is_roll': 'גליל רשת (30 מ\')',
                         'primary_contact_id': 'איש קשר ראשי',
                         'deal_status': 'סטטוס עסקה'
                     };

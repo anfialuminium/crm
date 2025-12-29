@@ -172,7 +172,7 @@ function resetNewDealForm() {
 
 function addAccItem() {
     const id = `item-${itemCounter++}`;
-    const item = { id, product_id: '', quantity: '', price: '', is_fin_brush: false };
+    const item = { id, product_id: '', quantity: '', price: '', is_fin_brush: false, is_roll: false };
     currentDealItems.push(item);
 
     const div = document.createElement('div');
@@ -206,6 +206,7 @@ function addAccItem() {
                 </select>
             </div>
             <div id="size-container-${id}" class="hidden size-field" style="margin-bottom: 12px;"></div>
+            <div id="roll-container-${id}" class="hidden roll-field" style="margin: 12px 0; padding: 16px; background: #fdf2f8; border-radius: 12px; border: 2px solid #fbcfe8;"></div>
             <div id="color-container-${id}" class="hidden color-field" style="margin-bottom: 12px;"></div>
             <div id="fin-container-${id}" class="hidden fin-field" style="margin: 16px 0; padding: 16px; background: #eff6ff; border-radius: 12px; border: 2px solid #bfdbfe;"></div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
@@ -248,6 +249,9 @@ function updateItemProduct(id, productId) {
     item.price = product ? (product.price || 0) : 0;
     item.is_fin_brush = false; // Reset fin option on product change
     
+    const isBrush = product && (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות')));
+    const isMesh = product && !isBrush && (product.product_name.includes('רשת') || (product.category && product.category.includes('רשתות')));
+
     // Check if size is required
     const sizeContainer = document.getElementById(`size-container-${id}`);
     if (product && product.requires_size) {
@@ -263,7 +267,12 @@ function updateItemProduct(id, productId) {
                 </select>
             `;
             item.size = ''; // Reset size when changing product
-        } else if (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות'))) {
+        } else if (isMesh) {
+            sizeContainer.innerHTML = `
+                <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">אורך (מטר):</label>
+                <input type="number" step="0.1" class="input-big" id="size-input-${id}" oninput="updateItemSize('${id}', this.value)" placeholder="אורך">
+            `;
+        } else if (isBrush) {
             let brushSizes = ['רגיל', '12', '15', '20'];
             if (product.product_name.includes('הדבקה')) {
                 brushSizes = ['5 מטר', '200 מטר'];
@@ -272,15 +281,6 @@ function updateItemProduct(id, productId) {
                 <select class="input-big" onchange="updateItemSize('${id}', this.value)">
                     <option value="">מידה</option>
                     ${brushSizes.map(s => `<option value="${s}">${s}</option>`).join('')}
-                </select>
-            `;
-            item.size = '';
-        } else if (product.product_name.includes('רשת') || (product.category && product.category.includes('רשת'))) {
-            const screenSizes = ['0.50', '0.60', '0.70', '0.80', '0.90', '1.00', '1.10', '1.20', '1.50', '1.80', '2.00', '2.50'];
-            sizeContainer.innerHTML = `
-                <select class="input-big" onchange="updateItemSize('${id}', this.value)">
-                    <option value="">מידה</option>
-                    ${screenSizes.map(s => `<option value="${s}">${s}</option>`).join('')}
                 </select>
             `;
             item.size = '';
@@ -300,7 +300,6 @@ function updateItemProduct(id, productId) {
     const colorContainer = document.getElementById(`color-container-${id}`);
     const isPullHandle = product && product.product_name.includes('ידית משיכה');
     const isRegularHandle = product && product.product_name.includes('ידית') && !isPullHandle;
-    const isBrush = product && (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות')));
     
     if (isPullHandle) {
         colorContainer.classList.remove('hidden');
@@ -352,6 +351,23 @@ function updateItemProduct(id, productId) {
         item.is_fin_brush = false;
     }
 
+    // Check for mesh roll option
+    const rollContainer = document.getElementById(`roll-container-${id}`);
+    if (isMesh) {
+        rollContainer.classList.remove('hidden');
+        rollContainer.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 1.5rem; width: 100%;">
+                <input type="checkbox" id="roll-${id}" style="width: 32px; height: 32px; cursor: pointer;" onchange="updateItemRoll('${id}', this.checked)">
+                <label for="roll-${id}" style="font-size: 1.2rem; font-weight: 700; cursor: pointer; color: #9d174d; margin-bottom: 0;">גליל (30 מטר)</label>
+            </div>
+        `;
+        item.is_roll = false;
+    } else {
+        rollContainer.classList.add('hidden');
+        rollContainer.innerHTML = '';
+        item.is_roll = false;
+    }
+    
     // If quantity is currently empty or 0, set to 1
     if (!item.quantity) {
         item.quantity = 1;
@@ -369,11 +385,30 @@ function updateItemProduct(id, productId) {
 function updateItemSize(id, size) {
     const item = currentDealItems.find(i => i.id === id);
     if (item) item.size = size;
+    updateTotal(); // Recalculate total if size changes (relevant for mesh)
 }
 
 function updateItemFin(id, isFin) {
     const item = currentDealItems.find(i => i.id === id);
     if (item) item.is_fin_brush = isFin;
+}
+
+function updateItemRoll(id, isRoll) {
+    const item = currentDealItems.find(i => i.id === id);
+    if (item) {
+        item.is_roll = isRoll;
+        if (isRoll) {
+            const qty = parseFloat(item.quantity) || 1;
+            item.size = '30';
+            const sizeInp = document.getElementById(`size-input-${id}`);
+            if (sizeInp) sizeInp.value = (30 * qty).toFixed(2);
+        } else {
+            item.size = ''; 
+            const sizeInp = document.getElementById(`size-input-${id}`);
+            if (sizeInp) sizeInp.value = '';
+        }
+        updateTotal();
+    }
 }
 
 function updateItemColor(id, color) {
@@ -383,8 +418,19 @@ function updateItemColor(id, color) {
 
 function updateItemQty(id, qty) {
     const item = currentDealItems.find(i => i.id === id);
-    if (item) item.quantity = parseFloat(qty) || 0;
-    updateTotal();
+    if (item) {
+        item.quantity = qty;
+        
+        // Update size display if it's a mesh roll
+        if (item.is_roll) {
+            const sizeInp = document.getElementById(`size-input-${id}`);
+            if (sizeInp) {
+                sizeInp.value = (30 * (parseFloat(qty) || 0)).toFixed(2);
+            }
+        }
+        
+        updateTotal();
+    }
 }
 
 function updateItemPrice(id, price) {
@@ -400,8 +446,27 @@ function removeAccItem(id) {
 }
 
 function updateTotal() {
-    const total = currentDealItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-    document.getElementById('acc-total-amount').textContent = `₪${total.toFixed(2)}`;
+    const subtotal = currentDealItems.reduce((sum, i) => {
+        const product = products.find(p => p.product_id === i.product_id);
+        let multiplier = 1;
+
+        const isBrush = product && (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות')));
+        const isMesh = product && !isBrush && (product.product_name.includes('רשת') || (product.category && product.category.includes('רשתות')));
+
+        if (isMesh) {
+            if (i.is_roll) {
+                multiplier = 30;
+            } else {
+                multiplier = parseFloat(i.size) || 1;
+            }
+        }
+        
+        const price = parseFloat(i.price) || 0;
+        const qty = parseFloat(i.quantity) || 0;
+        return sum + (price * qty * multiplier);
+    }, 0);
+    
+    document.getElementById('acc-total-amount').textContent = `₪${subtotal.toFixed(0)}`;
 }
 
 async function saveAccDeal() {
@@ -446,7 +511,8 @@ async function saveAccDeal() {
             unit_price: i.price,
             size: i.size || null,
             color: i.color || null,
-            is_fin_brush: !!i.is_fin_brush
+            is_fin_brush: !!i.is_fin_brush,
+            is_roll: !!i.is_roll
         }));
 
         const { error: iError } = await supabaseClient
