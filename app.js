@@ -750,7 +750,9 @@ function createItemRow(item, index) {
         (product.product_name && product.product_name.includes('מברשת'))
     );
     
-    if (isBrushRow) {
+    const canHaveFin = isBrushRow && !product.product_name.includes('אינסרט') && !product.product_name.includes('הדבקה');
+    
+    if (canHaveFin) {
         const finDiv = document.createElement('div');
         finDiv.style.marginTop = '0.5rem';
         finDiv.style.display = 'flex';
@@ -778,7 +780,9 @@ function createItemRow(item, index) {
     
     // Mesh Roll Option
     const isMeshRow = isMeshProduct(product);
-    if (isMeshRow) {
+    const isRollableMesh = isMeshRow && !product.product_name.includes('גלילה');
+    
+    if (isRollableMesh) {
         const rollDiv = document.createElement('div');
         rollDiv.style.marginTop = '0.5rem';
         rollDiv.style.display = 'flex';
@@ -793,7 +797,9 @@ function createItemRow(item, index) {
         rollCheckbox.addEventListener('change', (e) => {
             item.is_roll = e.target.checked;
             if (item.is_roll) {
-                item.size = '30';
+                item.length = 30;
+            } else {
+                item.length = 1;
             }
             renderDealItems();
         });
