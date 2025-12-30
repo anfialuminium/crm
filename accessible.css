@@ -149,18 +149,20 @@ label {
     display: block;
 }
 
-.input-big::placeholder {
-    color: #999;
-    opacity: 1;
-}
-
 .input-big:focus {
     outline: none;
     border-color: var(--primary-color);
 }
 
+.input-big::placeholder {
+    color: #999;
+    opacity: 1;
+}
+
 input[type="number"] {
-    direction: ltr;
+    direction: ltr !important;
+    text-align: left !important;
+    unicode-bidi: bidi-override !important;
 }
 
 /* Deals List */
@@ -423,7 +425,9 @@ input[type="number"] {
 
 .stepper-input {
     flex: 1;
-    direction: ltr;
+    direction: ltr !important;
+    text-align: center !important;
+    unicode-bidi: bidi-override !important;
     border: none !important;
     background: transparent !important;
     padding: 0 4px !important;
