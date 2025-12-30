@@ -247,7 +247,7 @@
                         <div style="display: flex; align-items: center; gap: 1rem;">
                             <input type="number" id="discount-percentage" class="form-input" 
                                    style="width: 100px; background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.3);"
-                                   value="0" min="0" max="100" step="0.5" onchange="calculateTotal()">
+                                   value="0" min="0" max="100" step="0.5" dir="ltr" onchange="calculateTotal()">
                             <span class="summary-value" id="discount-amount">₪0.00</span>
                         </div>
                     </div>
@@ -1252,7 +1252,7 @@
                     <div class="form-group">
                         <label class="form-label">מחיר (₪)</label>
                         <input type="number" id="product-price" class="form-input" 
-                               step="0.01" min="0">
+                               step="0.01" min="0" dir="ltr">
                     </div>
                 </div>
                 
@@ -1514,8 +1514,8 @@
                         <span class="summary-label" style="font-size: 0.9rem; opacity: 0.9;">מקדמה ששולמה:</span>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <input type="number" id="order-down-payment" class="form-input" 
-                                   style="width: 130px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 4px 8px; border-radius: 6px; text-align: left; font-weight: 600;"
-                                   value="0" min="0" step="0.01" onchange="renderSupplierOrderItems()" placeholder="מקדמה...">
+                                   style="width: 130px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 4px 8px; border-radius: 6px; text-align: left; font-weight: 600; unicode-bidi: bidi-override;"
+                                   value="0" min="0" step="0.01" dir="ltr" onchange="renderSupplierOrderItems()" placeholder="מקדמה...">
                         </div>
                     </div>
                      <div class="summary-row" style="border-top: none; padding-top: 10px;">

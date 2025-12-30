@@ -832,6 +832,7 @@ function createItemRow(item, index) {
     quantityInput.value = item.quantity;
     quantityInput.min = '0';
     quantityInput.step = '1';
+    quantityInput.dir = 'ltr';
     quantityInput.style.width = '50px';
     
     const qtyPlus = document.createElement('button');
@@ -894,6 +895,7 @@ function createItemRow(item, index) {
     priceInput.value = item.unit_price;
     priceInput.min = '0';
     priceInput.step = '0.01';
+    priceInput.dir = 'ltr';
     priceInput.style.width = '70px';
     
     const pricePlus = document.createElement('button');
@@ -1078,6 +1080,7 @@ function createItemRow(item, index) {
                 lengthInput.value = item.length || 1;
                 lengthInput.placeholder = 'אורך מ\'';
                 lengthInput.step = '0.1';
+                lengthInput.dir = 'ltr';
                 lengthInput.style.width = '100%';
                 lengthInput.addEventListener('input', (e) => {
                     item.length = parseFloat(e.target.value) || 0;
@@ -11078,8 +11081,8 @@ function renderSupplierOrderItems() {
                         </select>
                     </td>
                     <td><input type="text" class="form-input table-input" value="${item.sku || ''}" onchange="updateOrderItem(${index}, 'sku', this.value)" placeholder="מק״ט" style="width: 100%"></td>
-                    <td style="text-align: center;"><input type="number" class="form-input table-input" value="${item.quantity || 1}" step="any" onchange="updateOrderItem(${index}, 'quantity', this.value)" style="width: 60px; text-align: center;"></td>
-                    <td style="text-align: center;"><input type="number" class="form-input table-input" value="${item.unit_price || 0}" step="0.01" onchange="updateOrderItem(${index}, 'unit_price', this.value)" style="width: 90px; text-align: center;"></td>
+                    <td style="text-align: center;"><input type="number" class="form-input table-input" value="${item.quantity || 1}" step="any" dir="ltr" onchange="updateOrderItem(${index}, 'quantity', this.value)" style="width: 60px; text-align: center;"></td>
+                    <td style="text-align: center;"><input type="number" class="form-input table-input" value="${item.unit_price || 0}" step="0.01" dir="ltr" onchange="updateOrderItem(${index}, 'unit_price', this.value)" style="width: 90px; text-align: center;"></td>
                     <td style="vertical-align: middle; font-weight: bold; color: var(--primary-dark); text-align: center;">${currencySymbol}${itemTotal.toLocaleString()}</td>
                     <td style="text-align: center;"><button type="button" class="btn btn-sm btn-danger btn-icon" onclick="removeSupplierOrderItem(${index})" title="הסר">🗑️</button></td>
                 `;
