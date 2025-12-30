@@ -459,28 +459,16 @@ async function loadProducts() {
 
         const getCategoryScore = (cat) => categoryOrder[cat] || 999;
 
-        const getProductScore = (p) => {
-            const name = p.product_name || '';
-            const numMatch = name.match(/\d+/);
-            const num = numMatch ? numMatch[0].padStart(5, '0') : '99999';
-            
-            let material = '2'; 
-            if (name.includes('מתכת')) material = '0';
-            else if (name.includes('פלסטיק')) material = '1';
-
-            let type = '2';
-            if (name.includes('בודד')) type = '0';
-            else if (name.includes('כפול')) type = '1';
-
-            return `${num}-${material}-${type}-${name}`;
-        };
-
-        // Sort products globally
+        // Sort products globally by category score and then SKU
         products.sort((a, b) => {
             const catScoreA = getCategoryScore(a.category);
             const catScoreB = getCategoryScore(b.category);
             if (catScoreA !== catScoreB) return catScoreA - catScoreB;
-            return getProductScore(a).localeCompare(getProductScore(b));
+            
+            // Sort by SKU numerically/alphabetically
+            const skuA = a.sku || '';
+            const skuB = b.sku || '';
+            return skuA.localeCompare(skuB, undefined, { numeric: true, sensitivity: 'base' });
         });
 
         globalCategories = [...new Set(products.map(p => p.category))];
