@@ -827,7 +827,8 @@ function createItemRow(item, index) {
     qtyMinus.type = 'button';
     
     const quantityInput = document.createElement('input');
-    quantityInput.type = 'number';
+    quantityInput.type = 'text';
+    quantityInput.inputMode = 'decimal';
     quantityInput.className = 'stepper-input';
     quantityInput.value = item.quantity;
     quantityInput.min = '0';
@@ -890,7 +891,8 @@ function createItemRow(item, index) {
     priceMinus.type = 'button';
     
     const priceInput = document.createElement('input');
-    priceInput.type = 'number';
+    priceInput.type = 'text';
+    priceInput.inputMode = 'decimal';
     priceInput.className = 'stepper-input';
     priceInput.value = item.unit_price;
     priceInput.min = '0';
@@ -1075,7 +1077,8 @@ function createItemRow(item, index) {
                 lengthDiv.innerHTML = `<span style="font-size: 0.8rem; font-weight: 700; color: var(--primary-color);">אורך: ${(30 * item.quantity).toFixed(1)}מ' (גליל)</span>`;
             } else {
                 const lengthInput = document.createElement('input');
-                lengthInput.type = 'number';
+                lengthInput.type = 'text';
+                lengthInput.inputMode = 'decimal';
                 lengthInput.className = 'form-input';
                 lengthInput.value = item.length || 1;
                 lengthInput.placeholder = 'אורך מ\'';
@@ -11081,8 +11084,8 @@ function renderSupplierOrderItems() {
                         </select>
                     </td>
                     <td><input type="text" class="form-input table-input" value="${item.sku || ''}" onchange="updateOrderItem(${index}, 'sku', this.value)" placeholder="מק״ט" style="width: 100%"></td>
-                    <td style="text-align: center;"><input type="number" class="form-input table-input" value="${item.quantity || 1}" step="any" dir="ltr" onchange="updateOrderItem(${index}, 'quantity', this.value)" style="width: 60px; text-align: center;"></td>
-                    <td style="text-align: center;"><input type="number" class="form-input table-input" value="${item.unit_price || 0}" step="0.01" dir="ltr" onchange="updateOrderItem(${index}, 'unit_price', this.value)" style="width: 90px; text-align: center;"></td>
+                    <td style="text-align: center;"><input type="text" class="form-input table-input" value="${item.quantity || 1}" inputmode="decimal" dir="ltr" onchange="updateOrderItem(${index}, 'quantity', this.value)" style="width: 60px; text-align: center;"></td>
+                    <td style="text-align: center;"><input type="text" class="form-input table-input" value="${item.unit_price || 0}" inputmode="decimal" dir="ltr" onchange="updateOrderItem(${index}, 'unit_price', this.value)" style="width: 90px; text-align: center;"></td>
                     <td style="vertical-align: middle; font-weight: bold; color: var(--primary-dark); text-align: center;">${currencySymbol}${itemTotal.toLocaleString()}</td>
                     <td style="text-align: center;"><button type="button" class="btn btn-sm btn-danger btn-icon" onclick="removeSupplierOrderItem(${index})" title="הסר">🗑️</button></td>
                 `;
@@ -11178,7 +11181,7 @@ async function addNewProductPrompt(index) {
         html:
             '<input id="new-prod-name" class="swal2-input" placeholder="שם המוצר">' +
             '<input id="new-prod-sku" class="swal2-input" placeholder="מק״ט (אופציונלי)">' +
-            '<input id="new-prod-price" type="number" step="0.01" class="swal2-input" placeholder="מחיר (אופציונלי)">',
+            '<input id="new-prod-price" type="text" inputmode="decimal" dir="ltr" class="swal2-input" placeholder="מחיר (אופציונלי)">',
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'שמור והוסף',

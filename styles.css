@@ -232,9 +232,10 @@ body {
     color: var(--text-primary);
 }
 
-input[type="number"] {
+input[type="number"],
+input[inputmode="decimal"] {
     direction: ltr !important;
-    unicode-bidi: bidi-override !important;
+    unicode-bidi: plaintext !important;
 }
 
 .form-input:focus,

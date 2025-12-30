@@ -220,7 +220,7 @@ function addAccItem() {
                     <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">כמות:</label>
                     <div class="stepper-container">
                         <button type="button" class="stepper-btn" onclick="accStepQty('${id}', -1)">-</button>
-                        <input type="number" id="qty-${id}" class="stepper-input" value="1" min="1" inputmode="decimal" dir="ltr" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
+                        <input type="text" id="qty-${id}" class="stepper-input" value="1" inputmode="decimal" dir="ltr" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
                         <button type="button" class="stepper-btn" onclick="accStepQty('${id}', 1)">+</button>
                     </div>
                 </div>
@@ -228,7 +228,7 @@ function addAccItem() {
                     <label id="price-label-${id}" style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">מחיר (₪):</label>
                     <div class="stepper-container">
                         <button type="button" class="stepper-btn" onclick="accStepPrice('${id}', -1)">-</button>
-                        <input type="number" class="stepper-input" value="" step="0.1" inputmode="decimal" dir="ltr" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
+                        <input type="text" class="stepper-input" value="" inputmode="decimal" dir="ltr" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
                         <button type="button" class="stepper-btn" onclick="accStepPrice('${id}', 1)">+</button>
                     </div>
                 </div>
@@ -293,7 +293,7 @@ function updateItemProduct(id, productId) {
                 </div>
                 <div>
                     <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 4px; display: block;">אורך (מטר):</label>
-                    <input type="number" step="0.1" class="input-big" id="size-input-${id}" inputmode="decimal" dir="ltr" oninput="updateItemLength('${id}', this.value)" value="${item.length || 1}" placeholder="אורך">
+                    <input type="text" class="input-big" id="size-input-${id}" inputmode="decimal" dir="ltr" oninput="updateItemLength('${id}', this.value)" value="${item.length || 1}" placeholder="אורך">
                 </div>
             `;
         } else if (isBrush) {
