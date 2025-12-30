@@ -873,6 +873,12 @@ function createItemRow(item, index) {
     quantityCell.appendChild(qtyStepper);
     
     // Unit Price Stepper
+    const isBrushProduct = product && (
+        (product.category && product.category.includes('מברשות')) || 
+        (product.product_name && product.product_name.includes('מברשת'))
+    );
+    const priceStep = isBrushProduct ? 0.1 : 1;
+
     const priceCell = document.createElement('td');
     const priceStepper = document.createElement('div');
     priceStepper.className = 'stepper-container';
@@ -896,14 +902,14 @@ function createItemRow(item, index) {
     pricePlus.type = 'button';
     
     priceMinus.addEventListener('click', () => {
-        const val = Math.max(0, (parseFloat(priceInput.value) || 0) - 5);
-        priceInput.value = val;
+        const val = Math.max(0, (parseFloat(priceInput.value) || 0) - priceStep);
+        priceInput.value = isBrushProduct ? val.toFixed(1) : Math.round(val);
         priceInput.dispatchEvent(new Event('input'));
     });
     
     pricePlus.addEventListener('click', () => {
-        const val = (parseFloat(priceInput.value) || 0) + 5;
-        priceInput.value = val;
+        const val = (parseFloat(priceInput.value) || 0) + priceStep;
+        priceInput.value = isBrushProduct ? val.toFixed(1) : Math.round(val);
         priceInput.dispatchEvent(new Event('input'));
     });
 
@@ -916,11 +922,6 @@ function createItemRow(item, index) {
     priceStepper.appendChild(priceInput);
     priceStepper.appendChild(pricePlus);
     priceCell.appendChild(priceStepper);
-    
-    const isBrushProduct = product && (
-        (product.category && product.category.includes('מברשות')) || 
-        (product.product_name && product.product_name.includes('מברשת'))
-    );
     
     if (isBrushProduct) {
         const perMeterNote = document.createElement('div');

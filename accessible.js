@@ -16,11 +16,11 @@ let currentDealItems = [];
 let itemCounter = 0;
 let orderColors = []; // Supplier order colors
 let globalAccCategories = [];
+let isAccDataLoaded = false;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     await loadData();
-    showScreen('main');
 });
 
 function formatAccDate(dateStr) {
@@ -78,6 +78,7 @@ async function loadData() {
         orderColors = colorData || [];
 
         setupCustomerSearch();
+        isAccDataLoaded = true;
         console.log('✅ נתונים נטענו בהצלחה');
     } catch (err) {
         console.error('❌ שגיאה בטעינת נתונים:', err);
@@ -87,6 +88,10 @@ async function loadData() {
 
 // Navigation
 function showScreen(screenId) {
+    if (!isAccDataLoaded && screenId !== 'main') {
+        alert('המערכת מעדכנת נתונים, אנא נסה שוב בעוד רגע...');
+        return;
+    }
     document.querySelectorAll('.container > div:not(header)').forEach(div => {
         div.classList.add('hidden');
     });
@@ -210,7 +215,7 @@ function addAccItem() {
             <div id="roll-container-${id}" class="hidden roll-field" style="margin: 12px 0; padding: 16px; background: #fdf2f8; border-radius: 12px; border: 2px solid #fbcfe8;"></div>
             <div id="color-container-${id}" class="hidden color-field" style="margin-bottom: 12px;"></div>
             <div id="fin-container-${id}" class="hidden fin-field" style="margin: 16px 0; padding: 16px; background: #eff6ff; border-radius: 12px; border: 2px solid #bfdbfe;"></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 20px;">
                 <div>
                     <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">כמות:</label>
                     <div class="stepper-container">
@@ -222,9 +227,9 @@ function addAccItem() {
                 <div>
                     <label id="price-label-${id}" style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">מחיר (₪):</label>
                     <div class="stepper-container">
-                        <button type="button" class="stepper-btn" onclick="accStepPrice('${id}', -5)">-</button>
-                        <input type="number" class="stepper-input" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
-                        <button type="button" class="stepper-btn" onclick="accStepPrice('${id}', 5)">+</button>
+                        <button type="button" class="stepper-btn" onclick="accStepPrice('${id}', -1)">-</button>
+                        <input type="number" class="stepper-input" value="" step="0.1" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
+                        <button type="button" class="stepper-btn" onclick="accStepPrice('${id}', 1)">+</button>
                     </div>
                 </div>
             </div>
@@ -493,9 +498,21 @@ function accStepQty(id, delta) {
 function accStepPrice(id, delta) {
     const input = document.getElementById(`price-${id}`);
     if (input) {
-        const newVal = Math.max(0, (parseFloat(input.value) || 0) + delta);
-        input.value = newVal;
-        updateItemPrice(id, newVal);
+        const item = currentDealItems.find(i => i.id === id);
+        if (!item) return;
+
+        const product = products.find(p => p.product_id === item.product_id);
+        const isBrush = product && (
+            (product.category && product.category.includes('מברשות')) || 
+            (product.product_name && product.product_name.includes('מברשת'))
+        );
+
+        const actualStep = isBrush ? 0.1 : 1;
+        const currentVal = parseFloat(input.value) || 0;
+        const newVal = delta > 0 ? (currentVal + actualStep) : Math.max(0, currentVal - actualStep);
+        
+        input.value = isBrush ? newVal.toFixed(1) : Math.round(newVal);
+        updateItemPrice(id, input.value);
     }
 }
 
