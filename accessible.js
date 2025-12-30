@@ -213,11 +213,19 @@ function addAccItem() {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
                 <div>
                     <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">כמות:</label>
-                    <input type="number" class="input-big" value="" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
+                    <div class="stepper-container">
+                        <button type="button" class="stepper-btn" onclick="accStepQty('${id}', -1)">-</button>
+                        <input type="number" id="qty-${id}" class="stepper-input" value="1" min="1" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
+                        <button type="button" class="stepper-btn" onclick="accStepQty('${id}', 1)">+</button>
+                    </div>
                 </div>
                 <div>
                     <label id="price-label-${id}" style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">מחיר (₪):</label>
-                    <input type="number" class="input-big" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
+                    <div class="stepper-container">
+                        <button type="button" class="stepper-btn" onclick="accStepPrice('${id}', -5)">-</button>
+                        <input type="number" class="stepper-input" value="" step="0.5" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
+                        <button type="button" class="stepper-btn" onclick="accStepPrice('${id}', 5)">+</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -457,17 +465,37 @@ function updateItemColor(id, color) {
 function updateItemQty(id, qty) {
     const item = currentDealItems.find(i => i.id === id);
     if (item) {
-        item.quantity = qty;
+        item.quantity = parseFloat(qty) || 0;
         
-        // Update size display if it's a mesh roll
+        // Update length display if it's a mesh roll
         if (item.is_roll) {
             const sizeInp = document.getElementById(`size-input-${id}`);
             if (sizeInp) {
-                sizeInp.value = (30 * (parseFloat(qty) || 0)).toFixed(2);
+                const totalRollLength = (30 * item.quantity);
+                sizeInp.value = totalRollLength.toFixed(1);
+                item.length = totalRollLength;
             }
         }
         
         updateTotal();
+    }
+}
+
+function accStepQty(id, delta) {
+    const input = document.getElementById(`qty-${id}`);
+    if (input) {
+        const newVal = Math.max(1, (parseFloat(input.value) || 0) + delta);
+        input.value = newVal;
+        updateItemQty(id, newVal);
+    }
+}
+
+function accStepPrice(id, delta) {
+    const input = document.getElementById(`price-${id}`);
+    if (input) {
+        const newVal = Math.max(0, (parseFloat(input.value) || 0) + delta);
+        input.value = newVal;
+        updateItemPrice(id, newVal);
     }
 }
 

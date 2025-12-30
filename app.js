@@ -816,15 +816,41 @@ function createItemRow(item, index) {
         productCell.appendChild(rollDiv);
     }
     
-    // Quantity
+    // Quantity Stepper
     const quantityCell = document.createElement('td');
+    const qtyStepper = document.createElement('div');
+    qtyStepper.className = 'stepper-container';
+    
+    const qtyMinus = document.createElement('button');
+    qtyMinus.className = 'stepper-btn';
+    qtyMinus.textContent = '-';
+    qtyMinus.type = 'button';
+    
     const quantityInput = document.createElement('input');
     quantityInput.type = 'number';
-    quantityInput.className = 'form-input';
+    quantityInput.className = 'stepper-input';
     quantityInput.value = item.quantity;
-    quantityInput.min = '0.01';
-    quantityInput.step = '0.01';
-    quantityInput.style.width = '100px';
+    quantityInput.min = '0';
+    quantityInput.step = '1';
+    quantityInput.style.width = '50px';
+    
+    const qtyPlus = document.createElement('button');
+    qtyPlus.className = 'stepper-btn';
+    qtyPlus.textContent = '+';
+    qtyPlus.type = 'button';
+    
+    qtyMinus.addEventListener('click', () => {
+        const val = Math.max(0, (parseFloat(quantityInput.value) || 0) - 1);
+        quantityInput.value = val;
+        quantityInput.dispatchEvent(new Event('input'));
+    });
+    
+    qtyPlus.addEventListener('click', () => {
+        const val = (parseFloat(quantityInput.value) || 0) + 1;
+        quantityInput.value = val;
+        quantityInput.dispatchEvent(new Event('input'));
+    });
+
     quantityInput.addEventListener('input', (e) => {
         item.quantity = parseFloat(e.target.value) || 0;
         
@@ -840,22 +866,56 @@ function createItemRow(item, index) {
         
         calculateTotal();
     });
-    quantityCell.appendChild(quantityInput);
     
-    // Unit Price
+    qtyStepper.appendChild(qtyMinus);
+    qtyStepper.appendChild(quantityInput);
+    qtyStepper.appendChild(qtyPlus);
+    quantityCell.appendChild(qtyStepper);
+    
+    // Unit Price Stepper
     const priceCell = document.createElement('td');
+    const priceStepper = document.createElement('div');
+    priceStepper.className = 'stepper-container';
+    
+    const priceMinus = document.createElement('button');
+    priceMinus.className = 'stepper-btn';
+    priceMinus.textContent = '-';
+    priceMinus.type = 'button';
+    
     const priceInput = document.createElement('input');
     priceInput.type = 'number';
-    priceInput.className = 'form-input';
+    priceInput.className = 'stepper-input';
     priceInput.value = item.unit_price;
     priceInput.min = '0';
     priceInput.step = '0.01';
-    priceInput.style.width = '120px';
+    priceInput.style.width = '70px';
+    
+    const pricePlus = document.createElement('button');
+    pricePlus.className = 'stepper-btn';
+    pricePlus.textContent = '+';
+    pricePlus.type = 'button';
+    
+    priceMinus.addEventListener('click', () => {
+        const val = Math.max(0, (parseFloat(priceInput.value) || 0) - 5);
+        priceInput.value = val;
+        priceInput.dispatchEvent(new Event('input'));
+    });
+    
+    pricePlus.addEventListener('click', () => {
+        const val = (parseFloat(priceInput.value) || 0) + 5;
+        priceInput.value = val;
+        priceInput.dispatchEvent(new Event('input'));
+    });
+
     priceInput.addEventListener('input', (e) => {
         item.unit_price = parseFloat(e.target.value) || 0;
         calculateTotal();
     });
-    priceCell.appendChild(priceInput);
+    
+    priceStepper.appendChild(priceMinus);
+    priceStepper.appendChild(priceInput);
+    priceStepper.appendChild(pricePlus);
+    priceCell.appendChild(priceStepper);
     
     const isBrushProduct = product && (
         (product.category && product.category.includes('מברשות')) || 
