@@ -238,6 +238,40 @@ input[inputmode="decimal"] {
 .hidden { display: none !important; }
 .text-center { text-align: center; }
 
+/* Inline Alert System */
+#alert-container {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 500px;
+    z-index: 9999;
+}
+
+.alert-box {
+    padding: 16px 24px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideDown 0.3s ease-out;
+}
+
+.alert-success { background-color: var(--success-color); }
+.alert-error { background-color: var(--error-color); }
+.alert-info { background-color: var(--primary-color); }
+
+@keyframes slideDown {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
 /* Items List in New Deal */
 .item-row {
     background: white;

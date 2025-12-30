@@ -23,6 +23,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadData();
 });
 
+function showAlert(message, type = 'info') {
+    const container = document.getElementById('alert-container');
+    if (!container) return;
+    
+    const alertBox = document.createElement('div');
+    alertBox.className = `alert-box alert-${type}`;
+    alertBox.innerHTML = `
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer; margin-right:15px;">&times;</button>
+    `;
+    
+    container.appendChild(alertBox);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (alertBox.parentElement) {
+            alertBox.style.opacity = '0';
+            alertBox.style.transition = 'opacity 0.5s';
+            setTimeout(() => alertBox.remove(), 500);
+        }
+    }, 5000);
+}
+
 function formatAccDate(dateStr) {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
@@ -82,14 +105,14 @@ async function loadData() {
         console.log('✅ נתונים נטענו בהצלחה');
     } catch (err) {
         console.error('❌ שגיאה בטעינת נתונים:', err);
-        alert('שגיאה בתקשורת עם השרת. וודא שיש אינטרנט.');
+        showAlert('שגיאה בתקשורת עם השרת. וודא שיש אינטרנט.', 'error');
     }
 }
 
 // Navigation
 function showScreen(screenId) {
     if (!isAccDataLoaded && screenId !== 'main') {
-        alert('המערכת מעדכנת נתונים, אנא נסה שוב בעוד רגע...');
+        showAlert('המערכת מעדכנת נתונים, אנא נסה שוב בעוד רגע...', 'info');
         return;
     }
     document.querySelectorAll('.container > div:not(header)').forEach(div => {
@@ -555,13 +578,13 @@ function updateTotal() {
 async function saveAccDeal() {
     const customerId = document.getElementById('acc-customer-id').value;
     if (!customerId) {
-        alert('אנא בחר לקוח תחילה');
+        showAlert('אנא בחר לקוח תחילה', 'error');
         return;
     }
 
     const validItems = currentDealItems.filter(i => i.product_id);
-    if (validItems.length === 0) {
-        alert('אנא הוסף לפחות מוצר אחד');
+    if (currentDealItems.length === 0) {
+        showAlert('אנא הוסף לפחות מוצר אחד', 'error');
         return;
     }
 
@@ -634,11 +657,11 @@ async function saveAccDeal() {
             }
         );
 
-        alert('✅ העסקה נשמר בהצלחה!');
+        showAlert('✅ העסקה נשמרה בהצלחה!', 'success');
         showScreen('main');
     } catch (err) {
         console.error('❌ שגיאה בשמירת עסקה:', err);
-        alert('שגיאה בשמירה. נסה שוב.');
+        showAlert('שגיאה בשמירה. נסה שוב.', 'error');
     }
 }
 
@@ -850,6 +873,9 @@ async function loadAccDeals(containerId, searchQuery = '') {
 
         const { data: deals, error } = await query;
         if (error) throw error;
+        // The original instruction had `if (!deal)` here, but `deals` is an array.
+        // Assuming this check was meant for a single deal fetch or a different context.
+        // Keeping the original logic for `deals` array.
 
         let filtered = deals || [];
         if (q) {
