@@ -668,8 +668,8 @@ function addDealItem() {
     const item = {
         id: itemId,
         product_id: '',
-        quantity: 1,
-        unit_price: 0,
+        quantity: '',
+        unit_price: '',
         color: '',
         size: '',
         requires_color: false,

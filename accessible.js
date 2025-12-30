@@ -286,7 +286,7 @@ function addAccItem() {
                     <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">כמות:</label>
                     <div class="stepper-container">
                         <button type="button" class="stepper-btn" onclick="accStepQty('${id}', -1)">-</button>
-                        <input type="text" id="qty-${id}" class="stepper-input" value="1" inputmode="decimal" dir="ltr" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
+                        <input type="text" id="qty-${id}" class="stepper-input" value="" inputmode="decimal" dir="ltr" oninput="updateItemQty('${id}', this.value)" placeholder="כמות">
                         <button type="button" class="stepper-btn" onclick="accStepQty('${id}', 1)">+</button>
                     </div>
                 </div>
