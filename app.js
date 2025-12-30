@@ -7892,8 +7892,12 @@ async function sendNotificationEmail(action, email, url) {
                     
                     <p style="font-size: 14px; color: #64748b; margin-top: 30px;">לצפייה בפרטים המלאים היכנס למערכת בכתובת המוכרת לך.</p>
                 </div>
-                <div style="background-color: #f1f5f9; color: #64748b; padding: 20px; text-align: center; font-size: 12px; border-top: 1px solid #e2e8f0;">
-                    המייל נשלח באופן אוטומטי ממערכת ה-CRM • ${new Date().toLocaleDateString('he-IL')} ${new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'})}
+                <div style="background-color: #f1f5f9; color: #64748b; padding: 20px; text-align: center; font-size: 12px; border-top: 1px solid #e2e8f0; direction: rtl;" dir="rtl">
+                    <span style="unicode-bidi: isolate;">המייל נשלח באופן אוטומטי ממערכת ה-CRM</span>
+                    <span style="margin: 0 5px;">•</span>
+                    <span style="unicode-bidi: isolate; direction: ltr; display: inline-block;">${new Date().toLocaleDateString('he-IL')}</span>
+                    <span style="margin: 0 5px;">•</span>
+                    <span style="unicode-bidi: isolate; direction: ltr; display: inline-block;">${new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'})}</span>
                 </div>
             </div>
         `;
