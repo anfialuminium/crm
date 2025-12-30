@@ -77,10 +77,13 @@ async function loadData() {
             if (!category && (productName.includes('מברשת') || (p.description && p.description.includes('מברשת')))) {
                 category = 'מברשות';
             }
+            if (category === 'אביזרים') {
+                category = 'מוצרים נוספים';
+            }
             return { ...p, category: category || 'אחר' };
         });
         
-        globalAccCategories = [...new Set(products.map(p => p.category))].sort();
+        globalAccCategories = [...new Set(products.map(p => p.category))];
 
         // Load Customers
         const { data: cData, error: cError } = await supabaseClient
@@ -101,8 +104,48 @@ async function loadData() {
         orderColors = colorData || [];
 
         setupCustomerSearch();
+        
+        // --- Logical Sorting ---
+        const categoryOrder = {
+            'גלגלים': 10,
+            'ידיות': 20,
+            'מברשות': 30,
+            'רשתות': 40,
+            'מוצרים נוספים': 50
+        };
+
+        const getCategoryScore = (cat) => categoryOrder[cat] || 999;
+
+        const getProductScore = (p) => {
+            const name = p.product_name || '';
+            const numMatch = name.match(/\d+/);
+            const num = numMatch ? numMatch[0].padStart(5, '0') : '99999';
+            
+            // Priority: Number > Metal/Plastic > Single/Double
+            let material = '2'; 
+            if (name.includes('מתכת')) material = '0';
+            else if (name.includes('פלסטיק')) material = '1';
+
+            let type = '2';
+            if (name.includes('בודד')) type = '0';
+            else if (name.includes('כפול')) type = '1';
+
+            return `${num}-${material}-${type}-${name}`;
+        };
+
+        // Sort products globally by category score and then logical name score
+        products.sort((a, b) => {
+            const catScoreA = getCategoryScore(a.category);
+            const catScoreB = getCategoryScore(b.category);
+            if (catScoreA !== catScoreB) return catScoreA - catScoreB;
+            return getProductScore(a).localeCompare(getProductScore(b));
+        });
+
+        // Re-generate categories based on sorted products
+        globalAccCategories = [...new Set(products.map(p => p.category))];
+        
         isAccDataLoaded = true;
-        console.log('✅ נתונים נטענו בהצלחה');
+        console.log('✅ נתונים נטענו בסדר הגיוני');
     } catch (err) {
         console.error('❌ שגיאה בטעינת נתונים:', err);
         showAlert('שגיאה בתקשורת עם השרת. וודא שיש אינטרנט.', 'error');

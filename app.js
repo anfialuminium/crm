@@ -428,9 +428,11 @@ async function loadProducts() {
             let category = p.category ? p.category.trim() : '';
             const productName = p.product_name ? p.product_name.trim() : '';
             
-            // Auto-categorize brushes if category is missing
             if (!category && (productName.includes('מברשת') || (p.description && p.description.includes('מברשת')))) {
                 category = 'מברשות';
+            }
+            if (category === 'אביזרים') {
+                category = 'מוצרים נוספים';
             }
             
             let imageUrl = p.image_url;
@@ -446,9 +448,44 @@ async function loadProducts() {
             };
         });
         
-        globalCategories = [...new Set(products.map(p => p.category))].sort();
+        // --- Logical Sorting ---
+        const categoryOrder = {
+            'גלגלים': 10,
+            'ידיות': 20,
+            'מברשות': 30,
+            'רשתות': 40,
+            'מוצרים נוספים': 50
+        };
+
+        const getCategoryScore = (cat) => categoryOrder[cat] || 999;
+
+        const getProductScore = (p) => {
+            const name = p.product_name || '';
+            const numMatch = name.match(/\d+/);
+            const num = numMatch ? numMatch[0].padStart(5, '0') : '99999';
+            
+            let material = '2'; 
+            if (name.includes('מתכת')) material = '0';
+            else if (name.includes('פלסטיק')) material = '1';
+
+            let type = '2';
+            if (name.includes('בודד')) type = '0';
+            else if (name.includes('כפול')) type = '1';
+
+            return `${num}-${material}-${type}-${name}`;
+        };
+
+        // Sort products globally
+        products.sort((a, b) => {
+            const catScoreA = getCategoryScore(a.category);
+            const catScoreB = getCategoryScore(b.category);
+            if (catScoreA !== catScoreB) return catScoreA - catScoreB;
+            return getProductScore(a).localeCompare(getProductScore(b));
+        });
+
+        globalCategories = [...new Set(products.map(p => p.category))];
         
-        console.log(`✅ Loaded ${products.length} products, ${globalCategories.length} categories`);
+        console.log(`✅ Loaded ${products.length} products, ${globalCategories.length} categories in logical order`);
         
     } catch (error) {
         console.error('❌ Error loading products:', error);
