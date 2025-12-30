@@ -916,7 +916,7 @@ function createItemRow(item, index) {
         (product.category && product.category.includes('מברשות')) || 
         (product.product_name && product.product_name.includes('מברשת'))
     );
-    const priceStep = isBrushProduct ? 0.1 : 1;
+    const priceStep = isBrushProduct ? 0.01 : 1;
 
     const priceCell = document.createElement('td');
     const priceStepper = document.createElement('div');
@@ -944,13 +944,13 @@ function createItemRow(item, index) {
     
     priceMinus.addEventListener('click', () => {
         const val = Math.max(0, (parseFloat(priceInput.value) || 0) - priceStep);
-        priceInput.value = isBrushProduct ? val.toFixed(1) : Math.round(val);
+        priceInput.value = isBrushProduct ? val.toFixed(2) : Math.round(val);
         priceInput.dispatchEvent(new Event('input'));
     });
     
     pricePlus.addEventListener('click', () => {
         const val = (parseFloat(priceInput.value) || 0) + priceStep;
-        priceInput.value = isBrushProduct ? val.toFixed(1) : Math.round(val);
+        priceInput.value = isBrushProduct ? val.toFixed(2) : Math.round(val);
         priceInput.dispatchEvent(new Event('input'));
     });
 

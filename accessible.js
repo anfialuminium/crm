@@ -573,11 +573,11 @@ function accStepPrice(id, delta) {
             (product.product_name && product.product_name.includes('מברשת'))
         );
 
-        const actualStep = isBrush ? 0.1 : 1;
+        const actualStep = isBrush ? 0.01 : 1;
         const currentVal = parseFloat(input.value) || 0;
         const newVal = delta > 0 ? (currentVal + actualStep) : Math.max(0, currentVal - actualStep);
         
-        input.value = isBrush ? newVal.toFixed(1) : Math.round(newVal);
+        input.value = isBrush ? newVal.toFixed(2) : Math.round(newVal);
         updateItemPrice(id, input.value);
     }
 }
