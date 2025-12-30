@@ -2862,18 +2862,7 @@ function deleteCustomerNote(activityId) {
             
             showAlert('✅ ההערה נמחקה בהצלחה', 'success');
             
-            const customerId = document.getElementById('customer-details-modal')?.dataset.currentCustomerId || document.getElementById('customer-form')?.dataset.customerId;
-            if (customerId) {
-                if (document.getElementById('view-customer-notes-history')) {
-                    loadCustomerNotesHistory(customerId, 'view-customer-notes-history');
-                }
-                if (document.getElementById('customer-notes-history')) {
-                    loadCustomerNotesHistory(customerId, 'customer-notes-history');
-                }
-                if (document.getElementById('customer-notes-list')) {
-                    loadCustomerNotes(customerId);
-                }
-            }
+            await refreshAllUI();
         } catch (error) {
             console.error('❌ Error deleting customer note:', error);
             showAlert('שגיאה במחיקת ההערה: ' + error.message, 'error');
@@ -3791,7 +3780,7 @@ async function deleteContactNote(contactId, index) {
         if (contactIndex !== -1) contacts[contactIndex].notes = newNotesStr;
         
         // Refresh
-        viewContactDetails(contactId);
+        await refreshAllUI();
         
     } catch (e) {
         console.error('Error deleting note:', e);
@@ -4859,9 +4848,7 @@ function deleteNote(activityId) {
                 .eq('activity_id', activityId);
             if (error) throw error;
             showAlert('✅ ההערה נמחקה', 'success');
-            // Reload notes for current deal
-            const dealId = document.getElementById('deal-modal').dataset.currentDealId;
-            loadDealNotes(dealId);
+            await refreshAllUI();
         } catch (err) {
             console.error('❌ Error deleting note:', err);
             showAlert('שגיאה במחיקת ההערה: ' + err.message, 'error');
@@ -6018,26 +6005,7 @@ function deleteActivity(activityId) {
             logAction('delete', 'activity', activityId, activityType, `מחיקת פעילות של ${customerName}`, oldActivity, null);
             showAlert('✅ הפעילות נמחקה בהצלחה', 'success');
             
-            // Reload activities
-            loadActivities();
-
-            // Reload customer history if edit modal is open
-            const editCustomerModal = document.getElementById('customer-modal');
-            if (editCustomerModal && editCustomerModal.classList.contains('active')) {
-                 const form = document.getElementById('customer-form');
-                 if (form && form.dataset.customerId) {
-                     loadCustomerNotesHistory(form.dataset.customerId, 'customer-notes-history');
-                 }
-            }
-    
-            // Reload customer details history if details modal is open
-            const viewCustomerModal = document.getElementById('customer-details-modal');
-            if (viewCustomerModal && viewCustomerModal.classList.contains('active')) {
-                 if (viewCustomerModal.dataset.currentCustomerId) {
-                     loadCustomerNotesHistory(viewCustomerModal.dataset.currentCustomerId, 'view-customer-notes-history');
-                 }
-            }
-            
+            await refreshAllUI();
         } catch (error) {
             console.error('❌ Error deleting activity:', error);
             showAlert('שגיאה במחיקת הפעילות: ' + error.message, 'error');
@@ -7707,7 +7675,7 @@ async function refreshAllUI() {
     // 2. Refresh active tab
     const activeTab = document.querySelector('.tab-content:not(.hidden)');
     if (activeTab) {
-        if (activeTab.id === 'deals-tab') {
+        if (activeTab.id === 'deals-tab' || activeTab.id === 'history-tab') {
              if (typeof loadDealsHistory === 'function') loadDealsHistory(true);
         }
         else if (activeTab.id === 'customers-tab') {
@@ -7728,6 +7696,21 @@ async function refreshAllUI() {
         else if (activeTab.id === 'suppliers-tab') {
              if (typeof loadSuppliers === 'function') loadSuppliers();
         }
+        else if (activeTab.id === 'supplier-orders-tab') {
+             if (typeof loadSupplierOrders === 'function') loadSupplierOrders();
+        }
+        else if (activeTab.id === 'auditlog-tab') {
+             if (typeof loadAuditLog === 'function') loadAuditLog();
+        }
+        else if (activeTab.id === 'reports-tab') {
+             if (typeof loadReports === 'function') loadReports();
+        }
+        else if (activeTab.id === 'search-tab') {
+             const query = document.getElementById('global-search-input')?.value.trim();
+             if (query && query.length >= 2) {
+                 if (typeof performGlobalSearch === 'function') performGlobalSearch();
+             }
+        }
     }
 
     // 3. Refresh active modals that might depend on updated data
@@ -7735,6 +7718,16 @@ async function refreshAllUI() {
     if (customerDetailsModal && customerDetailsModal.classList.contains('active')) {
         const cid = customerDetailsModal.dataset.currentCustomerId;
         if (cid) viewCustomerDetails(cid);
+    }
+
+    const customerModal = document.getElementById('customer-modal');
+    if (customerModal && customerModal.classList.contains('active')) {
+        const form = document.getElementById('customer-form');
+        if (form && form.dataset.customerId) {
+            if (typeof loadCustomerNotesHistory === 'function') {
+                loadCustomerNotesHistory(form.dataset.customerId, 'customer-notes-history');
+            }
+        }
     }
 
     const contactDetailsModal = document.getElementById('contact-details-modal');
@@ -11579,8 +11572,7 @@ async function deleteSupplier(supplierId) {
             logAction('delete', 'supplier', supplierId, supplier?.name || 'ספק', 'מחיקת ספק', supplier, null);
 
             showAlert('הספק נמחק בהצלחה', 'success');
-            await loadSuppliers();
-            filterSuppliers();
+            await refreshAllUI();
         } catch (e) {
             console.error(e);
             showAlert('שגיאה במחיקת הספק: ' + e.message, 'error');

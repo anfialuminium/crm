@@ -609,16 +609,26 @@ async function saveAccDeal() {
         const customer = customers.find(c => c.customer_id === customerId);
         const customerName = customer ? customer.business_name : 'לקוח';
         
+        // Build items summary for audit log
+        const itemsSummary = validItems.map(i => {
+            const p = products.find(prod => prod.product_id === i.product_id);
+            let name = p ? p.product_name : 'מוצר';
+            if (i.is_fin_brush) name += ' (סנפיר)';
+            if (i.is_roll) name += ' (גליל)';
+            return `${name} - ${i.quantity} יח'`;
+        }).join(', ');
+
         await logAction(
             'create', 
             'deal', 
             deal.deal_id, 
             `עסקה - ${customerName}`, 
-            `יצירת עסקה חדשה (ממשק נגיש) בסכום ₪${subtotal.toFixed(0)}`,
+            `יצירת עסקה חדשה (ממשק נגיש) בסכום ₪${subtotal.toFixed(0)}. מוצרים: ${itemsSummary}`,
             null,
             {
                 customer_id: customerId,
                 total_amount: subtotal,
+                items_summary: itemsSummary,
                 items_count: validItems.length,
                 notes: 'נוצר דרך הממשק הנגיש'
             }
@@ -705,6 +715,9 @@ async function sendNotificationEmail(action, email, url) {
             'quantity': 'כמות',
             'unit_price': 'מחיר יחידה',
             'items_count': 'מספר פריטים',
+            'items_summary': 'פירוט מוצרים',
+            'is_fin_brush': 'מברשת סנפיר',
+            'is_roll': 'גליל',
             'active': 'פעיל'
         };
 
@@ -889,6 +902,8 @@ async function viewDealDetails(dealId) {
             const parts = [];
             if (item.size) parts.push(`מידה: ${item.size}`);
             if (item.color) parts.push(`צבע: ${item.color}`);
+            if (item.is_fin_brush) parts.push('מברשת סנפיר');
+            if (item.is_roll) parts.push('גליל');
             const detailsStr = parts.length > 0 ? `<br><span style="color:var(--text-secondary); font-size:1.1rem;">${parts.join(' | ')}</span>` : '';
 
             html += `
