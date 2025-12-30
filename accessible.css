@@ -159,6 +159,10 @@ label {
     border-color: var(--primary-color);
 }
 
+input[type="number"] {
+    direction: ltr;
+}
+
 /* Deals List */
 .deal-card {
     background: white;
@@ -419,6 +423,7 @@ label {
 
 .stepper-input {
     flex: 1;
+    direction: ltr;
     border: none !important;
     background: transparent !important;
     padding: 0 4px !important;
