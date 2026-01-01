@@ -459,13 +459,20 @@ async function loadProducts() {
 
         const getCategoryScore = (cat) => categoryOrder[cat] || 999;
 
-        // Sort products globally by category score and then SKU
+        // Sort products globally by category score and then Name (Logical Order)
         products.sort((a, b) => {
             const catScoreA = getCategoryScore(a.category);
             const catScoreB = getCategoryScore(b.category);
             if (catScoreA !== catScoreB) return catScoreA - catScoreB;
             
-            // Sort by SKU numerically/alphabetically
+            // Primary sort by Name (more logical for humans: 7000 < 7300 < 9000)
+            const nameA = a.product_name || '';
+            const nameB = b.product_name || '';
+            
+            const nameComp = nameA.localeCompare(nameB, 'he', { numeric: true, sensitivity: 'base' });
+            if (nameComp !== 0) return nameComp;
+
+            // Fallback to SKU
             const skuA = a.sku || '';
             const skuB = b.sku || '';
             return skuA.localeCompare(skuB, undefined, { numeric: true, sensitivity: 'base' });
