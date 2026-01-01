@@ -290,6 +290,7 @@ async function initializeApp() {
     await loadCustomers();
     await loadOrderColors(); // Load colors
     await checkSchemaCapabilities();
+    setupReportFilters();
     
     // Load dashboard data (default tab)
     // Default is now deals, no specific load needed as it's a form
@@ -8752,169 +8753,204 @@ async function showConfirmation(title, message) {
 
 let chartInstances = {};
 
+function setupReportFilters() {
+    const yearSelect = document.getElementById('report-filter-year');
+    if (!yearSelect) return;
+    
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = 0; i < 5; i++) {
+        years.push(currentYear - i);
+    }
+    
+    yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+    
+    // Default to current year
+    yearSelect.value = currentYear;
+}
+
+function setReportPeriod(type) {
+    const now = new Date();
+    const yearSelect = document.getElementById('report-filter-year');
+    const monthSelect = document.getElementById('report-filter-month');
+    
+    if (!yearSelect || !monthSelect) return;
+
+    if (type === 'today') {
+        yearSelect.value = now.getFullYear();
+        monthSelect.value = now.getMonth() + 1;
+    } else if (type === 'month') {
+        yearSelect.value = now.getFullYear();
+        monthSelect.value = now.getMonth() + 1;
+    } else if (type === 'year') {
+        yearSelect.value = now.getFullYear();
+        monthSelect.value = '';
+    }
+    loadReports();
+}
+
 async function loadReports() {
     try {
         showAlert('טוען נתונים לדוחות...', 'info');
 
-        // Fetch all deals
+        const year = parseInt(document.getElementById('report-filter-year')?.value) || new Date().getFullYear();
+        const month = document.getElementById('report-filter-month')?.value;
+
+        // Fetch deals for the selected year
+        const startDate = new Date(year, 0, 1, 0, 0, 0).toISOString();
+        const endDate = new Date(year, 11, 31, 23, 59, 59).toISOString();
+
         const { data: deals, error: dealsError } = await supabaseClient
             .from('deals')
-            .select('*');
+            .select('*')
+            .gte('created_at', startDate)
+            .lte('created_at', endDate);
             
         if (dealsError) throw dealsError;
-        
-        // Fetch deal items (simplified query)
-        const { data: dealItems, error: itemsError } = await supabaseClient
-            .from('deal_items')
-            .select(`
-                deal_id,
-                quantity,
-                total_price,
-                products (
-                    product_name
-                )
-            `);
-            
-        if (itemsError) throw itemsError;
-
-        // Calculate Summary Stats
-        const wonDeals = deals.filter(d => d.deal_status === 'זכייה');
-        const pendingDeals = deals.filter(d => ['חדש', 'ממתין', 'טיוטה'].includes(d.deal_status));
-        
-        const totalSales = wonDeals.reduce((sum, deal) => sum + (deal.final_amount || 0), 0);
         
         // Fetch Supplier Orders for Procurement Report
         const { data: supplierOrdersData, error: supplierOrdersError } = await supabaseClient
             .from('supplier_orders')
-            .select('total_amount, order_status, created_at');
+            .select('total_amount, order_status, created_at')
+            .gte('created_at', startDate)
+            .lte('created_at', endDate);
 
+        if (supplierOrdersError) throw supplierOrdersError;
         const supplierOrders = supplierOrdersData || [];
+
+        // Apply Month Filter if selected
+        let filteredDeals = deals;
+        let filteredSupplierOrders = supplierOrders;
+        if (month) {
+            const m = parseInt(month) - 1;
+            filteredDeals = deals.filter(d => new Date(d.created_at).getMonth() === m);
+            filteredSupplierOrders = supplierOrders.filter(o => new Date(o.created_at).getMonth() === m);
+        }
+
+        // Fetch deal items for the fetched deals
+        const dealIds = deals.map(d => d.deal_id);
+        let dealItems = [];
+        if (dealIds.length > 0) {
+            // Fetch in chunks of 500
+            for (let i = 0; i < dealIds.length; i += 500) {
+                const chunk = dealIds.slice(i, i + 500);
+                const { data, error: itemsError } = await supabaseClient
+                    .from('deal_items')
+                    .select(`
+                        deal_id,
+                        quantity,
+                        total_price,
+                        products (
+                            product_name
+                        )
+                    `)
+                    .in('deal_id', chunk);
+                    
+                if (!itemsError && data) {
+                    dealItems = dealItems.concat(data);
+                }
+            }
+        }
+
+        // Calculate Summary Stats (on filtered data)
+        const wonDeals = filteredDeals.filter(d => d.deal_status === 'זכייה');
+        const pendingDeals = filteredDeals.filter(d => ['חדש', 'ממתין', 'טיוטה'].includes(d.deal_status));
+        const totalSales = wonDeals.reduce((sum, deal) => sum + (deal.final_amount || 0), 0);
         
-        // --- Currency Conversion Logic (USD to ILS) ---
-        const activeOrders = supplierOrders.filter(o => o.order_status !== 'בוטל');
-        
-        // Helper to fetch rates with caching
+        // Calculate Expenses (on filtered data)
+        const activeOrders = filteredSupplierOrders.filter(o => o.order_status !== 'בוטל');
         const rateCache = {};
         const getRateForDate = async (dateStr) => {
             if (rateCache[dateStr]) return rateCache[dateStr];
-            
-            // Validate date - cannot be in future
             const today = new Date().toISOString().split('T')[0];
             if (dateStr > today) dateStr = today;
-            
             try {
-                // Validate date string format YYYY-MM-DD
-                if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) throw new Error('Invalid date');
-
                 const res = await fetch(`https://api.frankfurter.app/${dateStr}?from=USD&to=ILS`);
-                if (!res.ok) throw new Error('Rate not found');
                 const json = await res.json();
                 rateCache[dateStr] = json.rates.ILS;
                 return json.rates.ILS;
             } catch (e) {
-                // If specific date fails (e.g. weekend), try fetching latest as global fallback
-                if (rateCache[dateStr]) return rateCache[dateStr]; // Check if parallel request already filled it
-                
-                // Use a shared fallback promise/value
                 if (!rateCache['fallback']) {
-                     try {
-                        const fallbackRes = await fetch('https://api.frankfurter.app/latest?from=USD&to=ILS');
-                        const fallbackJson = await fallbackRes.json();
-                        rateCache['fallback'] = fallbackJson.rates.ILS;
-                     } catch {
-                        rateCache['fallback'] = 3.6; // Hard fallback
-                     }
+                    try {
+                        const fb = await fetch('https://api.frankfurter.app/latest?from=USD&to=ILS');
+                        const res = await fb.json();
+                        rateCache['fallback'] = res.rates.ILS;
+                    } catch { rateCache['fallback'] = 3.6; }
                 }
                 rateCache[dateStr] = rateCache['fallback'];
                 return rateCache['fallback'];
             }
         };
 
-        // Get unique dates to fetch
-        const uniqueDates = [...new Set(activeOrders.map(o => {
-            return o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-        }))];
-
-        // Fetch rates in parallel
+        const uniqueDates = [...new Set(activeOrders.map(o => 
+            o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+        ))];
         await Promise.all(uniqueDates.map(date => getRateForDate(date)));
 
-        // Calculate Total
         const totalSupplierExpenses = activeOrders.reduce((sum, o) => {
              const dateStr = o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
              const rate = rateCache[dateStr] || 3.6;
              return sum + ((o.total_amount || 0) * rate);
         }, 0);
             
-        const totalOrdersCount = supplierOrders.length;
-        const openOrdersCount = supplierOrders.filter(o => !['התקבל', 'בוטל'].includes(o.order_status)).length;
+        const totalOrdersCount = filteredSupplierOrders.length;
+        const openOrdersCount = filteredSupplierOrders.filter(o => !['התקבל', 'בוטל'].includes(o.order_status)).length;
         
-        // Update DOM for Procurement
+        // Update DOM
         const expensesEl = document.getElementById('report-total-expenses');
         const ordersCountEl = document.getElementById('report-total-supplier-orders');
         const openOrdersEl = document.getElementById('report-open-supplier-orders');
-        
-        if (expensesEl) expensesEl.textContent = `₪${totalSupplierExpenses.toLocaleString()}`;
-        if (ordersCountEl) ordersCountEl.textContent = totalOrdersCount;
-        if (openOrdersEl) openOrdersEl.textContent = openOrdersCount;
-        
-        // Update Summary Cards
         const totalSalesEl = document.getElementById('report-total-sales');
         const wonEl = document.getElementById('report-deals-won');
         const pendingEl = document.getElementById('report-deals-pending');
 
+        if (expensesEl) expensesEl.textContent = `₪${totalSupplierExpenses.toLocaleString()}`;
+        if (ordersCountEl) ordersCountEl.textContent = totalOrdersCount;
+        if (openOrdersEl) openOrdersEl.textContent = openOrdersCount;
         if (totalSalesEl) totalSalesEl.textContent = `₪${totalSales.toLocaleString()}`;
         if (wonEl) wonEl.textContent = wonDeals.length;
         if (pendingEl) pendingEl.textContent = pendingDeals.length;
 
-        // --- Render Charts ---
-
-        // 1. Monthly Sales Chart (Current Year)
-        renderSalesChart(wonDeals);
-
-        // 2. Deal Status Chart
+        // Render Charts
+        renderSalesChart(deals.filter(d => d.deal_status === 'זכייה'), year);
         renderStatusChart(deals);
-
-        // 3. Customer Types Chart
-        // Ensure customers are loaded
-        if (typeof customers === 'undefined' || !customers || customers.length === 0) {
-            await loadCustomers();
-        }
+        if (typeof customers === 'undefined' || !customers || customers.length === 0) await loadCustomers();
         renderCustomersChart();
 
-        // Load Business Insights
-        if (typeof loadBusinessInsights === 'function') {
-            loadBusinessInsights(deals, customers, dealItems);
-        }
+        // Business Insights
+        if (typeof loadBusinessInsights === 'function') loadBusinessInsights(filteredDeals, customers, dealItems);
 
-        // 4. Top Products Chart
-        // Pass deals map for easy status lookup
+        // Top Products (filtered by month if selected)
         const dealsStatusMap = deals.reduce((acc, deal) => {
             acc[deal.deal_id] = deal.deal_status;
             return acc;
         }, {});
         
-        renderProductsChart(dealItems, dealsStatusMap);
+        let filteredItems = dealItems;
+        if (month) {
+             const m = parseInt(month) - 1;
+             const monthDealIds = new Set(deals.filter(d => new Date(d.created_at).getMonth() === m).map(d => d.deal_id));
+             filteredItems = dealItems.filter(item => monthDealIds.has(item.deal_id));
+        }
+        renderProductsChart(filteredItems, dealsStatusMap);
 
         showAlert('✅ הדוחות עודכנו בהצלחה', 'success');
-
     } catch (error) {
         console.error('❌ Error loading reports:', error);
         showAlert('שגיאה בטעינת דוחות: ' + error.message, 'error');
     }
 }
 
-
-function renderSalesChart(wonDeals) {
+function renderSalesChart(wonDeals, yearSelection) {
     const ctx = document.getElementById('salesChart').getContext('2d');
     
     // Group by month
     const months = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
-    const currentYear = new Date().getFullYear();
     const monthlyData = new Array(12).fill(0);
 
     wonDeals.forEach(deal => {
         const date = new Date(deal.created_at);
-        if (date.getFullYear() === currentYear) {
+        if (date.getFullYear() === yearSelection) {
             monthlyData[date.getMonth()] += (deal.final_amount || 0);
         }
     });
@@ -8926,7 +8962,7 @@ function renderSalesChart(wonDeals) {
         data: {
             labels: months,
             datasets: [{
-                label: `מכירות ${currentYear} (₪)`,
+                label: `מכירות ${yearSelection} (₪)`,
                 data: monthlyData,
                 backgroundColor: '#3b82f6',
                 borderRadius: 4
@@ -9054,9 +9090,9 @@ function renderProductsChart(dealItems, dealsStatusMap) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'יחידות שנמכרו',
+                label: 'כמות שנמכרה',
                 data: data,
-                backgroundColor: '#6366f1',
+                backgroundColor: '#10b981',
                 borderRadius: 4
             }]
         },

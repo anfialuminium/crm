@@ -90,6 +90,38 @@
                         </button>
                     </div>
                     
+                    <div class="reports-filters" style="display: flex; gap: 1rem; margin-bottom: 2rem; background: white; padding: 1.25rem; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); flex-wrap: wrap; align-items: flex-end;">
+                        <div class="form-group" style="margin-bottom: 0; min-width: 140px; flex: 1;">
+                            <label class="form-label">🗓️ בחר שנה</label>
+                            <select id="report-filter-year" class="form-select" onchange="loadReports()">
+                                <!-- Years injected by JS -->
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0; min-width: 140px; flex: 1;">
+                            <label class="form-label">📅 בחר חודש</label>
+                            <select id="report-filter-month" class="form-select" onchange="loadReports()">
+                                <option value="">כל השנה</option>
+                                <option value="1">ינואר</option>
+                                <option value="2">פברואר</option>
+                                <option value="3">מרץ</option>
+                                <option value="4">אפריל</option>
+                                <option value="5">מאי</option>
+                                <option value="6">יוני</option>
+                                <option value="7">יולי</option>
+                                <option value="8">אוגוסט</option>
+                                <option value="9">ספטמבר</option>
+                                <option value="10">אוקטובר</option>
+                                <option value="11">נובמבר</option>
+                                <option value="12">דצמבר</option>
+                            </select>
+                        </div>
+                        <div style="flex: 2; min-width: 200px; display: flex; gap: 0.5rem;">
+                            <button class="btn btn-secondary" onclick="setReportPeriod('today')" style="flex: 1; padding: 0.5rem; font-size: 0.85rem;">היום</button>
+                            <button class="btn btn-secondary" onclick="setReportPeriod('month')" style="flex: 1; padding: 0.5rem; font-size: 0.85rem;">החודש</button>
+                            <button class="btn btn-secondary" onclick="setReportPeriod('year')" style="flex: 1; padding: 0.5rem; font-size: 0.85rem;">השנה</button>
+                        </div>
+                    </div>
+
                     <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
                         <!-- Summary Cards -->
                         <div class="summary-card" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">

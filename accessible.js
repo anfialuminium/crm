@@ -138,12 +138,28 @@ async function loadData() {
         // Re-generate categories based on sorted products
         globalAccCategories = [...new Set(products.map(p => p.category))];
         
+        setupAccFilters();
+        
         isAccDataLoaded = true;
         console.log('✅ נתונים נטענו בסדר הגיוני');
     } catch (err) {
         console.error('❌ שגיאה בטעינת נתונים:', err);
         showAlert('שגיאה בתקשורת עם השרת. וודא שיש אינטרנט.', 'error');
     }
+}
+
+function setupAccFilters() {
+    const years = [new Date().getFullYear(), new Date().getFullYear() - 1];
+    const yearOptions = years.map(y => `<option value="${y}">${y}</option>`).join('');
+    
+    ['acc-history-year', 'acc-search-year'].forEach(id => {
+        const select = document.getElementById(id);
+        if (select) {
+            select.innerHTML = yearOptions;
+            // Default to current year
+            select.value = new Date().getFullYear();
+        }
+    });
 }
 
 // Navigation
@@ -162,12 +178,16 @@ function showScreen(screenId) {
     }
 
     if (screenId === 'history') {
-        loadAccDeals('acc-deals-list', '');
+        const m = document.getElementById('acc-history-month')?.value || '';
+        const y = document.getElementById('acc-history-year')?.value || '';
+        loadAccDeals('acc-deals-list', '', m, y);
     }
 
     if (screenId === 'search') {
         document.getElementById('acc-history-search').value = '';
-        loadAccDeals('acc-search-list', '');
+        const m = document.getElementById('acc-search-month')?.value || '';
+        const y = document.getElementById('acc-search-year')?.value || '';
+        loadAccDeals('acc-search-list', '', m, y);
         setTimeout(() => document.getElementById('acc-history-search').focus(), 100);
     }
 
@@ -891,7 +911,7 @@ async function sendNotificationEmail(action, email, url) {
 }
 
 // History & Search Logic
-async function loadAccDeals(containerId, searchQuery = '') {
+async function loadAccDeals(containerId, searchQuery = '', month = '', year = '') {
     const container = document.getElementById(containerId);
     if (!container) return;
     
@@ -905,8 +925,24 @@ async function loadAccDeals(containerId, searchQuery = '') {
                 *,
                 customers (business_name)
             `)
-            .order('created_at', { ascending: false })
-            .limit(50);
+            .order('created_at', { ascending: false });
+
+        // Apply Date Filters
+        if (year) {
+            const y = parseInt(year);
+            if (month) {
+                const m = parseInt(month) - 1;
+                const startDate = new Date(y, m, 1, 0, 0, 0).toISOString();
+                const endDate = new Date(y, m + 1, 0, 23, 59, 59).toISOString();
+                query = query.gte('created_at', startDate).lte('created_at', endDate);
+            } else {
+                const startDate = new Date(y, 0, 1, 0, 0, 0).toISOString();
+                const endDate = new Date(y, 11, 31, 23, 59, 59).toISOString();
+                query = query.gte('created_at', startDate).lte('created_at', endDate);
+            }
+        }
+
+        query = query.limit(50);
 
         const { data: deals, error } = await query;
         if (error) throw error;
