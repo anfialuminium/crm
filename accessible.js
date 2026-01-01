@@ -149,15 +149,17 @@ async function loadData() {
 }
 
 function setupAccFilters() {
-    const years = [new Date().getFullYear(), new Date().getFullYear() - 1];
-    const yearOptions = years.map(y => `<option value="${y}">${y}</option>`).join('');
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear, currentYear - 1, currentYear - 2];
+    let yearOptions = '<option value="">כל השנים</option>';
+    yearOptions += years.map(y => `<option value="${y}">${y}</option>`).join('');
     
     ['acc-history-year', 'acc-search-year'].forEach(id => {
         const select = document.getElementById(id);
         if (select) {
             select.innerHTML = yearOptions;
-            // Default to current year
-            select.value = new Date().getFullYear();
+            // Default to "All Years" to show THE LATEST deals immediately
+            select.value = "";
         }
     });
 }
