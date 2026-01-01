@@ -28,10 +28,7 @@
                     <span>➕ עסקה חדשה</span>
                 </button>
                 <button onclick="showScreen('history')" class="btn-big btn-primary">
-                    <span>📋 היסטוריית עסקאות</span>
-                </button>
-                <button onclick="showScreen('search')" class="btn-big btn-outline">
-                    <span>🔍 חפש עסקה</span>
+                    <span>📋 היסטוריית עסקאות וחיפוש</span>
                 </button>
             </div>
         </div>
@@ -74,18 +71,23 @@
             </div>
         </div>
 
-        <!-- History Screen -->
+        <!-- History & Search Screen -->
         <div id="screen-history" class="hidden">
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 class="section-title" style="margin-bottom: 0;">📋 היסטוריית עסקאות</h2>
+                    <h2 class="section-title" style="margin-bottom: 0;">📋 עסקאות וחיפוש</h2>
                     <button onclick="showScreen('main')" class="btn-big btn-outline" style="width: auto; padding: 10px 20px; font-size: 1rem;">🏠 חזור</button>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-size: 0.9rem; color: var(--text-secondary);">חפש לקוח:</label>
+                    <input type="text" id="acc-history-search" class="input-big" placeholder="שם הלקוח..." onkeyup="loadAccDeals('acc-deals-list', this.value, document.getElementById('acc-history-month').value, document.getElementById('acc-history-year').value)">
                 </div>
 
                 <div class="filters-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
                     <div>
                         <label style="font-size: 0.9rem; color: var(--text-secondary);">חודש:</label>
-                        <select id="acc-history-month" class="input-big" style="padding: 10px; height: auto;" onchange="loadAccDeals('acc-deals-list', '', this.value, document.getElementById('acc-history-year').value)">
+                        <select id="acc-history-month" class="input-big" style="padding: 10px; height: auto;" onchange="loadAccDeals('acc-deals-list', document.getElementById('acc-history-search').value, this.value, document.getElementById('acc-history-year').value)">
                             <option value="">כל החודשים</option>
                             <option value="1">ינואר</option>
                             <option value="2">פברואר</option>
@@ -103,7 +105,7 @@
                     </div>
                     <div>
                         <label style="font-size: 0.9rem; color: var(--text-secondary);">שנה:</label>
-                        <select id="acc-history-year" class="input-big" style="padding: 10px; height: auto;" onchange="loadAccDeals('acc-deals-list', '', document.getElementById('acc-history-month').value, this.value)">
+                        <select id="acc-history-year" class="input-big" style="padding: 10px; height: auto;" onchange="loadAccDeals('acc-deals-list', document.getElementById('acc-history-search').value, document.getElementById('acc-history-month').value, this.value)">
                             <!-- Years will be populated by JS -->
                         </select>
                     </div>
@@ -115,50 +117,6 @@
             </div>
         </div>
 
-        <!-- Search Screen -->
-        <div id="screen-search" class="hidden">
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 class="section-title" style="margin-bottom: 0;">🔍 חפש עסקאות</h2>
-                    <button onclick="showScreen('main')" class="btn-big btn-outline" style="width: auto; padding: 10px 20px; font-size: 1rem;">🏠 חזור</button>
-                </div>
-
-                <div class="form-group">
-                    <input type="text" id="acc-history-search" class="input-big" placeholder="חפש לפי שם לקוח..." onkeyup="loadAccDeals('acc-search-list', this.value, document.getElementById('acc-search-month').value, document.getElementById('acc-search-year').value)">
-                </div>
-
-                <div class="filters-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
-                    <div>
-                        <label style="font-size: 0.9rem; color: var(--text-secondary);">בחר חודש:</label>
-                        <select id="acc-search-month" class="input-big" style="padding: 10px; height: auto;" onchange="loadAccDeals('acc-search-list', document.getElementById('acc-history-search').value, this.value, document.getElementById('acc-search-year').value)">
-                            <option value="">כל החודשים</option>
-                            <option value="1">ינואר</option>
-                            <option value="2">פברואר</option>
-                            <option value="3">מרץ</option>
-                            <option value="4">אפריל</option>
-                            <option value="5">מאי</option>
-                            <option value="6">יוני</option>
-                            <option value="7">יולי</option>
-                            <option value="8">אוגוסט</option>
-                            <option value="9">ספטמבר</option>
-                            <option value="10">אוקטובר</option>
-                            <option value="11">נובמבר</option>
-                            <option value="12">דצמבר</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size: 0.9rem; color: var(--text-secondary);">בחר שנה:</label>
-                        <select id="acc-search-year" class="input-big" style="padding: 10px; height: auto;" onchange="loadAccDeals('acc-search-list', document.getElementById('acc-history-search').value, document.getElementById('acc-search-month').value, this.value)">
-                            <!-- Years will be populated by JS -->
-                        </select>
-                    </div>
-                </div>
-
-                <div id="acc-search-list">
-                    <!-- Search results will be loaded here -->
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Modals -->

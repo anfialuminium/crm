@@ -154,14 +154,12 @@ function setupAccFilters() {
     let yearOptions = '<option value="">כל השנים</option>';
     yearOptions += years.map(y => `<option value="${y}">${y}</option>`).join('');
     
-    ['acc-history-year', 'acc-search-year'].forEach(id => {
-        const select = document.getElementById(id);
-        if (select) {
-            select.innerHTML = yearOptions;
-            // Default to "All Years" to show THE LATEST deals immediately
-            select.value = "";
-        }
-    });
+    const select = document.getElementById('acc-history-year');
+    if (select) {
+        select.innerHTML = yearOptions;
+        // Default to "All Years" to show THE LATEST deals immediately
+        select.value = "";
+    }
 }
 
 // Navigation
@@ -180,17 +178,10 @@ function showScreen(screenId) {
     }
 
     if (screenId === 'history') {
+        document.getElementById('acc-history-search').value = '';
         const m = document.getElementById('acc-history-month')?.value || '';
         const y = document.getElementById('acc-history-year')?.value || '';
         loadAccDeals('acc-deals-list', '', m, y);
-    }
-
-    if (screenId === 'search') {
-        document.getElementById('acc-history-search').value = '';
-        const m = document.getElementById('acc-search-month')?.value || '';
-        const y = document.getElementById('acc-search-year')?.value || '';
-        loadAccDeals('acc-search-list', '', m, y);
-        setTimeout(() => document.getElementById('acc-history-search').focus(), 100);
     }
 
     if (screenId === 'new-deal') {

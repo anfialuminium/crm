@@ -8757,16 +8757,14 @@ function setupReportFilters() {
     const yearSelect = document.getElementById('report-filter-year');
     if (!yearSelect) return;
     
-    const currentYear = new Date().getFullYear();
-    const years = [];
-    for (let i = 0; i < 5; i++) {
-        years.push(currentYear - i);
-    }
+    // As requested: Only 2025 and 2026
+    const years = [2026, 2025];
     
     yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
     
-    // Default to current year
-    yearSelect.value = currentYear;
+    // Default to current year or 2026
+    const currentYear = new Date().getFullYear();
+    yearSelect.value = years.includes(currentYear) ? currentYear : 2026;
 }
 
 function setReportPeriod(type) {
