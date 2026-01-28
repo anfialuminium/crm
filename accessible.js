@@ -984,8 +984,9 @@ async function loadAccDeals(containerId, searchQuery = '', month = '', year = ''
                         <h3>${d.customers.business_name}</h3>
                         <p>📅 ${date} | 📝 ${d.deal_status === 'זכייה' ? 'נסגר' : d.deal_status}</p>
                     </div>
-                    <div class="deal-amount">
-                        ₪${(d.final_amount || 0).toLocaleString()}
+                    <div class="deal-amount" style="text-align: left; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">לפני מע"מ: ₪${(d.final_amount || 0).toLocaleString()}</span>
+                        <span style="white-space: nowrap;">₪${((d.final_amount || 0) * 1.18).toLocaleString()} <small style="font-size: 0.7rem; font-weight: normal;">(כולל מע"מ)</small></span>
                     </div>
                     <button onclick="viewDealDetails('${d.deal_id}')" class="btn-big btn-outline" style="width:auto; margin:0; padding:8px 16px; font-size:1rem;">פרטים</button>
                 </div>
