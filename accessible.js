@@ -622,7 +622,18 @@ function updateTotal() {
         return sum + (price * qty * multiplier);
     }, 0);
     
-    document.getElementById('acc-total-amount').textContent = `₪${subtotal.toFixed(0)}`;
+    const vat = subtotal * 0.18;
+    const total = subtotal + vat;
+
+    const fmt = (val) => `₪${val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+    const subtotalEl = document.getElementById('acc-subtotal-amount');
+    const vatEl = document.getElementById('acc-vat-amount');
+    const totalEl = document.getElementById('acc-total-amount');
+
+    if (subtotalEl) subtotalEl.textContent = fmt(subtotal);
+    if (vatEl) vatEl.textContent = fmt(vat);
+    if (totalEl) totalEl.textContent = fmt(total);
 }
 
 async function saveAccDeal() {
@@ -639,7 +650,17 @@ async function saveAccDeal() {
     }
 
     try {
-        const subtotal = validItems.reduce((sum, i) => sum + (i.quantity * i.price), 0);
+        const subtotal = validItems.reduce((sum, i) => {
+            const product = products.find(p => p.product_id === i.product_id);
+            let multiplier = 1;
+            const isBrush = product && (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות')));
+            const isMesh = product && !isBrush && (product.product_name.includes('רשת') || (product.category && product.category.includes('רשתות')));
+            if (isMesh) {
+                if (i.is_roll) multiplier = 30;
+                else multiplier = parseFloat(i.length) || 1;
+            }
+            return sum + (parseFloat(i.price) * parseFloat(i.quantity) * multiplier);
+        }, 0);
         
         // 1. Create Deal
         const { data: deal, error: dError } = await supabaseClient
@@ -990,6 +1011,8 @@ async function viewDealDetails(dealId) {
         if (error) throw error;
 
         let html = '<h2 class="section-title">פרטי עסקה</h2><div style="font-size:1.2rem; margin-top:20px;">';
+        let subtotal = 0;
+        
         items.forEach(item => {
             const parts = [];
             if (item.size) parts.push(`מידה: ${item.size}`);
@@ -998,13 +1021,40 @@ async function viewDealDetails(dealId) {
             if (item.is_roll) parts.push('גליל');
             const detailsStr = parts.length > 0 ? `<br><span style="color:var(--text-secondary); font-size:1.1rem;">${parts.join(' | ')}</span>` : '';
 
+            // Calculate item total (quantity * price * length/multiplier)
+            // If it's a roll, multiplier is 30. If it has length, use length. Otherwise 1.
+            const multiplier = item.is_roll ? 30 : (item.length || 1);
+            const itemTotal = item.quantity * item.unit_price * multiplier;
+            subtotal += itemTotal;
+
             html += `
                 <div style="border-bottom:1px solid #eee; padding:12px 0;">
                     <strong>${item.products.product_name}</strong>${detailsStr}<br>
-                    כמות: ${item.quantity} | מחיר: ₪${item.unit_price} | סה"כ: ₪${(item.quantity * item.unit_price).toFixed(2)}
+                    כמות: ${item.quantity} | מחיר: ₪${item.unit_price} | סה"כ: ₪${itemTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </div>
             `;
         });
+
+        const vat = subtotal * 0.18;
+        const total = subtotal + vat;
+        const fmt = (val) => `₪${val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+        html += `
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 2px dashed var(--border-color);">
+                <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 4px;">
+                    <span>סה"כ לפני מע"מ:</span>
+                    <span>${fmt(subtotal)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 4px;">
+                    <span>מע"מ (18%):</span>
+                    <span>${fmt(vat)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 1.4rem; font-weight: 800; color: var(--primary-color); margin-top: 8px;">
+                    <span>סה"כ לתשלום:</span>
+                    <span>${fmt(total)}</span>
+                </div>
+            </div>
+        `;
         html += '</div>';
 
         const modalBody = document.getElementById('acc-modal-body');

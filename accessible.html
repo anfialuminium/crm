@@ -60,7 +60,18 @@
                 </div>
 
                 <div class="total-display">
-                    סה"כ לתשלום: <span id="acc-total-amount">₪0.00</span>
+                    <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 8px;">
+                        <span>סה"כ לפני מע"מ:</span>
+                        <span id="acc-subtotal-amount">₪0.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 8px;">
+                        <span>מע"מ (18%):</span>
+                        <span id="acc-vat-amount">₪0.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 1.6rem; border-top: 2px solid var(--border-color); padding-top: 12px; margin-top: 8px;">
+                        <span>סה"כ לתשלום:</span>
+                        <span id="acc-total-amount">₪0.00</span>
+                    </div>
                 </div>
 
                 <div style="margin-top: 32px;">
