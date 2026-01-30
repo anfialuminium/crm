@@ -486,17 +486,19 @@ input[inputmode="decimal"] {
     outline: none !important;
 }
 
-/* Color selection buttons for brushes */
-.color-selection-buttons {
+/* Color and Option selection buttons */
+.color-selection-buttons, .option-selection-buttons {
     display: flex;
+    flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 8px;
 }
 
-.color-choice-btn {
+.color-choice-btn, .option-choice-btn {
     flex: 1;
-    padding: 20px 16px;
-    font-size: 1.2rem;
+    min-width: 120px;
+    padding: 16px;
+    font-size: 1.1rem;
     font-weight: 700;
     border: 3px solid var(--border-color);
     border-radius: 16px;
@@ -504,14 +506,18 @@ input[inputmode="decimal"] {
     cursor: pointer;
     transition: all 0.2s;
     color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
-.color-choice-btn:hover {
+.color-choice-btn:hover, .option-choice-btn:hover {
     background: var(--bg-secondary);
     border-color: var(--primary-color);
 }
 
-.color-choice-btn.active {
+.color-choice-btn.active, .option-choice-btn.active {
     background: var(--primary-color);
     color: white;
     border-color: var(--primary-color);

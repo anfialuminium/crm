@@ -278,7 +278,7 @@ function addAccItem() {
     div.innerHTML = `
         <div style="width: 100%;">
             <div id="categories-container-${id}" style="margin-bottom: 20px;"></div>
-            <div style="margin-bottom: 12px;">
+            <div style="margin-bottom: 12px;" id="product-input-container-${id}">
                 <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px;">בחר מוצר:</label>
                 <select class="input-big" id="product-select-${id}" onchange="updateItemProduct('${id}', this.value)">
                     <option value="">בחר קטגוריה קודם</option>
@@ -315,21 +315,46 @@ function addAccItem() {
 }
 
 function updateAccDropdown(id, category) {
-    const select = document.getElementById(`product-select-${id}`);
+    const container = document.getElementById(`product-input-container-${id}`);
     const filtered = products.filter(p => p.category === category);
+    const item = currentDealItems.find(i => i.id === id);
     
-    select.innerHTML = `<option value="">בחר ${category}</option>`;
-    filtered.forEach(p => {
-        const option = document.createElement('option');
-        option.value = p.product_id;
-        option.textContent = p.product_name;
-        select.appendChild(option);
-    });
+    if (filtered.length === 2) {
+        // Use buttons for 2 products
+        container.innerHTML = `
+            <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px;">בחר ${category}:</label>
+            <div class="option-selection-buttons">
+                ${filtered.map(p => `
+                    <button type="button" class="option-choice-btn ${item.product_id === p.product_id ? 'active' : ''}" onclick="updateItemProduct('${id}', '${p.product_id}', this)">${p.product_name}</button>
+                `).join('')}
+            </div>
+        `;
+        // Optionally select the first one if none selected
+        if (!item.product_id) {
+            const firstBtn = container.querySelector('.option-choice-btn');
+            if (firstBtn) firstBtn.click();
+        }
+    } else {
+        // Use select for more than 2 products
+        container.innerHTML = `
+            <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px;">בחר ${category}:</label>
+            <select class="input-big" id="product-select-${id}" onchange="updateItemProduct('${id}', this.value)">
+                <option value="">בחר מוצר</option>
+                ${filtered.map(p => `<option value="${p.product_id}" ${item.product_id === p.product_id ? 'selected' : ''}>${p.product_name}</option>`).join('')}
+            </select>
+        `;
+    }
 }
 
-function updateItemProduct(id, productId) {
+function updateItemProduct(id, productId, btn) {
     const item = currentDealItems.find(i => i.id === id);
     if (!item) return;
+
+    if (btn) {
+        const container = btn.parentElement;
+        container.querySelectorAll('.option-choice-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
     
     const product = products.find(p => p.product_id === productId);
     item.product_id = productId;
@@ -374,13 +399,26 @@ function updateItemProduct(id, productId) {
             if (product.product_name.includes('הדבקה')) {
                 brushSizes = ['5 מטר', '200 מטר'];
             }
-            sizeContainer.innerHTML = `
-                <select class="input-big" onchange="updateItemSize('${id}', this.value)">
-                    <option value="">מידה</option>
-                    ${brushSizes.map(s => `<option value="${s}">${s}</option>`).join('')}
-                </select>
-            `;
-            item.size = '';
+            
+            if (brushSizes.length === 2) {
+                // Default to first size if not set
+                if (!item.size) item.size = brushSizes[0];
+                sizeContainer.innerHTML = `
+                    <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">מידה:</label>
+                    <div class="option-selection-buttons">
+                        ${brushSizes.map(s => `
+                            <button type="button" class="option-choice-btn ${item.size === s ? 'active' : ''}" onclick="updateItemSize('${id}', '${s}', this)">${s}</button>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                sizeContainer.innerHTML = `
+                    <select class="input-big" onchange="updateItemSize('${id}', this.value)">
+                        <option value="">מידה</option>
+                        ${brushSizes.map(s => `<option value="${s}" ${item.size === s ? 'selected' : ''}>${s}</option>`).join('')}
+                    </select>
+                `;
+            }
         } else {
             sizeContainer.innerHTML = `
                 <input type="text" class="input-big" oninput="updateItemSize('${id}', this.value)" placeholder="מידה">
@@ -400,26 +438,35 @@ function updateItemProduct(id, productId) {
     
     if (isMesh) {
         colorContainer.classList.remove('hidden');
+        const meshColors = ['שחור', 'אפור'];
+        // Default for mesh if not set
+        if (!item.color) item.color = 'שחור';
+        
         colorContainer.innerHTML = `
-            <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">צבע:</label>
-            <select class="input-big" onchange="updateItemColor('${id}', this.value)">
-                <option value="">בחר צבע</option>
-                <option value="שחור" ${item.color === 'שחור' ? 'selected' : ''}>שחור</option>
-                <option value="אפור" ${item.color === 'אפור' ? 'selected' : ''}>אפור</option>
-            </select>
+            <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">צבע רשת:</label>
+            <div class="option-selection-buttons">
+                ${meshColors.map(c => `
+                    <button type="button" class="option-choice-btn ${item.color === c ? 'active' : ''}" onclick="updateItemColor('${id}', '${c}', this)">${c}</button>
+                `).join('')}
+            </div>
         `;
     } else if (isPullHandle) {
         colorContainer.classList.remove('hidden');
         const pullColors = ['נירוסטה', 'שחור'];
+        // Default for pull handle if not set
+        if (!item.color) item.color = 'נירוסטה';
+        
         colorContainer.innerHTML = `
-            <select class="input-big" onchange="updateItemColor('${id}', this.value)">
-                <option value="">צבע</option>
-                ${pullColors.map(c => `<option value="${c}">${c}</option>`).join('')}
-            </select>
+            <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">צבע ידית:</label>
+            <div class="option-selection-buttons">
+                ${pullColors.map(c => `
+                    <button type="button" class="option-choice-btn ${item.color === c ? 'active' : ''}" onclick="updateItemColor('${id}', '${c}', this)">${c}</button>
+                `).join('')}
+            </div>
         `;
-        item.color = '';
     } else if (isBrush) {
         colorContainer.classList.remove('hidden');
+        const brushColors = ['שחור', 'לבן'];
         // Default to Black for brushes if not already set to a valid brush color
         if (item.color !== 'שחור' && item.color !== 'לבן') {
             item.color = 'שחור';
@@ -427,20 +474,33 @@ function updateItemProduct(id, productId) {
         
         colorContainer.innerHTML = `
             <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">צבע מברשת:</label>
-            <div class="color-selection-buttons">
-                <button type="button" class="color-choice-btn ${item.color === 'שחור' ? 'active' : ''}" onclick="setBrushColor('${id}', 'שחור', this)">שחור</button>
-                <button type="button" class="color-choice-btn ${item.color === 'לבן' ? 'active' : ''}" onclick="setBrushColor('${id}', 'לבן', this)">לבן</button>
+            <div class="option-selection-buttons">
+                ${brushColors.map(c => `
+                    <button type="button" class="option-choice-btn ${item.color === c ? 'active' : ''}" onclick="updateItemColor('${id}', '${c}', this)">${c}</button>
+                `).join('')}
             </div>
         `;
     } else if (isRegularHandle || (product && product.requires_color)) {
         colorContainer.classList.remove('hidden');
-        colorContainer.innerHTML = `
-            <select class="input-big" onchange="updateItemColor('${id}', this.value)">
-                <option value="">צבע</option>
-                ${orderColors.map(c => `<option value="${c.color_name}">${c.color_name}</option>`).join('')}
-            </select>
-        `;
-        item.color = '';
+        if (orderColors.length === 2) {
+            if (!item.color) item.color = orderColors[0].color_name;
+            colorContainer.innerHTML = `
+                <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">צבע:</label>
+                <div class="option-selection-buttons">
+                    ${orderColors.map(c => `
+                        <button type="button" class="option-choice-btn ${item.color === c.color_name ? 'active' : ''}" onclick="updateItemColor('${id}', '${c.color_name}', this)">${c.color_name}</button>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            colorContainer.innerHTML = `
+                <select class="input-big" onchange="updateItemColor('${id}', this.value)">
+                    <option value="">צבע</option>
+                    ${orderColors.map(c => `<option value="${c.color_name}" ${item.color === c.color_name ? 'selected' : ''}>${c.color_name}</option>`).join('')}
+                </select>
+            `;
+        }
+        if (!item.color && orderColors.length > 0) item.color = ''; 
     } else {
         item.color = '';
     }
@@ -503,9 +563,15 @@ function updateItemProduct(id, productId) {
     updateTotal();
 }
 
-function updateItemSize(id, size) {
+function updateItemSize(id, size, btn) {
     const item = currentDealItems.find(i => i.id === id);
     if (item) item.size = size;
+
+    if (btn) {
+        const container = btn.parentElement;
+        container.querySelectorAll('.option-choice-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
 }
 
 function updateItemLength(id, len) {
@@ -539,17 +605,20 @@ function updateItemRoll(id, isRoll) {
     }
 }
 
-function updateItemColor(id, color) {
+function updateItemColor(id, color, btn) {
     const item = currentDealItems.find(i => i.id === id);
     if (item) item.color = color;
+
+    if (btn) {
+        const container = btn.parentElement;
+        container.querySelectorAll('.option-choice-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
 }
 
+// Keep setBrushColor for backward compatibility/simplicity if needed, but we used updateItemColor above
 function setBrushColor(id, color, btn) {
-    updateItemColor(id, color);
-    // Update UI
-    const container = btn.parentElement;
-    container.querySelectorAll('.color-choice-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+    updateItemColor(id, color, btn);
 }
 
 function updateItemQty(id, qty) {
