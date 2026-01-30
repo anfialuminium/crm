@@ -420,14 +420,18 @@ function updateItemProduct(id, productId) {
         item.color = '';
     } else if (isBrush) {
         colorContainer.classList.remove('hidden');
-        const brushColors = ['שחור', 'לבן'];
+        // Default to Black for brushes if not already set to a valid brush color
+        if (item.color !== 'שחור' && item.color !== 'לבן') {
+            item.color = 'שחור';
+        }
+        
         colorContainer.innerHTML = `
-            <select class="input-big" onchange="updateItemColor('${id}', this.value)">
-                <option value="">צבע</option>
-                ${brushColors.map(c => `<option value="${c}">${c}</option>`).join('')}
-            </select>
+            <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">צבע מברשת:</label>
+            <div class="color-selection-buttons">
+                <button type="button" class="color-choice-btn ${item.color === 'שחור' ? 'active' : ''}" onclick="setBrushColor('${id}', 'שחור', this)">שחור</button>
+                <button type="button" class="color-choice-btn ${item.color === 'לבן' ? 'active' : ''}" onclick="setBrushColor('${id}', 'לבן', this)">לבן</button>
+            </div>
         `;
-        item.color = '';
     } else if (isRegularHandle || (product && product.requires_color)) {
         colorContainer.classList.remove('hidden');
         colorContainer.innerHTML = `
@@ -538,6 +542,14 @@ function updateItemRoll(id, isRoll) {
 function updateItemColor(id, color) {
     const item = currentDealItems.find(i => i.id === id);
     if (item) item.color = color;
+}
+
+function setBrushColor(id, color, btn) {
+    updateItemColor(id, color);
+    // Update UI
+    const container = btn.parentElement;
+    container.querySelectorAll('.color-choice-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
 }
 
 function updateItemQty(id, qty) {
