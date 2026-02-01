@@ -524,3 +524,35 @@ input[inputmode="decimal"] {
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
+/* ============================================
+   Custom Tooltip for Overflowing Text
+   ============================================ */
+.custom-tooltip {
+    position: fixed;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(8px);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 1.1rem; /* Slightly larger for accessibility */
+    font-weight: 500;
+    max-width: 350px;
+    z-index: 999999;
+    pointer-events: none;
+    box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.3), 0 10px 15px -8px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transition: opacity 0.2s ease-out, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: translateY(10px) scale(0.95);
+    line-height: 1.5;
+    word-break: break-word;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    text-align: right;
+    direction: rtl;
+}
+
+.custom-tooltip.active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+

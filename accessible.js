@@ -21,7 +21,9 @@ let isAccDataLoaded = false;
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     await loadData();
+    setupOverflowTooltips();
 });
+
 
 function showAlert(message, type = 'info') {
     const container = document.getElementById('alert-container');
@@ -1152,3 +1154,117 @@ async function viewDealDetails(dealId) {
 function closeAccModal() {
     document.getElementById('acc-modal').classList.remove('active');
 }
+
+/**
+ * Setup tooltips for elements with overflowing text
+ */
+function setupOverflowTooltips() {
+    // Create tooltip element if it doesn't exist
+    let tooltip = document.getElementById('overflow-tooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'overflow-tooltip';
+        tooltip.className = 'custom-tooltip';
+        document.body.appendChild(tooltip);
+    }
+
+    let activeTarget = null;
+
+    // Use mouseover for delegation
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target;
+        
+        // Skip some elements
+        if (!target || target.tagName === 'BODY' || target.tagName === 'HTML' || target.classList.contains('custom-tooltip')) return;
+
+        // Check for overflow
+        const isOverflowing = target.clientWidth > 0 && (target.scrollWidth > target.clientWidth + 1 || target.scrollHeight > target.clientHeight + 1);
+        
+        if (isOverflowing) {
+            // Avoid re-triggering for the same element
+            if (activeTarget === target) return;
+            activeTarget = target;
+
+            // Prefer title if exists, otherwise use innerText
+            const text = target.dataset.originalTitle || target.title || target.innerText || target.textContent;
+            
+            if (text && text.trim().length > 0) {
+                // Remove the native title temporarily to prevent double tooltip
+                if (target.title) {
+                    target.dataset.originalTitle = target.title;
+                    target.title = '';
+                }
+
+                tooltip.innerText = text.trim();
+                tooltip.classList.add('active');
+                
+                // Position tooltip
+                updateTooltipPosition(target, tooltip);
+            }
+        }
+    }, true);
+
+    document.addEventListener('mouseout', (e) => {
+        if (activeTarget && e.target === activeTarget) {
+            tooltip.classList.remove('active');
+            
+            // Restore title if it was removed
+            if (activeTarget.dataset.originalTitle) {
+                activeTarget.title = activeTarget.dataset.originalTitle;
+            }
+            
+            activeTarget = null;
+        }
+    }, true);
+
+    // Update position on scroll or resize to keep it attached
+    window.addEventListener('scroll', hideTooltip, true);
+    window.addEventListener('resize', hideTooltip);
+
+    function hideTooltip() {
+        if (activeTarget) {
+            tooltip.classList.remove('active');
+            if (activeTarget.dataset.originalTitle) {
+                activeTarget.title = activeTarget.dataset.originalTitle;
+            }
+            activeTarget = null;
+        }
+    }
+
+    function updateTooltipPosition(target, tooltip) {
+        const rect = target.getBoundingClientRect();
+        const spacing = 8;
+        
+        // Reset styles to get natural size
+        tooltip.style.visibility = 'hidden';
+        tooltip.style.display = 'block';
+        
+        const tooltipHeight = tooltip.offsetHeight;
+        const tooltipWidth = tooltip.offsetWidth;
+        
+        tooltip.style.visibility = 'visible';
+
+        let top = rect.top - tooltipHeight - spacing;
+        let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+
+        // Flip to bottom if not enough space on top
+        if (top < spacing) {
+            top = rect.bottom + spacing;
+        }
+
+        // Keep horizontal within bounds
+        if (left < spacing) left = spacing;
+        if (left + tooltipWidth > window.innerWidth - spacing) {
+            left = window.innerWidth - tooltipWidth - spacing;
+        }
+
+        // Ensure bottom space
+        if (top + tooltipHeight > window.innerHeight - spacing) {
+            top = window.innerHeight - tooltipHeight - spacing;
+        }
+
+        tooltip.style.top = `${top}px`;
+        tooltip.style.left = `${left}px`;
+    }
+}
+
