@@ -7036,7 +7036,11 @@ async function loadActivities(preservePage = false) {
                                             ? '<span class="badge badge-won" style="font-size: 0.7rem;">בוצע</span>'
                                             : '<span class="badge badge-pending" style="font-size: 0.7rem;">ממתין</span>'}
                                     </td>
-                                    <td style="${textStyle}">${formatActivityText(activity.description || '-')}</td>
+                                    <td style="${textStyle}">
+                                        <div style="max-width: 50ch; overflow-x: auto; white-space: nowrap; direction: rtl;">
+                                            ${formatActivityText(activity.description || '-')}
+                                        </div>
+                                    </td>
                                     <td>
                                         ${customerId 
                                             ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customerId}')" style="font-weight: 500;">${businessName}</a>`
@@ -10156,7 +10160,11 @@ function renderGlobalSearchResults(results, query) {
                 <td>${a.activity_type}</td>
                 <td>${date}</td>
                 <td>${client}</td>
-                <td>${formatActivityText(highlight(a.description || '-', query))}</td>
+                                 <td>
+                                     <div style="max-width: 50ch; overflow-x: auto; white-space: nowrap; direction: rtl;">
+                                         ${formatActivityText(highlight(a.description || '-', query))}
+                                     </div>
+                                 </td>
                 <td>
                     <div style="display: flex; gap: 0.5rem;">
                         <button class="btn btn-sm btn-info" onclick="viewActivityDetails('${a.activity_id}')">👁️ צפה</button>
