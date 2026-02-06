@@ -6099,6 +6099,7 @@ function goToCurrentWeek() {
 async function loadThisWeek() {
     const container = document.getElementById('thisweek-list');
     container.innerHTML = '<div class="spinner"></div>';
+    const nowForOverdue = new Date();
     
     // Update date range display
     const { startOfWeek, endOfWeek } = getWeekDates(currentWeekOffset);
@@ -6185,10 +6186,28 @@ async function loadThisWeek() {
                         contact_name
                     )
                 )
+            `);
+            // Note: We keep neq('activity_type', 'הערה') for the main weekly list as these are usually just logs,
+            // but for overdue we will check if the user wants all.
+        
+        let overdueQuery = supabaseClient
+            .from('activities')
+            .select(`
+                *,
+                deals (deal_id, deal_status, final_amount, customers (customer_id, business_name, contact_name, phone, email, city, primary_contact_id, primary_contact:contacts!customers_primary_contact_id_fkey (contact_name))),
+                customers (customer_id, business_name, contact_name, phone, email, city, primary_contact_id, primary_contact:contacts!customers_primary_contact_id_fkey (contact_name))
             `)
-            .neq('activity_type', 'הערה')
-            .gte('activity_date', startOfWeek.toISOString())
-            .lte('activity_date', endOfWeek.toISOString());
+            .or('completed.is.null,completed.eq.false')
+            .lt('activity_date', nowForOverdue.toISOString());
+        
+        // Fetch global overdue activities
+        const { data: globalOverdueActivities, error: overdueError } = await overdueQuery;
+        if (overdueError) throw overdueError;
+
+        // Apply week filters to main query
+        query = query.neq('activity_type', 'הערה')
+                     .gte('activity_date', startOfWeek.toISOString())
+                     .lte('activity_date', endOfWeek.toISOString());
         
         // Apply creator filter
         if (creatorFilter) {
@@ -6220,7 +6239,7 @@ async function loadThisWeek() {
         
         if (error) throw error;
         
-        // Filter by search (client-side)
+        // Filter main weekly activities by search
         let filteredActivities = activities || [];
         if (searchFilter) {
             filteredActivities = filteredActivities.filter(activity => {
@@ -6231,7 +6250,7 @@ async function loadThisWeek() {
                        description.toLowerCase().includes(searchFilter);
             });
         }
-        
+
         // Sort by customer if needed (client-side)
         if (sortFilter === 'customer') {
             filteredActivities.sort((a, b) => {
@@ -6240,8 +6259,28 @@ async function loadThisWeek() {
                 return nameA.localeCompare(nameB, 'he');
             });
         }
+
+        // Process Overdue Activities with same filters (except time-range)
+        let filteredOverdue = globalOverdueActivities || [];
         
-        if (filteredActivities.length === 0) {
+        // Note: For overdue we ignore creator and type filters to show "all activities in the system"
+        // as requested. We only keep searchFilter if user is searching for something specific.
+
+        // Filter by search
+        if (searchFilter) {
+            filteredOverdue = filteredOverdue.filter(activity => {
+                const customerName = activity.deals?.customers?.business_name || 
+                                    activity.customers?.business_name || '';
+                const description = activity.description || '';
+                return customerName.toLowerCase().includes(searchFilter) ||
+                       description.toLowerCase().includes(searchFilter);
+            });
+        }
+        
+        // Sort by date (descending)
+        filteredOverdue.sort((a, b) => new Date(b.activity_date) - new Date(a.activity_date));
+
+        if (filteredActivities.length === 0 && filteredOverdue.length === 0) {
             container.innerHTML = `
                 <div class="text-center" style="padding: 3rem; color: var(--text-tertiary);">
                     <p style="font-size: 1.3rem;">📭 אין פעילויות מתוכננות השבוע</p>
@@ -6279,6 +6318,28 @@ async function loadThisWeek() {
         // Filter keys into past and current/future
         const pastKeys = sortedDateKeys.filter(k => k < todayKey);
         const currentAndFutureKeys = sortedDateKeys.filter(k => k >= todayKey);
+
+        // 0. Render Overdue Activities (Collapsible)
+        const overdueActivities4Section = filteredOverdue;
+        
+        if (overdueActivities4Section.length > 0) {
+            html += `
+                <div style="margin-bottom: 2rem;">
+                    <div style="display: flex; justify-content: flex-start; align-items: center; gap: 1rem; margin-bottom: 1rem; cursor: pointer; padding: 0.5rem; border-radius: 8px; transition: background 0.2s;" 
+                         onmouseover="this.style.background='rgba(220, 38, 38, 0.05)'" 
+                         onmouseout="this.style.background='transparent'"
+                         onclick="toggleThisWeekDay('overdue')">
+                        <h4 style="margin: 0; color: #dc2626; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>🚨</span> פעילויות באיחור (${overdueActivities4Section.length})
+                        </h4>
+                        <span id="label-overdue" style="font-size: 0.8rem; color: var(--primary-color);">▼ לחץ להצגה</span>
+                    </div>
+                    <div id="day-activities-overdue" class="deals-grid" style="display: none; gap: 1rem; border: 1px solid #fee2e2; padding: 1.5rem; border-radius: 12px; background: #fff5f5;">
+                        ${overdueActivities4Section.map(activity => renderThisWeekActivityCard(activity)).join('')}
+                    </div>
+                </div>
+            `;
+        }
 
         // 1. Render Past Days (Summaries only, expandable)
         if (pastKeys.length > 0) {
@@ -6348,6 +6409,8 @@ async function loadThisWeek() {
         });
         
         // Add summary at top
+        const overdueCount = filteredOverdue.length;
+        
         const totalActivities = filteredActivities.length;
         const pendingCount = filteredActivities.filter(a => !a.completed).length;
         const completedCount = filteredActivities.filter(a => a.completed === true).length;
@@ -6365,6 +6428,10 @@ async function loadThisWeek() {
                 <div style="background: var(--success-color); color: white; padding: 0.75rem 1rem; border-radius: 12px; text-align: center; min-width: 90px; flex: 1; max-width: 140px;">
                     <div style="font-size: 1.5rem; font-weight: 700;">${completedCount}</div>
                     <div style="font-size: 0.75rem; opacity: 0.9;">הושלמו</div>
+                </div>
+                <div style="background: var(--error-color, #dc2626); color: white; padding: 0.75rem 1rem; border-radius: 12px; text-align: center; min-width: 90px; flex: 1; max-width: 140px;">
+                    <div style="font-size: 1.5rem; font-weight: 700;">${overdueCount}</div>
+                    <div style="font-size: 0.75rem; opacity: 0.9;">באיחור</div>
                 </div>
             </div>
         `;
