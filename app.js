@@ -4940,12 +4940,18 @@ async function loadDealNotes(dealId) {
             const icon = typeIcons[note.activity_type] || '📝';
             const editedInfo = note.edited_at ? `<div class="note-edited">עריכה על ידי ${note.edited_by || 'לא ידוע'} ב-${new Date(note.edited_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' })}</div>` : '';
             
+            const canPostpone = !note.completed && note.activity_type !== 'הערה';
+            
             return `
-                <div class="note-item">
+                <div class="note-item" style="${note.completed ? 'opacity: 0.7; border-right: 4px solid #10b981;' : ''}">
                     <div class="note-header">
                         <span class="note-author">${icon} ${note.created_by || 'משתמש מערכת'}</span>
                         <span style="font-size: 0.85rem; color: var(--text-tertiary);">${createdDate}</span>
                         <div style="display: flex; gap: 5px;">
+                            ${canPostpone ? `
+                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #fbbf24; color: white;" onclick="postponeActivity('${note.activity_id}', 'tomorrow')" title="דחה למחר">☀️</button>
+                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #818cf8; color: white;" onclick="postponeActivity('${note.activity_id}', 'next-week')" title="דחה לשבוע הבא">📅</button>
+                            ` : ''}
                             <button class="btn btn-sm btn-primary" onclick="editNote('${note.activity_id}')" title="ערוך">✏️</button>
                             <button class="btn btn-sm btn-danger" onclick="deleteNote('${note.activity_id}')" title="מחק">🗑️</button>
                         </div>
@@ -6614,6 +6620,13 @@ function renderThisWeekActivityCard(activity) {
     const isCompleted = activity.completed === true;
     const statusClass = isCompleted ? 'badge-won' : 'badge-pending';
     const statusText = isCompleted ? 'בוצע' : 'ממתין';
+
+    // Determine if we should show postpone buttons (only for pending tasks that are today or overdue)
+    const activityDate = new Date(activity.activity_date);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const activityDay = new Date(activityDate.getFullYear(), activityDate.getMonth(), activityDate.getDate());
+    const canPostpone = !isCompleted;
     
     return `
         <div class="deal-card" style="padding: 1rem; ${isCompleted ? 'opacity: 0.7;' : ''}">
@@ -6676,6 +6689,16 @@ function renderThisWeekActivityCard(activity) {
                     ${dealId ? `<span style="color: var(--primary-color);">💼 עסקה${dealAmount ? ` • ₪${dealAmount.toFixed(0)}` : ''}</span>` : ''}
                 </div>
                 <div style="display: flex; gap: 0.5rem;">
+                    ${canPostpone ? `
+                        <button class="btn btn-warning btn-icon" style="width: 32px; height: 32px; background: #fbbf24; border-color: #fbbf24;" 
+                                onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">
+                            ☀️
+                        </button>
+                        <button class="btn btn-icon" style="width: 32px; height: 32px; background: #818cf8; border-color: #818cf8; color: white;" 
+                                onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">
+                            📅
+                        </button>
+                    ` : ''}
                     ${!isCompleted ? `
                         <button class="btn btn-success btn-icon" style="width: 32px; height: 32px;" 
                                 onclick="markActivityComplete('${activity.activity_id}')" title="סמן כבוצע">
@@ -6772,6 +6795,57 @@ async function markActivityComplete(activityId) {
     } catch (error) {
         console.error('❌ Error marking activity complete:', error);
         showAlert('שגיאה בעדכון הפעילות: ' + error.message, 'error');
+    }
+}
+
+async function postponeActivity(activityId, type) {
+    try {
+        // Fetch current activity to get the base date and details for logging
+        const { data: activity, error: fetchError } = await supabaseClient
+            .from('activities')
+            .select('*, customers(business_name)')
+            .eq('activity_id', activityId)
+            .single();
+        
+        if (fetchError) throw fetchError;
+
+        const originalDate = new Date(activity.activity_date);
+        let newDate = new Date(originalDate); // Start from original activity date for postponement
+        
+        if (type === 'tomorrow') {
+            newDate.setDate(newDate.getDate() + 1);
+        } else if (type === 'next-week') {
+            newDate.setDate(newDate.getDate() + 7);
+        }
+
+        // Keep the original time
+        newDate.setHours(originalDate.getHours(), originalDate.getMinutes(), 0, 0);
+
+        const { error: updateError } = await supabaseClient
+            .from('activities')
+            .update({ 
+                activity_date: newDate.toISOString(),
+                completed: false,
+                completed_at: null
+            })
+            .eq('activity_id', activityId);
+
+        if (updateError) throw updateError;
+
+        const dateStr = newDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
+        
+        logAction('update', 'activity', activityId, activity.activity_type, 
+            `דחיית פעילות עבור ${activity.customers?.business_name || 'לקוח'} ל${type === 'tomorrow' ? 'יום הבא' : 'שבוע לאחר מכן'} (${dateStr})`, 
+            activity, { activity_date: newDate.toISOString() });
+
+        showAlert(`✅ הפעילות נדחתה ל${type === 'tomorrow' ? 'יום הבא' : 'שבוע לאחר מכן'} (${dateStr})`, 'success');
+        
+        // Refresh the UI
+        loadThisWeek();
+        
+    } catch (error) {
+        console.error('❌ Error postponing activity:', error);
+        showAlert('שגיאה בדחיית הפעילות: ' + error.message, 'error');
     }
 }
 
@@ -7064,6 +7138,7 @@ async function loadActivities(preservePage = false) {
                     deal_id,
                     deal_status,
                     customers (
+                        customer_id,
                         business_name,
                         contact_name,
                         phone,
@@ -7251,6 +7326,12 @@ async function loadActivities(preservePage = false) {
                                 ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500;">${contactNameRaw}</a>`
                                 : contactNameRaw;
 
+                            const activityDateObj = new Date(activity.activity_date);
+                            const now = new Date();
+                            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                            const activityDay = new Date(activityDateObj.getFullYear(), activityDateObj.getMonth(), activityDateObj.getDate());
+                            const canPostpone = !activity.completed;
+
                             return `
                                 <tr style="${rowStyle}">
                                     <td>${icon} ${activity.activity_type}</td>
@@ -7275,6 +7356,10 @@ async function loadActivities(preservePage = false) {
                                     <td>${activity.created_by || 'מערכת'}</td>
                                     <td>
                                         <div style="display: flex; gap: 0.25rem; align-items: center; justify-content: flex-start; flex-wrap: nowrap;">
+                                            ${canPostpone ? `
+                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">☀️</button>
+                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">📅</button>
+                                            ` : ''}
                                             ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">💼</button>` : ''}
                                             <button class="btn btn-sm btn-info" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">👁️</button>
                                             <button class="btn btn-sm btn-secondary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
@@ -7354,13 +7439,19 @@ async function loadActivities(preservePage = false) {
                     ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500; color: inherit; text-decoration: underline;">${contactName}</a>`
                     : contactName;
                 
-                // Format phone for WhatsApp (remove dashes, ensure +972)
+                // Format phone for WhatsApp
                 let whatsappLink = '';
                 if (phone && isMobileNumber(phone)) {
                     let cleanPhone = phone.replace(/\D/g, '');
                     if (cleanPhone.startsWith('0')) cleanPhone = '972' + cleanPhone.substring(1);
                     whatsappLink = `https://wa.me/${cleanPhone}`;
                 }
+
+                const activityDateObj = new Date(activity.activity_date);
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const activityDay = new Date(activityDateObj.getFullYear(), activityDateObj.getMonth(), activityDateObj.getDate());
+                const canPostpone = !activity.completed;
                 
                 card.innerHTML = `
                     <div class="deal-card-header" style="padding: 0.5rem 0.75rem;">
@@ -7372,6 +7463,10 @@ async function loadActivities(preservePage = false) {
                                 : `<span class="badge badge-pending" style="font-size: 0.65rem; padding: 2px 6px;">ממתין</span>`}
                         </div>
                         <div style="display: flex; gap: 0.25rem;">
+                            ${canPostpone ? `
+                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">☀️</button>
+                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">📅</button>
+                            ` : ''}
                             ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">💼</button>` : ''}
                             <button class="btn btn-sm btn-info" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">👁️</button>
                             <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
@@ -7430,7 +7525,6 @@ async function loadActivities(preservePage = false) {
     }
 }
 
-// Toggle activity completion status
 // Toggle activity completion status
 async function toggleActivityCompletion(activityId, completed) {
     try {
