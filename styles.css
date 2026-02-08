@@ -1364,6 +1364,8 @@ input[inputmode="decimal"] {
 .note-content {
     color: var(--text-primary);
     line-height: 1.4;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 /* ============================================

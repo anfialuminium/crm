@@ -2217,7 +2217,7 @@ async function loadCustomerNotesHistory(customerId, containerId = 'customer-note
                              <button onclick="deleteActivity('${activity.activity_id}')" type="button" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0 4px;" title="מחק">🗑️</button>
                         </div>
                     </div>
-                    <div style="color: var(--text-primary); white-space: pre-wrap;">${formatActivityText(activity.description || '-')}</div>
+                    <div style="color: var(--text-primary); white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word;">${formatActivityText(activity.description || '-')}</div>
                     <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-tertiary);">
                         <span>
                             ${activityDate && type !== 'הערה' ? `<strong>מועד הפעילות:</strong> ${activityDate}` : ''}
@@ -6303,6 +6303,15 @@ async function loadThisWeek() {
             });
         }
 
+        // Filter out overdue activities from the main weekly list (they have their own section)
+        // An activity is overdue if it's not completed AND its date is before NOW
+        const now = new Date();
+        filteredActivities = filteredActivities.filter(activity => {
+            const isCompleted = activity.completed === true;
+            const isOverdue = !isCompleted && new Date(activity.activity_date) < now;
+            return !isOverdue; // Keep only those that are NOT overdue
+        });
+
         // Process Overdue Activities with same filters (except time-range)
         let filteredOverdue = globalOverdueActivities || [];
         
@@ -6536,11 +6545,18 @@ function renderThisWeekActivityCard(activity) {
                         })() : ''}
                     </div>
                 </div>
-                <span class="badge ${statusClass}">${statusText}</span>
+                <div style="text-align: left;">
+                    <span class="badge ${statusClass}">${statusText}</span>
+                    ${activity.completed && activity.completed_at ? `
+                        <div style="font-size: 0.75rem; color: var(--success-color); margin-top: 4px;">
+                            ${new Date(activity.completed_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                    ` : ''}
+                </div>
             </div>
             
             ${activity.description ? `
-                <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9rem;">
+                <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9rem; overflow-wrap: break-word; word-break: break-word;">
                     ${formatActivityText(activity.description)}
                 </div>
             ` : ''}
@@ -6810,6 +6826,11 @@ async function viewActivityDetails(activityId) {
                         <span class="deal-card-label">סטטוס:</span>
                         <span class="deal-card-value">
                             ${activity.completed ? '<span class="badge badge-won">בוצע</span>' : '<span class="badge badge-pending">ממתין</span>'}
+                            ${activity.completed && activity.completed_at ? `
+                                <div style="font-size: 0.8rem; color: var(--success-color); margin-top: 5px;">
+                                    <strong>ביצוע:</strong> ${new Date(activity.completed_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                            ` : ''}
                         </span>
                     </div>
                     <div class="deal-card-info">
@@ -6844,7 +6865,7 @@ async function viewActivityDetails(activityId) {
                     </div>
                 </div>
                 
-                <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px;">
+                <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; overflow-wrap: break-word; word-break: break-word;">
                     <label style="font-weight: 600; display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">תיאור הפעילות:</label>
                     <div style="white-space: pre-wrap;">${formatActivityText(activity.description || '-')}</div>
                 </div>
@@ -7295,7 +7316,7 @@ async function loadActivities(preservePage = false) {
                                 </div>
                             ` : ''}
                             <div><strong>נוצר:</strong> ${activity.created_by || 'מערכת'}</div>
-                            ${activity.completed && activity.completed_at ? `<div><strong>בוצע:</strong> <span style="color: var(--success-color);">${new Date(activity.completed_at).toLocaleDateString('he-IL')}</span></div>` : ''}
+                            ${activity.completed && activity.completed_at ? `<div><strong>בוצע:</strong> <span style="color: var(--success-color);">${new Date(activity.completed_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div>` : ''}
                         </div>
                         <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.3rem;">נוצר: ${createdDate}</div>
                     </div>
@@ -10390,7 +10411,7 @@ function renderGlobalSearchResults(results, query) {
                 <td>${client}</td>
                                  <td>
                                      <div style="max-width: 50ch; overflow-x: auto; white-space: nowrap; direction: rtl;">
-                                         ${formatActivityText(highlight(a.description || '-', query))}
+                                         ${highlight(formatActivityText(a.description || '-'), query)}
                                      </div>
                                  </td>
                 <td>
@@ -12677,25 +12698,39 @@ function confirmMarkdownLink() {
 function formatActivityText(text) {
     if (!text) return '';
     
-    // 1. Handle Bold first: **text** -> <strong>text</strong>
+    // 1. Handle Bold first: **text** -> <strong>text</strong> (outside the combined regex)
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
     // 2. Combined regex to handle all link types in one pass to avoid double-processing.
     // Groups:
-    // 1: Existing <a> tags (to be ignored)
-    // 2,3: Markdown Links [Label](URL)
+    // 1: Existing tags (a, span, mark) - to be ignored
+    // 2,3: Markdown Links [Label](URL) - Handles nested one-level parentheses and multi-line candidates
     // 4,5,6: Mentions @[Type:ID|Label]
     // 7,8,9: New Mentions [Label|Type:ID@]
     // 10: Raw URLs https://...
-    const combinedRegex = /(<a\b[^>]*>.*?<\/a>)|(?:\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\))|(?:@\[(Deal|Order|Contact):([^\|]+)\|([^\]]+)\])|(?:\[([^\|]+)\|(Deal|Order|Contact):([^@]+)@\])|(https?:\/\/[^\s<"']+)/gi;
+    
+    // Markdown link URL regex explanation: 
+    // [^\s)]+ -> matches till space or closing paren
+    // (?:\([^\s)]*\)[^\s)]*)* -> allows balanced parentheses once
+    const mdUrlPattern = '(https?:\\/\\/[^\\s)]+(?:\\([^\\s)]*\\)[^\\s)]*)*)';
+    const combinedRegex = new RegExp(
+        '(<(?:a|span|mark)\\b[^>]*>.*?<\\/(?:a|span|mark)>)|' +
+        '(?:\\[([^\\]]+)\\]\\s*\\(\\s*' + mdUrlPattern + '\\s*\\))|' +
+        '(?:@\\[(Deal|Order|Contact):([^\\|]+)\\|([^\\]]+)\\])|' +
+        '(?:\\[([^\\|]+)\\|(Deal|Order|Contact):([^@]+)@\\])|' +
+        '(https?:\\/\\/[^\\s<"\']+\\b)',
+        'gi'
+    );
 
     return text.replace(combinedRegex, (match, anchor, mdLabel, mdUrl, m1Type, m1Id, m1Label, m2Label, m2Type, m2Id, rawUrl) => {
-        // If it's an existing anchor tag, return it as is
+        // If it's an existing anchor tag or highlighted span, return it as is
         if (anchor) return anchor;
 
         // If it's a Markdown link [Label](URL)
         if (mdLabel && mdUrl) {
-            return `<a href="${mdUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline; font-weight: 600;">${mdLabel}</a>`;
+            // Clean up the URL from internal whitespace if any (captured between label and url)
+            const cleanMdUrl = mdUrl.trim().replace(/\s/g, '');
+            return `<a href="${cleanMdUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline; font-weight: 600;">${mdLabel}</a>`;
         }
 
         // Helper to generate Mention HTML
@@ -12727,7 +12762,15 @@ function formatActivityText(text) {
 
         // If it's a Raw URL
         if (rawUrl) {
-            return `<a href="${rawUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${rawUrl}</a>`;
+            // Trim trailing punctuation from raw URLs (don't swallow closing parenthesis of a sentence)
+            let cleanUrl = rawUrl;
+            let trailing = '';
+            const matchTrailing = cleanUrl.match(/[.,!?;:)]+$/);
+            if (matchTrailing) {
+                trailing = matchTrailing[0];
+                cleanUrl = cleanUrl.substring(0, cleanUrl.length - trailing.length);
+            }
+            return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${cleanUrl}</a>${trailing}`;
         }
 
         return match;
