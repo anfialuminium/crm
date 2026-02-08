@@ -253,7 +253,7 @@ function resetNewDealForm() {
 
 function addAccItem() {
     const id = `item-${itemCounter++}`;
-    const item = { id, product_id: '', quantity: '', price: '', is_fin_brush: false, is_roll: false, length: 1 };
+    const item = { id, product_id: '', quantity: '', price: '', is_fin_brush: false, is_roll: false, is_carton: false, length: 1 };
     currentDealItems.push(item);
 
     const div = document.createElement('div');
@@ -290,6 +290,7 @@ function addAccItem() {
             <div id="roll-container-${id}" class="hidden roll-field" style="margin: 12px 0; padding: 16px; background: #fdf2f8; border-radius: 12px; border: 2px solid #fbcfe8;"></div>
             <div id="color-container-${id}" class="hidden color-field" style="margin-bottom: 12px;"></div>
             <div id="fin-container-${id}" class="hidden fin-field" style="margin: 16px 0; padding: 16px; background: #eff6ff; border-radius: 12px; border: 2px solid #bfdbfe;"></div>
+            <div id="carton-container-${id}" class="hidden carton-field" style="margin: 16px 0; padding: 16px; background: #fffbeb; border-radius: 12px; border: 2px solid #fde68a;"></div>
             <div style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 20px;">
                 <div>
                     <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">כמות:</label>
@@ -526,6 +527,23 @@ function updateItemProduct(id, productId, btn) {
         item.is_fin_brush = false;
     }
 
+    // Check for carton option (any brush)
+    const cartonContainer = document.getElementById(`carton-container-${id}`);
+    if (isBrush) {
+        cartonContainer.classList.remove('hidden');
+        cartonContainer.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 1.5rem; width: 100%;">
+                <input type="checkbox" id="carton-${id}" style="width: 32px; height: 32px; cursor: pointer;" onchange="updateItemCarton('${id}', this.checked)">
+                <label for="carton-${id}" style="font-size: 1.2rem; font-weight: 700; cursor: pointer; color: #d97706; margin-bottom: 0;">📦 קרטון</label>
+            </div>
+        `;
+        item.is_carton = false;
+    } else {
+        cartonContainer.classList.add('hidden');
+        cartonContainer.innerHTML = '';
+        item.is_carton = false;
+    }
+
     // Check for mesh roll option
     const rollContainer = document.getElementById(`roll-container-${id}`);
     const isRollableMesh = isMesh && product && !product.product_name.includes('גלילה');
@@ -607,6 +625,14 @@ function updateItemRoll(id, isRoll) {
     }
 }
 
+function updateItemCarton(id, isCarton) {
+    const item = currentDealItems.find(i => i.id === id);
+    if (item) {
+        item.is_carton = isCarton;
+        updateTotal();
+    }
+}
+
 function updateItemColor(id, color, btn) {
     const item = currentDealItems.find(i => i.id === id);
     if (item) item.color = color;
@@ -684,6 +710,40 @@ function removeAccItem(id) {
     updateTotal();
 }
 
+function getBrushCartonMultiplier(product, size, isFin) {
+    if (!product) return 1;
+    const name = product.product_name || '';
+    
+    if (isFin) {
+        if (name.includes('צר נמוך')) return 2000;
+        if (name.includes('רחב נמוך')) return 1800;
+        if (name.includes('צר גבוה')) return 1600;
+        if (name.includes('רחב גבוה')) return 1400;
+        return 1500;
+    }
+    
+    if (name.includes('צר נמוך')) return 1500;
+    if (name.includes('רחב נמוך')) return 1500;
+    if (name.includes('צר גבוה')) {
+        if (size === '12') return 1000;
+        if (size === '15') return 800;
+        if (size === '20') return 600;
+        return 1000;
+    }
+    if (name.includes('רחב גבוה')) {
+        if (size === '12') return 800;
+        if (size === '15') return 600;
+        if (size === '20') return 400;
+        return 800;
+    }
+    if (name.includes('אינסרט')) return 300;
+    if (name.includes('הדבקה')) {
+        if (size === '200 מטר') return 800;
+        return 100;
+    }
+    return 1;
+}
+
 function updateTotal() {
     const subtotal = currentDealItems.reduce((sum, i) => {
         const product = products.find(p => p.product_id === i.product_id);
@@ -698,6 +758,8 @@ function updateTotal() {
             } else {
                 multiplier = parseFloat(i.length) || 1;
             }
+        } else if (isBrush && i.is_carton) {
+            multiplier = getBrushCartonMultiplier(product, i.size, i.is_fin_brush);
         }
         
         const price = parseFloat(i.price) || 0;
@@ -741,6 +803,8 @@ async function saveAccDeal() {
             if (isMesh) {
                 if (i.is_roll) multiplier = 30;
                 else multiplier = parseFloat(i.length) || 1;
+            } else if (isBrush && i.is_carton) {
+                multiplier = getBrushCartonMultiplier(product, i.size, i.is_fin_brush);
             }
             return sum + (parseFloat(i.price) * parseFloat(i.quantity) * multiplier);
         }, 0);
@@ -773,7 +837,8 @@ async function saveAccDeal() {
             length: i.length || 1,
             color: i.color || null,
             is_fin_brush: !!i.is_fin_brush,
-            is_roll: !!i.is_roll
+            is_roll: !!i.is_roll,
+            is_carton: !!i.is_carton
         }));
 
         const { error: iError } = await supabaseClient
@@ -792,6 +857,7 @@ async function saveAccDeal() {
             let name = p ? p.product_name : 'מוצר';
             if (i.is_fin_brush) name += ' (סנפיר)';
             if (i.is_roll) name += ' (גליל)';
+            if (i.is_carton) name += ' (קרטון)';
             return `${name} - ${i.quantity} יח'`;
         }).join(', ');
 

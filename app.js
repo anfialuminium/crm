@@ -673,7 +673,9 @@ function addDealItem() {
         requires_color: false,
         requires_size: false,
         is_fin_brush: false,
-        is_roll: false
+        is_roll: false,
+        is_carton: false,
+        notes: ''
     };
     
     dealItems.push(item);
@@ -812,7 +814,7 @@ function createItemRow(item, index) {
         finDiv.appendChild(finLabel);
         productCell.appendChild(finDiv);
     }
-    
+
     // Mesh Roll Option
     const isMeshRow = isMeshProduct(product);
     const isRollableMesh = isMeshRow && !product.product_name.includes('גלילה');
@@ -901,6 +903,7 @@ function createItemRow(item, index) {
             }
         }
         
+        updateRowTotal();
         calculateTotal();
     });
     
@@ -908,6 +911,36 @@ function createItemRow(item, index) {
     qtyStepper.appendChild(quantityInput);
     qtyStepper.appendChild(qtyPlus);
     quantityCell.appendChild(qtyStepper);
+
+    // Carton Option for Brushes (under quantity)
+    if (isBrushRow) {
+        const cartonDiv = document.createElement('div');
+        cartonDiv.style.marginTop = '0.5rem';
+        cartonDiv.style.display = 'flex';
+        cartonDiv.style.alignItems = 'center';
+        cartonDiv.style.gap = '0.5rem';
+        cartonDiv.style.fontSize = '0.82rem';
+        
+        const cartonCheckbox = document.createElement('input');
+        cartonCheckbox.type = 'checkbox';
+        cartonCheckbox.id = `carton-brush-${item.id}`;
+        cartonCheckbox.checked = !!item.is_carton;
+        cartonCheckbox.addEventListener('change', (e) => {
+            item.is_carton = e.target.checked;
+            renderDealItems(); // Re-render to update total price and size
+        });
+        
+        const cartonLabel = document.createElement('label');
+        cartonLabel.htmlFor = `carton-brush-${item.id}`;
+        cartonLabel.textContent = '📦 קרטון';
+        cartonLabel.style.fontWeight = '600';
+        cartonLabel.style.color = '#d97706';
+        cartonLabel.style.cursor = 'pointer';
+        
+        cartonDiv.appendChild(cartonCheckbox);
+        cartonDiv.appendChild(cartonLabel);
+        quantityCell.appendChild(cartonDiv);
+    }
     
     // Unit Price Stepper
     const isBrushProduct = product && (
@@ -954,6 +987,7 @@ function createItemRow(item, index) {
 
     priceInput.addEventListener('input', (e) => {
         item.unit_price = parseFloat(e.target.value) || 0;
+        updateRowTotal();
         calculateTotal();
     });
     
@@ -1140,6 +1174,7 @@ function createItemRow(item, index) {
             sizeInput.style.width = '100px';
             sizeInput.addEventListener('input', (e) => {
                 item.size = e.target.value;
+                updateRowTotal();
                 calculateTotal();
             });
             sizeInput.addEventListener('change', () => {
@@ -1159,20 +1194,30 @@ function createItemRow(item, index) {
     // Calculate total with mesh logic
     let quantityMultiplier = 1;
     
-    if (product && isMeshProduct(product)) {
-        if (item.is_roll) {
-            quantityMultiplier = 30;
-        } else {
-            const sizeVal = parseFloat(item.size);
-            if (!isNaN(sizeVal) && sizeVal > 0) {
-                quantityMultiplier = sizeVal;
+    const updateRowTotal = () => {
+        let quantityMultiplier = 1;
+        
+        if (product && isMeshProduct(product)) {
+            if (item.is_roll) {
+                quantityMultiplier = 30;
+            } else {
+                const lengthVal = parseFloat(item.length);
+                if (!isNaN(lengthVal) && lengthVal > 0) {
+                    quantityMultiplier = lengthVal;
+                }
+            }
+        } else if (product && (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות')))) {
+            if (item.is_carton) {
+                quantityMultiplier = getBrushCartonMultiplier(product, item.size, item.is_fin_brush);
             }
         }
-    }
-    
-    const total = item.quantity * quantityMultiplier * item.unit_price;
-    totalCell.textContent = `₪${total.toFixed(2)}`;
-    totalCell.style.fontWeight = '600';
+        
+        const total = (parseFloat(item.quantity) || 0) * quantityMultiplier * (parseFloat(item.unit_price) || 0);
+        totalCell.textContent = `₪${total.toFixed(2)}`;
+        totalCell.style.fontWeight = '600';
+    };
+
+    updateRowTotal();
     
     // Actions
     const actionsCell = document.createElement('td');
@@ -1226,6 +1271,40 @@ function isMeshProduct(product) {
     return name.includes('רשת') || category.includes('רשת');
 }
 
+function getBrushCartonMultiplier(product, size, isFin) {
+    if (!product) return 1;
+    const name = product.product_name || '';
+    
+    if (isFin) {
+        if (name.includes('צר נמוך')) return 2000;
+        if (name.includes('רחב נמוך')) return 1800;
+        if (name.includes('צר גבוה')) return 1600;
+        if (name.includes('רחב גבוה')) return 1400;
+        return 1500;
+    }
+    
+    if (name.includes('צר נמוך')) return 1500;
+    if (name.includes('רחב נמוך')) return 1500;
+    if (name.includes('צר גבוה')) {
+        if (size === '12') return 1000;
+        if (size === '15') return 800;
+        if (size === '20') return 600;
+        return 1000;
+    }
+    if (name.includes('רחב גבוה')) {
+        if (size === '12') return 800;
+        if (size === '15') return 600;
+        if (size === '20') return 400;
+        return 800;
+    }
+    if (name.includes('אינסרט')) return 300;
+    if (name.includes('הדבקה')) {
+        if (size === '200 מטר') return 800;
+        return 100;
+    }
+    return 1;
+}
+
 // ============================================
 // Calculations
 // ============================================
@@ -1243,6 +1322,10 @@ function calculateTotal() {
                 if (!isNaN(lengthVal) && lengthVal > 0) {
                     quantityMultiplier = lengthVal;
                 }
+            }
+        } else if (product && (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות')))) {
+            if (item.is_carton) {
+                quantityMultiplier = getBrushCartonMultiplier(product, item.size, item.is_fin_brush);
             }
         }
         
@@ -1366,7 +1449,8 @@ async function saveDeal(status = null) {
                 color: item.color || null,
                 size: item.size || null,
                 is_fin_brush: !!item.is_fin_brush,
-                is_roll: !!item.is_roll
+                is_roll: !!item.is_roll,
+                is_carton: !!item.is_carton
             }));
             
             const { error: itemsError } = await supabaseClient
@@ -1527,7 +1611,8 @@ async function saveDeal(status = null) {
                 color: item.color || null,
                 size: item.size || null,
                 is_fin_brush: !!item.is_fin_brush,
-                is_roll: !!item.is_roll
+                is_roll: !!item.is_roll,
+                is_carton: !!item.is_carton
             }));
             
             const { error: itemsError } = await supabaseClient
@@ -4735,9 +4820,12 @@ async function viewDealDetails(dealId) {
                                     <td>₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(למטר)</small>' : ''}</td>
                                     <td>${item.color || '-'}</td>
                                     <td>
-                                        ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : (item.size || '-')}
+                                        ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : ''}
+                                        ${item.is_carton ? `${(item.quantity * getBrushCartonMultiplier(item.products, item.size, item.is_fin_brush)).toFixed(0)} מ' (קרטון)` : ''}
+                                        ${(!item.is_roll && !item.is_carton) ? (item.size || '-') : ''}
                                         ${item.is_fin_brush ? '<br><span class="badge badge-success" style="font-size: 0.75rem; margin-top: 0.25rem;">מברשת סנפיר</span>' : ''}
                                         ${item.is_roll ? '<br><span class="badge badge-primary" style="font-size: 0.75rem; margin-top: 0.25rem;">גליל רשת</span>' : ''}
+                                        ${item.is_carton ? '<br><span class="badge" style="background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; font-size: 0.75rem; margin-top: 0.25rem;">קרטון מברשות</span>' : ''}
                                     </td>
                                     <td><strong>₪${item.total_price.toFixed(2)}</strong></td>
                                 </tr>
@@ -6035,6 +6123,7 @@ async function editDeal(dealId) {
                 size: item.size || '',
                 is_fin_brush: !!item.is_fin_brush,
                 is_roll: !!item.is_roll,
+                is_carton: !!item.is_carton,
                 requires_color: item.products.requires_color,
                 requires_size: item.products.requires_size
             };
@@ -7548,9 +7637,12 @@ async function generateQuotePDF(specificDealId = null) {
                                 <td style="padding: 1rem;">₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(למטר)</small>' : ''}</td>
                                 <td style="padding: 1rem;">${item.color || '-'}</td>
                                 <td style="padding: 1rem;">
-                                    ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : (item.size || '-')}
+                                    ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : ''}
+                                    ${item.is_carton ? `${(item.quantity * getBrushCartonMultiplier(item.products, item.size, item.is_fin_brush)).toFixed(0)} מ' (קרטון)` : ''}
+                                    ${(!item.is_roll && !item.is_carton) ? (item.size || '-') : ''}
                                     ${item.is_fin_brush ? '<br><span style="color: #059669; font-size: 0.8rem; font-weight: 600;">מברשת סנפיר</span>' : ''}
                                     ${item.is_roll ? '<br><span style="color: #2563eb; font-size: 0.8rem; font-weight: 600;">גליל רשת (30 מ\')</span>' : ''}
+                                    ${item.is_carton ? '<br><span style="color: #d97706; font-size: 0.8rem; font-weight: 600;">קרטון מברשות</span>' : ''}
                                 </td>
                                 <td style="padding: 1rem;">₪${item.total_price.toFixed(2)}</td>
                             </tr>
