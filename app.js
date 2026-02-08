@@ -2512,7 +2512,10 @@ async function viewCustomerDetails(customerId) {
             
             <!-- Add Note Section -->
             <div style="margin-bottom: 1.5rem;">
-                <h4 style="margin-bottom: 1rem;">📝 הוסף הערה חדשה</h4>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="margin: 0;">📝 הוסף הערה חדשה</h4>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="insertNamedLink('customer-new-note')" style="padding: 2px 8px; font-size: 0.8rem;">🔗 הוסף קישור</button>
+                </div>
                 <form onsubmit="addCustomerNote(event, '${customerId}')">
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <textarea id="customer-new-note" class="form-textarea" rows="4" 
@@ -2537,8 +2540,26 @@ async function viewCustomerDetails(customerId) {
                     <div class="spinner"></div>
                 </div>
             </div>
+
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1.5rem 0;">
+
+            <!-- Resource Links Section -->
+            <div class="resource-links-section">
+                <div class="resource-links-header">
+                    <h4 style="margin: 0; color: var(--text-secondary);">🔗 קישורים ומשאבים</h4>
+                    <button class="btn btn-primary btn-sm" onclick="openLinkModal('${customerId}', 'customer')">
+                        ➕ הוסף קישור
+                    </button>
+                </div>
+                <div id="resource-links-container-${customerId}" class="resource-links-container" style="margin-top: 1rem;">
+                    <div class="spinner"></div>
+                </div>
+            </div>
         `;
         
+        // Load links
+        loadResourceLinks(customerId, 'customer');
+
         // Load contacts for this customer
         loadCustomerContacts(customerId, customer.primary_contact_id);
         
@@ -4746,7 +4767,23 @@ async function viewDealDetails(dealId) {
                     <span class="summary-value summary-total">₪${((deal.final_amount || 0) * 1.18).toFixed(2)}</span>
                 </div>
             </div>
+
+            <!-- Resource Links Section -->
+            <div class="resource-links-section">
+                <div class="resource-links-header">
+                    <h3 style="margin: 0;">🔗 קישורים ומשאבים</h3>
+                    <button class="btn btn-primary btn-sm" onclick="openLinkModal('${deal.deal_id}', 'deal')">
+                        ➕ הוסף קישור
+                    </button>
+                </div>
+                <div id="resource-links-container-${deal.deal_id}" class="resource-links-container">
+                    <div class="spinner"></div>
+                </div>
+            </div>
         `;
+        
+        // Load links
+        loadResourceLinks(deal.deal_id, 'deal');
         
         // Load notes
         loadDealNotes(dealId);
@@ -5180,7 +5217,10 @@ function showEditActivityModal(activity) {
                     </div>
                     
                     <div class="form-group" style="margin-bottom: 1rem;">
-                        <label class="form-label">תיאור</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                            <label class="form-label">תיאור</label>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="insertNamedLink('edit-activity-description')" title="הוסף קישור עם שם" style="padding: 2px 8px; font-size: 0.8rem;">🔗 הוסף קישור</button>
+                        </div>
                         <textarea id="edit-activity-description" class="form-textarea" rows="3" required></textarea>
                     </div>
                     
@@ -5598,7 +5638,10 @@ function openNewActivityModal(prefillData = null) {
                     </div>
                     
                     <div class="form-group" style="margin-bottom: 1rem;">
-                        <label class="form-label required">תיאור</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                            <label class="form-label required">תיאור</label>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="insertNamedLink('new-activity-description')" title="הוסף קישור עם שם" style="padding: 2px 8px; font-size: 0.8rem;">🔗 הוסף קישור</button>
+                        </div>
                         <textarea id="new-activity-description" class="form-textarea" rows="3" required placeholder="תאר את הפעילות..."></textarea>
                     </div>
                     
@@ -12584,60 +12627,111 @@ function hideMentionSuggestions() {
     }
 }
 
+function insertNamedLink(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+
+    // Get selected text if any
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+
+    // Populate modal
+    document.getElementById('md-link-target-textarea').value = textareaId;
+    document.getElementById('md-link-label').value = selectedText || '';
+    document.getElementById('md-link-url').value = selectedText.startsWith('http') ? selectedText : '';
+    
+    // Open modal
+    document.getElementById('markdown-link-modal').classList.add('active');
+    document.getElementById('md-link-label').focus();
+}
+
+function closeMarkdownLinkModal() {
+    document.getElementById('markdown-link-modal').classList.remove('active');
+}
+
+function confirmMarkdownLink() {
+    const textareaId = document.getElementById('md-link-target-textarea').value;
+    const textarea = document.getElementById(textareaId);
+    const label = document.getElementById('md-link-label').value;
+    const url = document.getElementById('md-link-url').value;
+    
+    if (!textarea || !url) {
+        if (!url) showAlert('יש להזין כתובת קישור', 'warning');
+        return;
+    }
+
+    const markdownLink = `[${label || url}](${url})`;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    
+    textarea.value = text.substring(0, start) + markdownLink + text.substring(end);
+    
+    closeMarkdownLinkModal();
+    textarea.dispatchEvent(new Event('input'));
+    textarea.focus();
+}
+
 function formatActivityText(text) {
     if (!text) return '';
     
-    // First, linkify URLs (simple regex)
-    // Avoid replacing URLs that might be inside the mention format if that ever happens (unlikely for now)
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    text = text.replace(urlRegex, (url) => {
-        // Simple check to avoid double-linking if the URL is already in an anchor tag (naive check)
-        if (text.includes(`"${url}"`)) return url;
-        return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${url}</a>`;
-    });
-
-    // Bold: **text** -> <strong>text</strong>
+    // 1. Handle Bold first: **text** -> <strong>text</strong>
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-    // Handle existing format @[Type:ID|Label]
-    text = text.replace(/@\[(Deal|Order|Contact):([^\|]+)\|([^\]]+)\]/g, (match, type, id, label) => {
-        let onclick = '';
-        let color = '';
-        
-        if (type === 'Deal') {
-            onclick = `viewDealDetails('${id}')`;
-            color = '#1e40af'; // Blue-ish
-        } else if (type === 'Order') {
-            onclick = `viewSupplierOrder('${id}')`;
-            color = '#9d174d'; // Pink-ish
-        } else if (type === 'Contact') {
-            onclick = `viewContactDetails('${id}')`;
-            color = '#065f46'; // Green-ish
-        }
-        
-        return `<a href="javascript:void(0)" onclick="${onclick}" style="color: ${color}; font-weight: 500; text-decoration: underline; background: #f1f5f9; padding: 0 4px; border-radius: 4px;">${label}</a>`;
-    });
+    // 2. Combined regex to handle all link types in one pass to avoid double-processing.
+    // Groups:
+    // 1: Existing <a> tags (to be ignored)
+    // 2,3: Markdown Links [Label](URL)
+    // 4,5,6: Mentions @[Type:ID|Label]
+    // 7,8,9: New Mentions [Label|Type:ID@]
+    // 10: Raw URLs https://...
+    const combinedRegex = /(<a\b[^>]*>.*?<\/a>)|(?:\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\))|(?:@\[(Deal|Order|Contact):([^\|]+)\|([^\]]+)\])|(?:\[([^\|]+)\|(Deal|Order|Contact):([^@]+)@\])|(https?:\/\/[^\s<"']+)/gi;
 
-    // Handle new format [Label|Type:ID@]
-    text = text.replace(/\[(.*?)\|([A-Za-z]+):([^@]+)@\]/g, (match, label, type, id) => {
-        let onclick = '';
-        let color = '';
-        
-        if (type === 'Deal') {
-            onclick = `viewDealDetails('${id}')`;
-            color = '#1e40af'; // Blue-ish
-        } else if (type === 'Order') {
-            onclick = `viewSupplierOrder('${id}')`;
-            color = '#9d174d'; // Pink-ish
-        } else if (type === 'Contact') {
-            onclick = `viewContactDetails('${id}')`;
-            color = '#065f46'; // Green-ish
-        }
-        
-        return `<a href="javascript:void(0)" onclick="${onclick}" style="color: ${color}; font-weight: 500; text-decoration: underline; background: #f1f5f9; padding: 0 4px; border-radius: 4px;">${label}</a>`;
-    });
+    return text.replace(combinedRegex, (match, anchor, mdLabel, mdUrl, m1Type, m1Id, m1Label, m2Label, m2Type, m2Id, rawUrl) => {
+        // If it's an existing anchor tag, return it as is
+        if (anchor) return anchor;
 
-    return text;
+        // If it's a Markdown link [Label](URL)
+        if (mdLabel && mdUrl) {
+            return `<a href="${mdUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline; font-weight: 600;">${mdLabel}</a>`;
+        }
+
+        // Helper to generate Mention HTML
+        const getMentionHtml = (type, id, label) => {
+            let onclick = '';
+            let color = '';
+            if (type === 'Deal') {
+                onclick = `viewDealDetails('${id}')`;
+                color = '#1e40af';
+            } else if (type === 'Order') {
+                onclick = `viewSupplierOrder('${id}')`;
+                color = '#9d174d';
+            } else if (type === 'Contact') {
+                onclick = `viewContactDetails('${id}')`;
+                color = '#065f46';
+            }
+            return `<a href="javascript:void(0)" onclick="${onclick}" style="color: ${color}; font-weight: 500; text-decoration: underline; background: #f1f5f9; padding: 0 4px; border-radius: 4px;">${label}</a>`;
+        };
+
+        // If it's a Mention @[Type:ID|Label]
+        if (m1Type && m1Id && m1Label) {
+            return getMentionHtml(m1Type, m1Id, m1Label);
+        }
+
+        // If it's a New Mention [Label|Type:ID@]
+        if (m2Label && m2Type && m2Id) {
+            return getMentionHtml(m2Type, m2Id, m2Label);
+        }
+
+        // If it's a Raw URL
+        if (rawUrl) {
+            return `<a href="${rawUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${rawUrl}</a>`;
+        }
+
+        return match;
+    });
 }
 
 
@@ -13275,6 +13369,161 @@ document.addEventListener('input', (e) => {
     }
 });
 
+
+// ============================================
+// Resource Links Management
+// ============================================
+
+async function openLinkModal(entityId, entityType, linkId = null) {
+    const modal = document.getElementById('link-modal');
+    const form = document.getElementById('link-form');
+    const title = document.getElementById('link-modal-title');
+    
+    // Reset form
+    form.reset();
+    document.getElementById('link-id').value = linkId || '';
+    document.getElementById('link-entity-id').value = entityId;
+    document.getElementById('link-entity-type').value = entityType;
+    
+    if (linkId) {
+        title.innerHTML = '✏️ עריכת קישור';
+        // Fetch specific link data
+        try {
+            const { data, error } = await supabaseClient
+                .from('resource_links')
+                .select('*')
+                .eq('link_id', linkId)
+                .single();
+            
+            if (error) throw error;
+            
+            document.getElementById('link-name').value = data.link_name;
+            document.getElementById('link-url').value = data.url;
+        } catch (error) {
+            console.error('Error fetching link:', error);
+            showAlert('שגיאה בטעינת הקישור', 'error');
+            return;
+        }
+    } else {
+        title.innerHTML = '🔗 הוספת קישור';
+    }
+    
+    modal.classList.add('active');
+}
+
+function closeLinkModal() {
+    document.getElementById('link-modal').classList.remove('active');
+}
+
+async function handleLinkSubmit(event) {
+    event.preventDefault();
+    
+    const linkId = document.getElementById('link-id').value;
+    const entityId = document.getElementById('link-entity-id').value;
+    const entityType = document.getElementById('link-entity-type').value;
+    const linkName = document.getElementById('link-name').value;
+    const url = document.getElementById('link-url').value;
+    
+    const linkData = {
+        entity_id: entityId,
+        entity_type: entityType,
+        link_name: linkName,
+        url: url
+    };
+    
+    try {
+        let error;
+        if (linkId) {
+            const { error: updateError } = await supabaseClient
+                .from('resource_links')
+                .update(linkData)
+                .eq('link_id', linkId);
+            error = updateError;
+        } else {
+            const { error: insertError } = await supabaseClient
+                .from('resource_links')
+                .insert([linkData]);
+            error = insertError;
+        }
+        
+        if (error) throw error;
+        
+        showAlert('הקישור נשמר בהצלחה', 'success');
+        closeLinkModal();
+        
+        // Refresh the links list in the current view
+        loadResourceLinks(entityId, entityType);
+        
+    } catch (error) {
+        console.error('Error saving link:', error);
+        showAlert('שגיאה בשמירת הקישור: ' + error.message, 'error');
+    }
+}
+
+async function deleteResourceLink(linkId, entityId, entityType) {
+    if (!confirm('האם אתה בטוח שברצונך למחוק קישור זה?')) return;
+    
+    try {
+        const { error } = await supabaseClient
+            .from('resource_links')
+            .delete()
+            .eq('link_id', linkId);
+            
+        if (error) throw error;
+        
+        showAlert('הקישור נמחק', 'success');
+        loadResourceLinks(entityId, entityType);
+    } catch (error) {
+        console.error('Error deleting link:', error);
+        showAlert('שגיאה במחיקת הקישור', 'error');
+    }
+}
+
+async function loadResourceLinks(entityId, entityType) {
+    const container = document.getElementById(`resource-links-container-${entityId}`);
+    if (!container) return;
+    
+    try {
+        const { data: links, error } = await supabaseClient
+            .from('resource_links')
+            .select('*')
+            .eq('entity_id', entityId)
+            .eq('entity_type', entityType)
+            .order('created_at', { ascending: true });
+            
+        if (error) throw error;
+        
+        renderResourceLinks(links, container, entityId, entityType);
+    } catch (error) {
+        console.error('Error loading links:', error);
+        container.innerHTML = '<p style="color: var(--error-color);">שגיאה בטעינת קישורים</p>';
+    }
+}
+
+function renderResourceLinks(links, container, entityId, entityType) {
+    if (!links || links.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-tertiary); font-size: 0.9rem;">אין קישורים עדיין</p>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="links-grid">
+            ${links.map(link => `
+                <div class="link-card">
+                    <div class="link-info">
+                        <a href="${link.url}" target="_blank" class="link-name" title="${link.link_name}">${link.link_name}</a>
+                        <div class="link-url-text">${link.url}</div>
+                    </div>
+                    <div class="link-actions">
+                        <button class="link-action-btn" onclick="openLinkModal('${entityId}', '${entityType}', '${link.link_id}')" title="ערוך">✏️</button>
+                        <button class="link-action-btn delete" onclick="deleteResourceLink('${link.link_id}', '${entityId}', '${entityType}')" title="מחק">🗑️</button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
 // Manage ESC key and modal states
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -13304,7 +13553,8 @@ document.addEventListener('keydown', (e) => {
             'new-activity-modal',
             'contact-modal',
             'customer-details-modal',
-            'contact-details-modal'
+            'contact-details-modal',
+            'link-modal'
         ];
 
         const closeActiveModalById = (modalId) => {
@@ -13322,7 +13572,9 @@ document.addEventListener('keydown', (e) => {
                 'confirmation-modal': typeof closeConfirmationModal === 'function' ? closeConfirmationModal : null,
                 'supplier-modal': typeof closeSupplierModal === 'function' ? closeSupplierModal : null,
                 'supplier-details-modal': typeof closeSupplierDetailsModal === 'function' ? closeSupplierDetailsModal : null,
-                'supplier-order-modal': typeof closeSupplierOrderModal === 'function' ? closeSupplierOrderModal : null
+                'supplier-order-modal': typeof closeSupplierOrderModal === 'function' ? closeSupplierOrderModal : null,
+                'link-modal': typeof closeLinkModal === 'function' ? closeLinkModal : null,
+                'markdown-link-modal': typeof closeMarkdownLinkModal === 'function' ? closeMarkdownLinkModal : null
             };
 
             const modalElement = document.getElementById(modalId);

@@ -610,6 +610,10 @@ input[inputmode="decimal"] {
     z-index: 20000 !important;
 }
 
+#markdown-link-modal {
+    z-index: 2000;
+}
+
 .modal.active {
     display: flex;
     animation: fadeIn 0.3s ease-out;
@@ -2387,3 +2391,107 @@ html, body {
     transform: translateY(0) scale(1);
 }
 
+
+/* ============================================
+   Resource Links Styles
+   ============================================ */
+
+.resource-links-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.resource-links-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.link-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all var(--transition-base);
+}
+
+.link-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+    background: white;
+    transform: translateY(-2px);
+}
+
+.link-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    overflow: hidden;
+    flex: 1;
+    margin-left: 0.5rem;
+}
+
+.link-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.link-name:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.link-url-text {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: ltr;
+    text-align: right;
+}
+
+.link-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.link-action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0.3rem;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.link-action-btn:hover {
+    opacity: 1;
+    background: var(--bg-tertiary);
+}
+
+.link-action-btn.delete:hover {
+    color: var(--error-color);
+    background: #fee2e2;
+}

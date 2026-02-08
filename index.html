@@ -1597,6 +1597,62 @@
          </div>
     </div>
 
+    <!-- Link Modal (Add/Edit URL) -->
+    <div id="link-modal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2 id="link-modal-title">🔗 הוספת קישור</h2>
+                <button class="modal-close" onclick="closeLinkModal()">&times;</button>
+            </div>
+            
+            <form id="link-form" onsubmit="handleLinkSubmit(event)" style="padding: 1.5rem;">
+                <input type="hidden" id="link-id">
+                <input type="hidden" id="link-entity-id">
+                <input type="hidden" id="link-entity-type">
+                
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label class="form-label required">שם הקישור</label>
+                    <input type="text" id="link-name" class="form-input" placeholder="לדוגמה: תיקיית פרויקט, חשבונית..." required>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label class="form-label required">URL (קישור)</label>
+                    <input type="url" id="link-url" class="form-input" placeholder="https://..." required dir="ltr">
+                </div>
+                
+                <div class="modal-footer" style="padding: 1rem 0 0 0; margin-top: 0.5rem;">
+                    <button type="submit" class="btn btn-primary">💾 שמור קישור</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeLinkModal()">ביטול</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Markdown Link Insertion Modal -->
+    <div id="markdown-link-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>🔗 הוספת קישור לטקסט</h2>
+                <button class="modal-close" onclick="closeMarkdownLinkModal()">&times;</button>
+            </div>
+            <div style="padding: 1.5rem;">
+                <input type="hidden" id="md-link-target-textarea">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label">טקסט להצגה</label>
+                    <input type="text" id="md-link-label" class="form-input" placeholder="שם הקישור...">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label">כתובת (URL)</label>
+                    <input type="url" id="md-link-url" class="form-input" placeholder="https://..." dir="ltr">
+                </div>
+                <div class="modal-footer" style="padding: 1rem 0 0 0;">
+                    <button type="button" class="btn btn-primary" onclick="confirmMarkdownLink()">✅ אשר</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeMarkdownLinkModal()">ביטול</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
