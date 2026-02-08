@@ -12748,16 +12748,37 @@ function insertNamedLink(textareaId) {
     // Get selected text if any
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const selectedText = textarea.value.substring(start, end);
+    const selectedText = textarea.value.substring(start, end).trim();
+
+    let label = selectedText || '';
+    let url = selectedText.startsWith('http') ? selectedText : '';
+    let isEdit = false;
+
+    // Check if it's already a markdown link [Label](URL)
+    const mdLinkMatch = selectedText.match(/^\[(.*?)\]\s*\((.*?)\)$/);
+    if (mdLinkMatch) {
+        label = mdLinkMatch[1];
+        url = mdLinkMatch[2];
+        isEdit = true;
+    }
 
     // Populate modal
     document.getElementById('md-link-target-textarea').value = textareaId;
-    document.getElementById('md-link-label').value = selectedText || '';
-    document.getElementById('md-link-url').value = selectedText.startsWith('http') ? selectedText : '';
+    document.getElementById('md-link-label').value = label;
+    document.getElementById('md-link-url').value = url;
+    
+    // Update title
+    const modalTitle = document.getElementById('markdown-link-modal-title');
+    if (modalTitle) {
+        modalTitle.textContent = isEdit ? '✏️ עריכת קישור' : '🔗 הוספת קישור לטקסט';
+    }
     
     // Open modal
     document.getElementById('markdown-link-modal').classList.add('active');
     document.getElementById('md-link-label').focus();
+    if (isEdit) {
+        document.getElementById('md-link-label').select();
+    }
 }
 
 function closeMarkdownLinkModal() {
