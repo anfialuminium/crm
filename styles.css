@@ -769,8 +769,8 @@ input[inputmode="decimal"] {
 }
 
 .badge-won {
-    background: #d1fae5;
-    color: #065f46;
+    background: #10b981;
+    color: white;
 }
 
 .badge-lost {

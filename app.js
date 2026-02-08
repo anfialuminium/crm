@@ -6324,6 +6324,9 @@ async function loadThisWeek() {
                     primary_contact:contacts!customers_primary_contact_id_fkey (
                         contact_name
                     )
+                ),
+                contacts (
+                    contact_name
                 )
             `);
             // Note: We keep neq('activity_type', 'הערה') for the main weekly list as these are usually just logs,
@@ -6334,7 +6337,8 @@ async function loadThisWeek() {
             .select(`
                 *,
                 deals (deal_id, deal_status, final_amount, customers (customer_id, business_name, contact_name, phone, email, city, primary_contact_id, primary_contact:contacts!customers_primary_contact_id_fkey (contact_name))),
-                customers (customer_id, business_name, contact_name, phone, email, city, primary_contact_id, primary_contact:contacts!customers_primary_contact_id_fkey (contact_name))
+                customers (customer_id, business_name, contact_name, phone, email, city, primary_contact_id, primary_contact:contacts!customers_primary_contact_id_fkey (contact_name)),
+                contacts (contact_name)
             `)
             .or('completed.is.null,completed.eq.false')
             .lt('activity_date', nowForOverdue.toISOString());
@@ -6537,23 +6541,50 @@ async function loadThisWeek() {
             const dayData = groupedByDay[dateKey];
             const isToday = dateKey === todayKey;
             
-            html += `
-                <div class="thisweek-day-section" style="margin-bottom: 2rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid ${isToday ? 'var(--primary-color)' : 'var(--border-color)'}; flex-wrap: wrap;">
-                        <span style="font-size: 1.1rem; font-weight: 600; color: ${isToday ? 'var(--primary-color)' : 'var(--text-primary)'};">
-                            ${dayData.dayName}
-                        </span>
-                        <span style="color: var(--text-secondary); font-size: 0.9rem;">${dayData.formattedDate}</span>
-                        ${isToday ? '<span style="background: var(--primary-color); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">היום</span>' : ''}
-                        <span style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; color: var(--text-secondary);">
-                            ${dayData.activities.length} פעילויות
-                        </span>
+            const allCompleted = dayData.activities.length > 0 && dayData.activities.every(a => a.completed === true);
+            
+            if (allCompleted) {
+                const total = dayData.activities.length;
+                html += `
+                    <div class="thisweek-day-section-summary" 
+                         onclick="toggleThisWeekDay('${dateKey}')"
+                         style="margin-bottom: 0.75rem; padding: 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; cursor: pointer; transition: all 0.2s ease;">
+                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <span style="font-weight: 600; color: #166534;">${dayData.dayName}</span>
+                                <span style="color: var(--text-tertiary); font-size: 0.85rem;">${dayData.formattedDate}</span>
+                                <span style="background: #10b981; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">הושלם</span>
+                                <span style="font-size: 0.8rem; color: var(--primary-color);">▼ לחץ להרחבה</span>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; font-size: 0.85rem;">
+                                <span class="badge badge-won" style="background: #10b981; color: white;">${total} פעילויות בוצעו</span>
+                            </div>
+                         </div>
+                         
+                         <div id="day-activities-${dateKey}" class="deals-grid past-day-container" style="display: none; margin-top: 1.5rem; gap: 1rem; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+                            ${dayData.activities.map(activity => renderThisWeekActivityCard(activity)).join('')}
+                         </div>
                     </div>
-                    <div class="deals-grid" style="gap: 1rem;">
-                        ${dayData.activities.map(activity => renderThisWeekActivityCard(activity)).join('')}
+                `;
+            } else {
+                html += `
+                    <div class="thisweek-day-section" style="margin-bottom: 2rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid ${isToday ? 'var(--primary-color)' : 'var(--border-color)'}; flex-wrap: wrap;">
+                            <span style="font-size: 1.1rem; font-weight: 600; color: ${isToday ? 'var(--primary-color)' : 'var(--text-primary)'};">
+                                ${dayData.dayName}
+                            </span>
+                            <span style="color: var(--text-secondary); font-size: 0.9rem;">${dayData.formattedDate}</span>
+                            ${isToday ? '<span style="background: var(--primary-color); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;">היום</span>' : ''}
+                            <span style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; color: var(--text-secondary);">
+                                ${dayData.activities.length} פעילויות
+                            </span>
+                        </div>
+                        <div class="deals-grid" style="gap: 1rem;">
+                            ${dayData.activities.map(activity => renderThisWeekActivityCard(activity)).join('')}
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
         });
         
         // Add summary at top
@@ -6599,7 +6630,8 @@ function renderThisWeekActivityCard(activity) {
     const customerName = customer?.business_name || 
                                     activity.customers?.business_name || 'ללא לקוח';
     const primaryContact = customer?.primary_contact;
-    const contactName = primaryContact?.contact_name || customer?.contact_name || '';
+    const contactName = activity.contacts?.contact_name || primaryContact?.contact_name || customer?.contact_name || '';
+    const contactId = activity.contact_id || customer?.primary_contact_id;
     const phone = customer?.phone || '';
     const dealId = activity.deal_id;
     const dealAmount = activity.deals?.final_amount;
@@ -6629,7 +6661,7 @@ function renderThisWeekActivityCard(activity) {
     const canPostpone = !isCompleted;
     
     return `
-        <div class="deal-card" style="padding: 1rem; ${isCompleted ? 'opacity: 0.7;' : ''}">
+        <div class="deal-card" style="padding: 1rem;">
             <div class="deal-card-header" style="margin-bottom: 0.75rem; padding-bottom: 0.75rem;">
                 <div>
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
@@ -6639,8 +6671,8 @@ function renderThisWeekActivityCard(activity) {
                     </div>
                     <div class="deal-card-date" style="font-size: 0.9rem;">
                         🏢 ${customer ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customer.customer_id}')" style="color: inherit; text-decoration: underline; font-weight: 500;">${customerName}</a>` : customerName}
-                        ${(contactName && customer?.primary_contact_id) 
-                            ? ` • <a href="javascript:void(0)" onclick="viewContactDetails('${customer.primary_contact_id}')" style="color: inherit; text-decoration: underline;">${contactName}</a>` 
+                        ${(contactName && contactId) 
+                            ? ` • <a href="javascript:void(0)" onclick="viewContactDetails('${contactId}')" style="color: inherit; text-decoration: underline;">${contactName}</a>` 
                             : (contactName ? ` • ${contactName}` : '')}
                         ${customer?.city ? (() => {
                             const cityName = getCityFromAddress(customer.city);
@@ -7159,6 +7191,9 @@ async function loadActivities(preservePage = false) {
                     primary_contact:contacts!customers_primary_contact_id_fkey (
                         contact_name
                     )
+                ),
+                contacts (
+                    contact_name
                 )
             `)
             .neq('activity_type', 'הערה');
@@ -7312,14 +7347,14 @@ async function loadActivities(preservePage = false) {
                                 const cust = activity.deals.customers;
                                 businessName = cust.business_name || 'לא משויך';
                                 customerId = cust.customer_id;
-                                contactNameRaw = cust.primary_contact?.contact_name || cust.contact_name || '-';
-                                primaryContactId = cust.primary_contact_id;
+                                contactNameRaw = activity.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '-';
+                                primaryContactId = activity.contact_id || cust.primary_contact_id;
                             } else if (activity.customers) {
                                 const cust = activity.customers;
                                 businessName = cust.business_name || 'לא משויך';
                                 customerId = cust.customer_id;
-                                contactNameRaw = cust.primary_contact?.contact_name || cust.contact_name || '-';
-                                primaryContactId = cust.primary_contact_id;
+                                contactNameRaw = activity.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '-';
+                                primaryContactId = activity.contact_id || cust.primary_contact_id;
                             }
                             
                             const contactDisplay = (primaryContactId && contactNameRaw !== '-')
@@ -7422,17 +7457,17 @@ async function loadActivities(preservePage = false) {
                 if (activity.deals?.customers) {
                     const cust = activity.deals.customers;
                     businessName = cust.business_name || 'לא משויך';
-                    contactName = cust.primary_contact?.contact_name || cust.contact_name || '';
+                    contactName = activity.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '';
                     phone = cust.phone || '';
                     email = cust.email || '';
-                    primaryContactId = cust.primary_contact_id;
+                    primaryContactId = activity.contact_id || cust.primary_contact_id;
                 } else if (activity.customers) {
                     const cust = activity.customers;
                     businessName = cust.business_name || 'לא משויך';
-                    contactName = cust.primary_contact?.contact_name || cust.contact_name || '';
+                    contactName = activity.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '';
                     phone = cust.phone || '';
                     email = cust.email || '';
-                    primaryContactId = cust.primary_contact_id;
+                    primaryContactId = activity.contact_id || cust.primary_contact_id;
                 }
                 
                 const contactDisplay = (primaryContactId && contactName)
