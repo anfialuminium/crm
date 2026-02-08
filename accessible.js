@@ -287,7 +287,6 @@ function addAccItem() {
                 </select>
             </div>
             <div id="size-container-${id}" class="hidden size-field" style="margin-bottom: 12px;"></div>
-            <div id="roll-container-${id}" class="hidden roll-field" style="margin: 12px 0; padding: 16px; background: #fdf2f8; border-radius: 12px; border: 2px solid #fbcfe8;"></div>
             <div id="color-container-${id}" class="hidden color-field" style="margin-bottom: 12px;"></div>
             <div id="fin-container-${id}" class="hidden fin-field" style="margin: 16px 0; padding: 16px; background: #eff6ff; border-radius: 12px; border: 2px solid #bfdbfe;"></div>
             <div id="carton-container-${id}" class="hidden carton-field" style="margin: 16px 0; padding: 16px; background: #fffbeb; border-radius: 12px; border: 2px solid #fde68a;"></div>
@@ -300,6 +299,7 @@ function addAccItem() {
                         <button type="button" class="stepper-btn" onclick="accStepQty('${id}', 1)">+</button>
                     </div>
                 </div>
+                <div id="roll-container-${id}" class="hidden roll-field" style="padding: 16px; background: #fdf2f8; border-radius: 12px; border: 2px solid #fbcfe8;"></div>
                 <div>
                     <label id="price-label-${id}" style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">מחיר (₪):</label>
                     <div class="stepper-container">

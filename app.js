@@ -819,40 +819,6 @@ function createItemRow(item, index) {
     const isMeshRow = isMeshProduct(product);
     const isRollableMesh = isMeshRow && !product.product_name.includes('גלילה');
     
-    if (isRollableMesh) {
-        const rollDiv = document.createElement('div');
-        rollDiv.style.marginTop = '0.5rem';
-        rollDiv.style.display = 'flex';
-        rollDiv.style.alignItems = 'center';
-        rollDiv.style.gap = '0.5rem';
-        rollDiv.style.fontSize = '0.85rem';
-        
-        const rollCheckbox = document.createElement('input');
-        rollCheckbox.type = 'checkbox';
-        rollCheckbox.id = `roll-mesh-${item.id}`;
-        rollCheckbox.checked = !!item.is_roll;
-        rollCheckbox.addEventListener('change', (e) => {
-            item.is_roll = e.target.checked;
-            if (item.is_roll) {
-                item.length = 30;
-            } else {
-                item.length = 1;
-            }
-            renderDealItems();
-        });
-        
-        const rollLabel = document.createElement('label');
-        rollLabel.htmlFor = `roll-mesh-${item.id}`;
-        rollLabel.textContent = 'גליל (30 מטר)';
-        rollLabel.style.fontWeight = '600';
-        rollLabel.style.color = 'var(--primary-color)';
-        rollLabel.style.cursor = 'pointer';
-        
-        rollDiv.appendChild(rollCheckbox);
-        rollDiv.appendChild(rollLabel);
-        productCell.appendChild(rollDiv);
-    }
-    
     // Quantity Stepper
     const quantityCell = document.createElement('td');
     const qtyStepper = document.createElement('div');
@@ -911,6 +877,41 @@ function createItemRow(item, index) {
     qtyStepper.appendChild(quantityInput);
     qtyStepper.appendChild(qtyPlus);
     quantityCell.appendChild(qtyStepper);
+
+    // Mesh Roll Option (under quantity)
+    if (isRollableMesh) {
+        const rollDiv = document.createElement('div');
+        rollDiv.style.marginTop = '0.5rem';
+        rollDiv.style.display = 'flex';
+        rollDiv.style.alignItems = 'center';
+        rollDiv.style.gap = '0.5rem';
+        rollDiv.style.fontSize = '0.85rem';
+        
+        const rollCheckbox = document.createElement('input');
+        rollCheckbox.type = 'checkbox';
+        rollCheckbox.id = `roll-mesh-${item.id}`;
+        rollCheckbox.checked = !!item.is_roll;
+        rollCheckbox.addEventListener('change', (e) => {
+            item.is_roll = e.target.checked;
+            if (item.is_roll) {
+                item.length = 30;
+            } else {
+                item.length = 1;
+            }
+            renderDealItems();
+        });
+        
+        const rollLabel = document.createElement('label');
+        rollLabel.htmlFor = `roll-mesh-${item.id}`;
+        rollLabel.textContent = 'גליל (30 מטר)';
+        rollLabel.style.fontWeight = '600';
+        rollLabel.style.color = 'var(--primary-color)';
+        rollLabel.style.cursor = 'pointer';
+        
+        rollDiv.appendChild(rollCheckbox);
+        rollDiv.appendChild(rollLabel);
+        quantityCell.appendChild(rollDiv);
+    }
 
     // Carton Option for Brushes (under quantity)
     if (isBrushRow) {
