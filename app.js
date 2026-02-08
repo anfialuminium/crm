@@ -6720,7 +6720,26 @@ function renderThisWeekActivityCard(activity) {
                     ` : ''}
                     ${dealId ? `<span style="color: var(--primary-color);">💼 עסקה${dealAmount ? ` • ₪${dealAmount.toFixed(0)}` : ''}</span>` : ''}
                 </div>
-                <div style="display: flex; gap: 0.5rem;">
+                <div style="display: flex; gap: 0.4rem; align-items: center;">
+                    ${!isCompleted ? `
+                        <button class="btn btn-success btn-icon" style="width: 68px; height: 32px;" 
+                                onclick="markActivityComplete('${activity.activity_id}')" title="סמן כבוצע">
+                            ✓ בוצע
+                        </button>
+                    ` : `
+                        <button class="btn btn-warning btn-icon" style="width: 68px; height: 32px;" 
+                                onclick="toggleActivityCompletion('${activity.activity_id}', false)" title="בטל סימון כבוצע">
+                            ↩️ בטל
+                        </button>
+                    `}
+                    <button class="btn btn-info btn-icon" style="width: 32px; height: 32px;" 
+                            onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">
+                        👁️
+                    </button>
+                    <button class="btn btn-secondary btn-icon" style="width: 32px; height: 32px;" 
+                            onclick="editActivity('${activity.activity_id}')" title="ערוך">
+                        ✏️
+                    </button>
                     ${canPostpone ? `
                         <button class="btn btn-warning btn-icon" style="width: 32px; height: 32px; background: #fbbf24; border-color: #fbbf24;" 
                                 onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">
@@ -6731,31 +6750,12 @@ function renderThisWeekActivityCard(activity) {
                             📅
                         </button>
                     ` : ''}
-                    ${!isCompleted ? `
-                        <button class="btn btn-success btn-icon" style="width: 32px; height: 32px;" 
-                                onclick="markActivityComplete('${activity.activity_id}')" title="סמן כבוצע">
-                            ✓
-                        </button>
-                    ` : `
-                        <button class="btn btn-warning btn-icon" style="width: 32px; height: 32px;" 
-                                onclick="toggleActivityCompletion('${activity.activity_id}', false)" title="בטל סימון כבוצע">
-                            ↩️
-                        </button>
-                    `}
                     ${dealId ? `
                         <button class="btn btn-primary btn-icon" style="width: 32px; height: 32px;" 
                                 onclick="openDealModal('${dealId}')" title="פתח עסקה">
                             💼
                         </button>
                     ` : ''}
-                        <button class="btn btn-info btn-icon" style="width: 32px; height: 32px;" 
-                                onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">
-                            👁️
-                        </button>
-                        <button class="btn btn-secondary btn-icon" style="width: 32px; height: 32px;" 
-                                onclick="editActivity('${activity.activity_id}')" title="ערוך">
-                            ✏️
-                    </button>
                     <button class="btn btn-danger btn-icon" style="width: 32px; height: 32px;" 
                             onclick="deleteActivity('${activity.activity_id}')" title="מחק">
                         🗑️
@@ -7497,19 +7497,19 @@ async function loadActivities(preservePage = false) {
                                 ? `<span class="badge badge-won" style="font-size: 0.65rem; padding: 2px 6px;">בוצע</span>`
                                 : `<span class="badge badge-pending" style="font-size: 0.65rem; padding: 2px 6px;">ממתין</span>`}
                         </div>
-                        <div style="display: flex; gap: 0.25rem;">
+                        <div style="display: flex; gap: 0.25rem; align-items: center;">
+                            <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
+                                    style="padding: 0.2rem 0.4rem; font-size: 0.7rem; width: 60px;"
+                                    onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})" title="${activity.completed ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
+                                ${activity.completed ? '↩️ בטל' : '✓ בוצע'}
+                            </button>
+                            <button class="btn btn-sm btn-info" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">👁️</button>
+                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
                             ${canPostpone ? `
                                 <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">☀️</button>
                                 <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">📅</button>
                             ` : ''}
                             ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">💼</button>` : ''}
-                            <button class="btn btn-sm btn-info" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">👁️</button>
-                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
-                            <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
-                                    style="padding: 0.2rem 0.4rem; font-size: 0.7rem;"
-                                    onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})" title="${activity.completed ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
-                                ${activity.completed ? '↩️' : '✓'}
-                            </button>
                             <button class="btn btn-sm btn-danger" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="deleteActivity('${activity.activity_id}')" title="מחק">🗑️</button>
                         </div>
                     </div>
