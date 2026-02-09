@@ -6684,7 +6684,7 @@ function renderThisWeekActivityCard(activity) {
                     <span class="badge ${statusClass}">${statusText}</span>
                     ${activity.completed && activity.completed_at ? `
                         <div style="font-size: 0.75rem; color: var(--success-color); margin-top: 4px;">
-                            ${new Date(activity.completed_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            📅 ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })} • 🕒 ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                     ` : ''}
                 </div>
@@ -7024,7 +7024,7 @@ async function viewActivityDetails(activityId) {
                             ${activity.completed ? '<span class="badge badge-won">בוצע</span>' : '<span class="badge badge-pending">ממתין</span>'}
                             ${activity.completed && activity.completed_at ? `
                                 <div style="font-size: 0.8rem; color: var(--success-color); margin-top: 5px;">
-                                    <strong>ביצוע:</strong> ${new Date(activity.completed_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    <strong>ביצוע:</strong> 📅 ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })} • 🕒 ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                             ` : ''}
                         </span>
@@ -7536,7 +7536,7 @@ async function loadActivities(preservePage = false) {
                                 </div>
                             ` : ''}
                             <div><strong>נוצר:</strong> ${activity.created_by || 'מערכת'}</div>
-                            ${activity.completed && activity.completed_at ? `<div><strong>בוצע:</strong> <span style="color: var(--success-color);">${new Date(activity.completed_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span></div>` : ''}
+                            ${activity.completed && activity.completed_at ? `<div><strong>בוצע:</strong> <span style="color: var(--success-color);">📅 ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })} • 🕒 ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span></div>` : ''}
                         </div>
                         <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.3rem;">נוצר: ${createdDate}</div>
                     </div>
