@@ -52,6 +52,20 @@ function isMobileNumber(phone) {
     return cleanPhone.startsWith('05') || cleanPhone.startsWith('5') || cleanPhone.startsWith('9725');
 }
 
+// Automatically detect activity type based on description keywords
+function autoDetectActivityType(description, selectElementId) {
+    if (!description) return;
+    const keywords = ['להתקשר', 'לדבר עם'];
+    const hasKeyword = keywords.some(keyword => description.includes(keyword));
+    
+    if (hasKeyword) {
+        const selectElement = document.getElementById(selectElementId);
+        if (selectElement) {
+            selectElement.value = 'שיחה';
+        }
+    }
+}
+
 function getCityFromAddress(address) {
     if (!address) return '';
     let city = address.trim();
@@ -132,6 +146,72 @@ let dealItems = [];
 let itemCounter = 0;
 let orderColors = []; // Global state for colors
 let globalCategories = [];
+
+// Reminder system state
+let notifiedActivityIds = new Set();
+let activityReminderInterval = null;
+
+function startActivityReminderCheck() {
+    if (activityReminderInterval) clearInterval(activityReminderInterval);
+    // Check every 30 seconds
+    activityReminderInterval = setInterval(checkActivityReminders, 30000);
+    // Also check immediately
+    checkActivityReminders();
+}
+
+async function checkActivityReminders() {
+    try {
+        const now = new Date();
+        const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+        const tenMinutesAhead = new Date(now.getTime() + 10 * 60 * 1000);
+
+        // Fetch pending activities with date between 10 mins ago and 10 mins ahead
+        const { data: activities, error } = await supabaseClient
+            .from('activities')
+            .select('*, customers(business_name)')
+            .eq('completed', false)
+            .gte('activity_date', tenMinutesAgo.toISOString())
+            .lte('activity_date', tenMinutesAhead.toISOString());
+
+        if (error) throw error;
+
+        for (const activity of (activities || [])) {
+            if (!notifiedActivityIds.has(activity.activity_id)) {
+                const activityDate = new Date(activity.activity_date);
+                // We show it if it's <= now (already reached or slightly passed)
+                if (activityDate <= now) {
+                    showActivityReminder(activity);
+                    notifiedActivityIds.add(activity.activity_id);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Reminder check failed', e);
+    }
+}
+
+function showActivityReminder(activity) {
+    const panel = document.getElementById('activity-reminder-panel');
+    const desc = document.getElementById('reminder-desc');
+    const actionBtn = document.getElementById('reminder-action-btn');
+    
+    if (!panel || !desc || !actionBtn) return;
+
+    const customerName = activity.customers ? activity.customers.business_name : 'לקוח כללי';
+    desc.textContent = `${activity.activity_type} עבור ${customerName}: ${activity.description || ''}`;
+    
+    actionBtn.onclick = () => {
+        closeActivityReminder();
+        viewActivityDetails(activity.activity_id);
+    };
+
+    panel.style.display = 'flex';
+}
+
+function closeActivityReminder() {
+    const panel = document.getElementById('activity-reminder-panel');
+    if (panel) panel.style.display = 'none';
+}
 
 // Pagination Global State
 // Pagination Global State
@@ -304,6 +384,9 @@ async function initializeApp() {
     } else {
         updateEmptyState();
     }
+
+    // Start activity reminders
+    startActivityReminderCheck();
     
     console.log('✅ CRM System ready!');
 }
@@ -4973,6 +5056,10 @@ async function loadDealNotes(dealId) {
 async function addDealNote() {
     const noteText = document.getElementById('new-note-text').value.trim();
     const author = document.getElementById('note-author').value.trim() || 'משתמש מערכת';
+    
+    // Auto-detect activity type if keywords found
+    autoDetectActivityType(noteText, 'activity-type');
+    
     const activityType = document.getElementById('activity-type').value;
     const activityDate = document.getElementById('activity-date').value;
     const dealId = document.getElementById('deal-modal').dataset.currentDealId;
@@ -5316,7 +5403,7 @@ function showEditActivityModal(activity) {
                             <label class="form-label">תיאור</label>
                             <button type="button" class="btn btn-sm btn-secondary" onclick="insertNamedLink('edit-activity-description')" title="הוסף קישור עם שם" style="padding: 2px 8px; font-size: 0.8rem;">🔗 הוסף קישור</button>
                         </div>
-                        <textarea id="edit-activity-description" class="form-textarea" rows="3" required></textarea>
+                        <textarea id="edit-activity-description" class="form-textarea" rows="3" required oninput="autoDetectActivityType(this.value, 'edit-activity-type')"></textarea>
                     </div>
                     
                     <div class="form-group" style="margin-bottom: 1rem;">
@@ -5514,6 +5601,10 @@ async function saveActivityEdit(event) {
     event.preventDefault();
     
     const activityId = document.getElementById('edit-activity-id').value;
+    const description = document.getElementById('edit-activity-description').value;
+    
+    // Auto-detect activity type if keywords found
+    autoDetectActivityType(description.trim(), 'edit-activity-type');
     
     // Fetch current state for logging BEFORE update
     let currentActivity = null;
@@ -5526,7 +5617,6 @@ async function saveActivityEdit(event) {
 
     const activityType = document.getElementById('edit-activity-type').value;
     const activityDate = document.getElementById('edit-activity-date').value;
-    const description = document.getElementById('edit-activity-description').value;
     const completedStatus = document.getElementById('edit-activity-status').value === 'true';
     const dealId = document.getElementById('edit-activity-deal').value;
     const customerId = document.getElementById('edit-activity-customer').value;
@@ -5737,7 +5827,7 @@ function openNewActivityModal(prefillData = null) {
                             <label class="form-label required">תיאור</label>
                             <button type="button" class="btn btn-sm btn-secondary" onclick="insertNamedLink('new-activity-description')" title="הוסף קישור עם שם" style="padding: 2px 8px; font-size: 0.8rem;">🔗 הוסף קישור</button>
                         </div>
-                        <textarea id="new-activity-description" class="form-textarea" rows="3" required placeholder="תאר את הפעילות..."></textarea>
+                        <textarea id="new-activity-description" class="form-textarea" rows="3" required placeholder="תאר את הפעילות..." oninput="autoDetectActivityType(this.value, 'new-activity-type')"></textarea>
                     </div>
                     
                     <div class="form-group" style="margin-bottom: 1rem;">
@@ -5918,9 +6008,13 @@ function closeNewActivityModal() {
 async function saveNewActivity(event) {
     event.preventDefault();
     
+    const description = document.getElementById('new-activity-description').value;
+    
+    // Auto-detect activity type if keywords found
+    autoDetectActivityType(description.trim(), 'new-activity-type');
+    
     const activityType = document.getElementById('new-activity-type').value;
     const activityDate = document.getElementById('new-activity-date-input').value;
-    const description = document.getElementById('new-activity-description').value;
     const dealId = document.getElementById('new-activity-deal').value;
     const customerId = document.getElementById('new-activity-customer').value;
     const contactElement = document.getElementById('new-activity-contact');

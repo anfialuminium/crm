@@ -341,6 +341,7 @@ input[inputmode="decimal"] {
     transition: all var(--transition-base);
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: var(--spacing-sm);
     font-family: inherit;
     text-decoration: none;
@@ -2496,4 +2497,9 @@ html, body {
 .link-action-btn.delete:hover {
     color: var(--error-color);
     background: #fee2e2;
+}
+
+@keyframes slideDownCentered {
+    from { transform: translate(-50%, -100%); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
 }
