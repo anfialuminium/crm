@@ -618,6 +618,14 @@
                             </select>
                         </div>
                         <div class="form-group">
+                            <label class="form-label">סטטוס</label>
+                            <select id="filter-customer-status" class="form-select" onchange="filterCustomers()">
+                                <option value="active" selected>✅ פעיל</option>
+                                <option value="inactive">❌ לא פעיל</option>
+                                <option value="all">הכל</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label class="form-label">מיון</label>
                             <select id="filter-customer-sort" class="form-select" onchange="filterCustomers()">
                                 <option value="name-asc">שם (א-ת)</option>
@@ -1162,6 +1170,13 @@
                         <label class="form-label">מקור</label>
                         <select id="new-source" class="form-select">
                             <option value="">-- בחר מקור --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">סטטוס לקוח</label>
+                        <select id="new-active" class="form-select">
+                            <option value="true" selected>✅ פעיל</option>
+                            <option value="false">❌ לא פעיל</option>
                         </select>
                     </div>
                 </div>

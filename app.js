@@ -592,7 +592,6 @@ async function loadCustomers() {
                         role
                     )
                 `)
-                .eq('active', true)
                 .order('business_name');
             
             data = result.data;
@@ -608,7 +607,6 @@ async function loadCustomers() {
             const result = await supabaseClient
                 .from('customers')
                 .select('*')
-                .eq('active', true)
                 .order('business_name');
             
             data = result.data;
@@ -649,9 +647,11 @@ function setupCustomerSearch() {
         }
         
         const filtered = customers.filter(c => 
+            c.active !== false && (
             c.business_name.toLowerCase().includes(query) || 
             (c.contact_name && c.contact_name.toLowerCase().includes(query)) ||
             (c.phone && c.phone.includes(query))
+            )
         );
         
         resultsContainer.innerHTML = '';
@@ -692,8 +692,8 @@ function setupCustomerSearch() {
         if (searchInput.value.length >= 1) {
              searchInput.dispatchEvent(new Event('input'));
         } else {
-            // Show recent/all customers (limit to 10)
-            const recent = customers.slice(0, 10);
+            // Show recent/all customers (limit to 10) - ONLY active
+            const recent = customers.filter(c => c.active !== false).slice(0, 10);
             resultsContainer.innerHTML = '';
             recent.forEach(c => {
                 const div = document.createElement('div');
@@ -1865,6 +1865,7 @@ async function saveCustomer(event) {
             customer_type: document.getElementById('new-customer-type').value || null,
             source: document.getElementById('new-source').value || null,
             notes: document.getElementById('new-notes').value || null,
+            active: document.getElementById('new-active').value === 'true',
             // Keep legacy fields for backwards compatibility
             contact_name: contactName || null,
             phone: contactPhone || null,
@@ -2012,6 +2013,7 @@ function filterCustomers(preservePage = false) {
     const typeFilter = document.getElementById('filter-customer-type')?.value || '';
     const sourceFilter = document.getElementById('filter-customer-source')?.value.toLowerCase() || '';
     const cityFilter = document.getElementById('filter-customer-city')?.value.toLowerCase() || '';
+    const statusFilter = document.getElementById('filter-customer-status')?.value || 'active';
     const sortBy = document.getElementById('filter-customer-sort')?.value || 'city';
     
     // Filter customers
@@ -2039,8 +2041,16 @@ function filterCustomers(preservePage = false) {
         const customerCity = getCityFromAddress(customer.city).toLowerCase();
         const filterCity = cityFilter.toLowerCase();
         const matchesCity = !cityFilter || customerCity === filterCity;
+
+        // Status filter
+        let matchesStatus = true;
+        if (statusFilter === 'active') {
+            matchesStatus = customer.active === true;
+        } else if (statusFilter === 'inactive') {
+            matchesStatus = customer.active === false;
+        }
         
-        return matchesSearch && matchesType && matchesSource && matchesCity;
+        return matchesSearch && matchesType && matchesSource && matchesCity && matchesStatus;
     });
     
     // Sort customers
@@ -2118,7 +2128,7 @@ function filterCustomers(preservePage = false) {
 
                         return `
                         <tr>
-                            <td><strong>${customer.business_name}</strong></td>
+                            <td><strong>${customer.business_name} ${customer.active === false ? '<span style="color: var(--error-color); font-size: 0.8rem;">(לא פעיל)</span>' : ''}</strong></td>
                             <td>
                                 ${contactId && contactName !== '-' 
                                     ? `<a href="javascript:void(0)" onclick="viewContactDetails('${contactId}')" style="font-weight: 500;">${contactName}</a>`
@@ -2137,6 +2147,11 @@ function filterCustomers(preservePage = false) {
                             <td>
                                 <div style="display: flex; gap: 0.5rem;">
                                     <button class="btn btn-sm btn-primary btn-icon" onclick="viewCustomerDetails('${customer.customer_id}')" title="פרטים">👁️</button>
+                                    <button type="button" class="btn btn-sm ${customer.active !== false ? 'btn-warning' : 'btn-success'} btn-icon" 
+                                            onclick="toggleCustomerActiveStatus(event, '${customer.customer_id}', ${customer.active !== false})" 
+                                            title="${customer.active !== false ? 'הפוך ללא פעיל' : 'הפוך לפעיל'}">
+                                        ${customer.active !== false ? '🚫' : '✅'}
+                                    </button>
                                     <button class="btn btn-sm btn-secondary btn-icon" onclick="editCustomerById('${customer.customer_id}')" title="ערוך">✏️</button>
                                     <button class="btn btn-sm btn-danger btn-icon" onclick="deleteCustomer('${customer.customer_id}')" title="מחק">🗑️</button>
                                 </div>
@@ -2174,7 +2189,7 @@ function filterCustomers(preservePage = false) {
             card.innerHTML = `
                 <div class="deal-card-header">
                     <div>
-                        <div class="deal-card-title">${customer.business_name}</div>
+                        <div class="deal-card-title">${customer.business_name} ${customer.active === false ? '<span style="color: var(--error-color); font-size: 0.8rem; font-weight: normal;">(לא פעיל)</span>' : ''}</div>
                         <div class="deal-card-date">
                             👤 ${
                                 (customer.primary_contact_id || customer.contact_id) && contactName !== 'ללא איש קשר'
@@ -2229,6 +2244,11 @@ function filterCustomers(preservePage = false) {
                     <div class="deal-card-actions" style="margin-right: auto;">
                         <button class="btn btn-primary btn-icon" onclick="viewCustomerDetails('${customer.customer_id}')" title="צפה בפרטים והערות">
                             👁️
+                        </button>
+                        <button type="button" class="btn ${customer.active !== false ? 'btn-warning' : 'btn-success'} btn-icon" 
+                                onclick="toggleCustomerActiveStatus(event, '${customer.customer_id}', ${customer.active !== false})" 
+                                title="${customer.active !== false ? 'הפוך ללא פעיל' : 'הפוך לפעיל'}">
+                            ${customer.active !== false ? '🚫' : '✅'}
                         </button>
                         <button class="btn btn-secondary btn-icon" onclick="editCustomerById('${customer.customer_id}')" title="ערוך">
                             ✏️
@@ -2285,6 +2305,11 @@ function editCustomer(customer) {
     document.getElementById('new-source').value = customer.source || '';
     document.getElementById('new-customer-type').value = customer.customer_type || '';
     document.getElementById('new-source').value = customer.source || '';
+    
+    const activeField = document.getElementById('new-active');
+    if (activeField) {
+        activeField.value = (customer.active !== false).toString();
+    }
     
     // Parse Extended Data from Notes
     const { text: cleanNotes, data: extendedData } = extractExtendedData(customer.notes || '');
@@ -2435,6 +2460,54 @@ function deleteCustomer(customerId) {
 // Customer Details & Notes
 // ============================================
 
+async function toggleCustomerActiveStatus(event, customerId, currentlyActive) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    const result = await Swal.fire({
+        title: currentlyActive ? 'הפוך ללא פעיל?' : 'הפוך לפעיל?',
+        text: `האם אתה בטוח שברצונך לשנות את סטטוס הלקוח ל${currentlyActive ? 'לא פעיל' : 'פעיל'}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: currentlyActive ? '#ef4444' : '#10b981',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'כן, בצע',
+        cancelButtonText: 'ביטול',
+        reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('customers')
+            .update({ active: !currentlyActive })
+            .eq('customer_id', customerId);
+
+        if (error) throw error;
+
+        showAlert(`✅ הלקוח סומן כ${currentlyActive ? 'לא פעיל' : 'פעיל'} בהצלחה`, 'success');
+        
+        // Refresh customer details modal ONLY if it is currently open
+        const modal = document.getElementById('customer-details-modal');
+        if (modal && modal.classList.contains('active') && modal.dataset.currentCustomerId === customerId) {
+            viewCustomerDetails(customerId);
+        }
+        
+        // Reload all customers to update the list
+        await loadCustomers();
+        
+        // Re-filter the current list
+        filterCustomers(true);
+        
+    } catch (error) {
+        console.error('❌ Error toggling customer status:', error);
+        showAlert('שגיאה בעדכון סטטוס הלקוח: ' + error.message, 'error');
+    }
+}
+
 async function switchToEditCustomer(customerId) {
     closeCustomerDetailsModal();
     // Try to find it in global customers first
@@ -2517,7 +2590,13 @@ async function viewCustomerDetails(customerId) {
                             ${customer.customer_type ? `<span class="badge ${typeBadgeClass}">${customer.customer_type}</span>` : ''}
                         </div>
                     </div>
-                    <button class="btn btn-sm btn-secondary" onclick="switchToEditCustomer('${customer.customer_id}')">✏️ ערוך פרטים</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button type="button" class="btn btn-sm ${customer.active !== false ? 'btn-danger' : 'btn-success'}" 
+                                onclick="toggleCustomerActiveStatus(event, '${customer.customer_id}', ${customer.active !== false})">
+                            ${customer.active !== false ? '🚫 הפוך ללא פעיל' : '✅ הפוך לפעיל'}
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="switchToEditCustomer('${customer.customer_id}')">✏️ ערוך פרטים</button>
+                    </div>
                 </div>
 
                 ${customer.primary_contact ? `
@@ -6968,6 +7047,15 @@ async function postponeActivity(activityId, type) {
         
         // Refresh the UI
         loadThisWeek();
+        loadActivities(true);
+        
+        // Refresh deal notes if inside a deal modal
+        if (activity.deal_id) {
+            const dealModal = document.getElementById('deal-modal');
+            if (dealModal && (dealModal.style.display === 'flex' || dealModal.classList.contains('active'))) {
+                loadDealNotes(activity.deal_id);
+            }
+        }
         
     } catch (error) {
         console.error('❌ Error postponing activity:', error);
