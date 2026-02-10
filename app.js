@@ -2,6 +2,33 @@
 // CRM System - Main Application Logic
 // ============================================
 
+const APP_ICONS = {
+    EYE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+    EDIT: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>',
+    TRASH: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
+    WHATSAPP: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"></path></svg>',
+    CALENDAR: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+    MAIL: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>',
+    CHECK_CIRCLE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
+    NOTE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+    PDF: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="12" y1="9" x2="8" y2="9"></line></svg>',
+    UNDO: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>',
+    BRIEFCASE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>',
+    SUN: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>',
+    INFO: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>',
+    X_CIRCLE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>',
+    CONTACT: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
+    LOCATION: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>',
+    SEARCH: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
+    CHEVRON_UP: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>',
+    CHEVRON_DOWN: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>',
+    STAR: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
+    STAR_FILL: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
+    PACKAGE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>',
+    PLUS: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
+    X: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>'
+};
+
 // Supabase Configuration
 const SUPABASE_URL = 'https://abqracafkjerlcemqnva.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFicXJhY2Fma2plcmxjZW1xbnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3NDk1NTYsImV4cCI6MjA4MDMyNTU1Nn0.WejWdsYxqC7ESs3C8UkGhWUpnDJ7xD5j4-n9BKRE7rE';
@@ -40,7 +67,7 @@ function toggleFilters(button) {
     const container = button.closest('.form-section').querySelector('.filters-content');
     if (container) {
         container.classList.toggle('collapsed');
-        button.textContent = container.classList.contains('collapsed') ? '🔍 הצג סינונים' : '🔼 הסתר סינונים';
+        button.innerHTML = container.classList.contains('collapsed') ? `${APP_ICONS.SEARCH} הצג סינונים` : `${APP_ICONS.CHEVRON_UP} הסתר סינונים`;
     }
 }
 
@@ -109,10 +136,10 @@ function openNavigationMenu(address, event) {
     
     menu.innerHTML = `
         <div class="nav-menu-item" data-url="${wazeUrl.replace(/"/g, '&quot;')}" onclick="window.open(this.dataset.url, '_blank')">
-             <span>🚙 Waze</span>
+             <span>Waze</span>
         </div>
         <div class="nav-menu-item" data-url="${mapsUrl.replace(/"/g, '&quot;')}" onclick="window.open(this.dataset.url, '_blank')">
-             <span>📍 Google Maps</span>
+             <span>Google Maps</span>
         </div>
     `;
     
@@ -388,7 +415,7 @@ async function initializeApp() {
     // Start activity reminders
     startActivityReminderCheck();
     
-    console.log('✅ CRM System ready!');
+    console.log(' CRM System ready!');
 }
 
 async function checkSchemaCapabilities() {
@@ -399,7 +426,7 @@ async function checkSchemaCapabilities() {
         const { error } = await supabaseClient.from('activities').select('contact_id').limit(0);
         if (!error) {
             window.crmCapabilities.contactInActivity = true;
-            console.log('✅ Capability detected: Activities support contact linking');
+            console.log(' Capability detected: Activities support contact linking');
         } else {
             console.warn('⚠️ Capability missing: activity.contact_id (Run migration add_contact_id_to_activities.sql)');
         }
@@ -410,7 +437,7 @@ async function checkSchemaCapabilities() {
         const { error } = await supabaseClient.from('activities').select('edited_at').limit(0);
         if (!error) {
             window.crmCapabilities.editTracking = true;
-            console.log('✅ Capability detected: Activities support edit tracking');
+            console.log(' Capability detected: Activities support edit tracking');
         }
     } catch(e) {}
 }
@@ -566,7 +593,7 @@ async function loadProducts() {
 
         globalCategories = [...new Set(products.map(p => p.category))];
         
-        console.log(`✅ Loaded ${products.length} products, ${globalCategories.length} categories in logical order`);
+        console.log(` Loaded ${products.length} products, ${globalCategories.length} categories in logical order`);
         
     } catch (error) {
         console.error('❌ Error loading products:', error);
@@ -616,7 +643,7 @@ async function loadCustomers() {
         if (error) throw error;
         
         customers = data || [];
-        console.log(`✅ Loaded ${customers.length} customers`);
+        console.log(` Loaded ${customers.length} customers`);
         
         // Populate customer dropdown
         setupCustomerSearch();
@@ -664,10 +691,10 @@ function setupCustomerSearch() {
                 div.className = 'search-result-item';
                 div.innerHTML = `
                     <div style="font-weight: 500;">${c.business_name}</div>
-                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                        👤 ${c.contact_name || 'ללא איש קשר'} 
-                        ${c.phone ? `| 📞 ${c.phone}` : ''}
-                        ${c.city ? `| 📍 ${c.city}` : ''}
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                        <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CONTACT} ${c.contact_name || 'ללא איש קשר'}</span> 
+                        ${c.phone ? `| ${c.phone}` : ''}
+                        ${c.city ? `| <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.LOCATION} ${c.city}</span>` : ''}
                     </div>
                 `;
                 div.onclick = () => {
@@ -700,10 +727,10 @@ function setupCustomerSearch() {
                 div.className = 'search-result-item';
                 div.innerHTML = `
                     <div style="font-weight: 500;">${c.business_name}</div>
-                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                        👤 ${c.contact_name || 'ללא איש קשר'} 
-                        ${c.phone ? `| 📞 ${c.phone}` : ''}
-                        ${c.city ? `| 📍 ${c.city}` : ''}
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                        <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CONTACT} ${c.contact_name || 'ללא איש קשר'}</span> 
+                        ${c.phone ? `| ${c.phone}` : ''}
+                        ${c.city ? `| <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.LOCATION} ${c.city}</span>` : ''}
                     </div>
                 `;
                 div.onclick = () => {
@@ -1016,7 +1043,7 @@ function createItemRow(item, index) {
         
         const cartonLabel = document.createElement('label');
         cartonLabel.htmlFor = `carton-brush-${item.id}`;
-        cartonLabel.textContent = '📦 קרטון';
+        cartonLabel.innerHTML = `${APP_ICONS.PACKAGE} קרטון`;
         cartonLabel.style.fontWeight = '600';
         cartonLabel.style.color = '#d97706';
         cartonLabel.style.cursor = 'pointer';
@@ -1307,7 +1334,7 @@ function createItemRow(item, index) {
     const actionsCell = document.createElement('td');
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn btn-danger btn-icon';
-    deleteBtn.innerHTML = '🗑️';
+    deleteBtn.innerHTML = APP_ICONS.TRASH;
     deleteBtn.title = 'מחק פריט';
     deleteBtn.addEventListener('click', () => {
         removeDealItem(index);
@@ -1581,7 +1608,7 @@ async function saveDeal(status = null) {
                 if (!newItemsMap[productId]) {
                     const oldItem = oldItemsMap[productId];
                     const productName = oldItem.products?.product_name || 'מוצר';
-                    itemChanges.push(`🗑️ הוסר: ${productName} (${oldItem.quantity} יח' ב-₪${oldItem.unit_price})`);
+                    itemChanges.push(`[הסרה]: ${productName} (${oldItem.quantity} יח' ב-₪${oldItem.unit_price})`);
                 }
             });
             
@@ -1591,7 +1618,7 @@ async function saveDeal(status = null) {
                     const newItem = newItemsMap[productId];
                     const product = products.find(p => p.product_id === productId);
                     const productName = product?.product_name || 'מוצר';
-                    itemChanges.push(`➕ נוסף: ${productName} (${newItem.quantity} יח' ב-₪${newItem.unit_price})`);
+                    itemChanges.push(`[הוספה]: ${productName} (${newItem.quantity} יח' ב-₪${newItem.unit_price})`);
                 }
             });
             
@@ -1618,7 +1645,7 @@ async function saveDeal(status = null) {
                     }
                     
                     if (itemModifications.length > 0) {
-                        itemChanges.push(`✏️ ${productName}: ${itemModifications.join(', ')}`);
+                        itemChanges.push(`[עדכון] ${productName}: ${itemModifications.join(', ')}`);
                     }
                 }
             });
@@ -1665,7 +1692,7 @@ async function saveDeal(status = null) {
             // Log the action with detailed changes
             logAction('update', 'deal', editDealId, `עסקה - ${customerName}`, description, oldValue, newValue);
             
-            showAlert('✅ העסקה עודכנה בהצלחה!', 'success');
+            showAlert(' העסקה עודכנה בהצלחה!', 'success');
             
         } else {
             // Insert new deal
@@ -1710,7 +1737,7 @@ async function saveDeal(status = null) {
             const customerNameNew = customers.find(c => c.customer_id === customerId)?.business_name || 'לקוח';
             logAction('create', 'deal', dealData.deal_id, `עסקה - ${customerNameNew}`, `יצירת עסקה חדשה בסכום ₪${finalAmount.toFixed(0)}`);
             
-            showAlert('✅ העסקה נשמרה בהצלחה!', 'success');
+            showAlert(' העסקה נשמרה בהצלחה!', 'success');
 
             // Open the deal details
             await viewDealDetails(dealData.deal_id);
@@ -1824,7 +1851,7 @@ function addCustomerAddressRow(address = '', description = '') {
     row.innerHTML = `
         <input type="text" class="form-input additional-address-input" placeholder="כתובת נוספת" value="${address.replace(/"/g, '&quot;')}" style="flex: 1;">
         <input type="text" class="form-input additional-address-desc" placeholder="תיאור (למשל: סניף צפון)" value="${description.replace(/"/g, '&quot;')}" style="flex: 1;">
-        <button type="button" class="btn btn-danger btn-icon" onclick="this.parentElement.remove()" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">🗑️</button>
+        <button type="button" class="btn btn-danger btn-icon" onclick="this.parentElement.remove()" style="width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center;">${APP_ICONS.TRASH}</button>
     `;
     
     container.appendChild(row);
@@ -1976,7 +2003,7 @@ async function saveCustomer(event) {
             customerData
         );
         
-        showAlert(customerId ? '✅ הלקוח עודכן בהצלחה!' : '✅ הלקוח נשמר בהצלחה!', 'success');
+        showAlert(customerId ? ' הלקוח עודכן בהצלחה!' : ' הלקוח נשמר בהצלחה!', 'success');
         await refreshAllUI();
         closeCustomerModal();
     } catch (e) {
@@ -2086,7 +2113,7 @@ function filterCustomers(preservePage = false) {
     if (filteredCustomers.length === 0) {
         container.innerHTML = `
             <div class="text-center" style="padding: 3rem; color: var(--text-tertiary);">
-                <p style="font-size: 1.2rem;">🔍 לא נמצאו לקוחות</p>
+                <p style="font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; justify-content: center;">${APP_ICONS.SEARCH} לא נמצאו לקוחות</p>
                 <p>נסה לשנות את הפילטרים</p>
             </div>
         `;
@@ -2145,15 +2172,23 @@ function filterCustomers(preservePage = false) {
                             <td>${customer.customer_type ? `<span class="badge ${typeBadgeClass}">${customer.customer_type}</span>` : '-'}</td>
                             <td>${customer.source || '-'}</td>
                             <td>
-                                <div style="display: flex; gap: 0.5rem;">
-                                    <button class="btn btn-sm btn-primary btn-icon" onclick="viewCustomerDetails('${customer.customer_id}')" title="פרטים">👁️</button>
+                                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                                    <button type="button" class="btn btn-sm btn-primary btn-icon" onclick="viewCustomerDetails('${customer.customer_id}')" title="פרטים">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    </button>
                                     <button type="button" class="btn btn-sm ${customer.active !== false ? 'btn-warning' : 'btn-success'} btn-icon" 
                                             onclick="toggleCustomerActiveStatus(event, '${customer.customer_id}', ${customer.active !== false})" 
                                             title="${customer.active !== false ? 'הפוך ללא פעיל' : 'הפוך לפעיל'}">
-                                        ${customer.active !== false ? '🚫' : '✅'}
+                                        ${customer.active !== false 
+                                            ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="18" y1="8" x2="23" y2="13"></line><line x1="23" y1="8" x2="18" y2="13"></line></svg>' 
+                                            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>'}
                                     </button>
-                                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editCustomerById('${customer.customer_id}')" title="ערוך">✏️</button>
-                                    <button class="btn btn-sm btn-danger btn-icon" onclick="deleteCustomer('${customer.customer_id}')" title="מחק">🗑️</button>
+                                    <button type="button" class="btn btn-sm btn-secondary btn-icon" onclick="editCustomerById('${customer.customer_id}')" title="ערוך">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger btn-icon" onclick="deleteCustomer('${customer.customer_id}')" title="מחק">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -2242,19 +2277,21 @@ function filterCustomers(preservePage = false) {
                 </div>
                 <div class="deal-card-footer">
                     <div class="deal-card-actions" style="margin-right: auto;">
-                        <button class="btn btn-primary btn-icon" onclick="viewCustomerDetails('${customer.customer_id}')" title="צפה בפרטים והערות">
-                            👁️
+                        <button type="button" class="btn btn-primary btn-icon" onclick="viewCustomerDetails('${customer.customer_id}')" title="צפה בפרטים והערות">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         </button>
                         <button type="button" class="btn ${customer.active !== false ? 'btn-warning' : 'btn-success'} btn-icon" 
                                 onclick="toggleCustomerActiveStatus(event, '${customer.customer_id}', ${customer.active !== false})" 
                                 title="${customer.active !== false ? 'הפוך ללא פעיל' : 'הפוך לפעיל'}">
-                            ${customer.active !== false ? '🚫' : '✅'}
+                            ${customer.active !== false 
+                                ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="18" y1="8" x2="23" y2="13"></line><line x1="23" y1="8" x2="18" y2="13"></line></svg>' 
+                                : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>'}
                         </button>
-                        <button class="btn btn-secondary btn-icon" onclick="editCustomerById('${customer.customer_id}')" title="ערוך">
-                            ✏️
+                        <button type="button" class="btn btn-secondary btn-icon" onclick="editCustomerById('${customer.customer_id}')" title="ערוך">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                         </button>
-                        <button class="btn btn-danger btn-icon" onclick="deleteCustomer('${customer.customer_id}')" title="מחק">
-                            🗑️
+                        <button type="button" class="btn btn-danger btn-icon" onclick="deleteCustomer('${customer.customer_id}')" title="מחק">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
                     </div>
                 </div>
@@ -2383,20 +2420,23 @@ async function loadCustomerNotesHistory(customerId, containerId = 'customer-note
             
             // Determine source label and icon based on type
             let sourceLabel = 'פעילות';
-            let icon = '📅';
+            let icon = APP_ICONS.CALENDAR;
             
             if (type === 'הערה') {
                 sourceLabel = 'הערה';
-                icon = '📝';
-            } else if (type === 'שיחה') {
+                icon = APP_ICONS.NOTE;
+            } else if (type === 'שיחה' || type === 'Phone') {
                 sourceLabel = 'שיחה';
-                icon = '📞';
-            } else if (type === 'מייל') {
+                icon = '';
+            } else if (type === 'מייל' || type === 'Mail') {
                 sourceLabel = 'מייל';
-                icon = '📧';
-            } else if (type === 'פגישה') {
+                icon = APP_ICONS.MAIL;
+            } else if (type === 'פגישה' || type === 'Meeting') {
                 sourceLabel = 'פגישה';
-                icon = '🤝';
+                icon = APP_ICONS.CALENDAR;
+            } else if (type === 'משימה' || type === 'Task') {
+                sourceLabel = 'משימה';
+                icon = APP_ICONS.CHECK_CIRCLE;
             }
             
             return `
@@ -2407,8 +2447,8 @@ async function loadCustomerNotesHistory(customerId, containerId = 'customer-note
                         </span>
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
                              <span style="color: var(--text-tertiary); font-size: 0.8rem;">${createdDate}</span>
-                             <button onclick="editActivity('${activity.activity_id}')" type="button" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0 4px;" title="ערוך">✏️</button>
-                             <button onclick="deleteActivity('${activity.activity_id}')" type="button" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0 4px;" title="מחק">🗑️</button>
+                             <button onclick="editActivity('${activity.activity_id}')" type="button" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0 4px; color: var(--text-secondary);" title="ערוך">${APP_ICONS.EDIT}</button>
+                             <button onclick="deleteActivity('${activity.activity_id}')" type="button" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0 4px; color: var(--error-color);" title="מחק">${APP_ICONS.TRASH}</button>
                         </div>
                     </div>
                     <div style="color: var(--text-primary); white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word;">${formatActivityText(activity.description || '-')}</div>
@@ -2446,7 +2486,7 @@ function deleteCustomer(customerId) {
             // Log the action
             logAction('delete', 'customer', customerId, customerName, logDescription, deletedCustomer, null);
             
-            showAlert('✅ הלקוח נמחק בהצלחה', 'success');
+            showAlert(' הלקוח נמחק בהצלחה', 'success');
             await refreshAllUI();
             
         } catch (error) {
@@ -2488,7 +2528,7 @@ async function toggleCustomerActiveStatus(event, customerId, currentlyActive) {
 
         if (error) throw error;
 
-        showAlert(`✅ הלקוח סומן כ${currentlyActive ? 'לא פעיל' : 'פעיל'} בהצלחה`, 'success');
+        showAlert(` הלקוח סומן כ${currentlyActive ? 'לא פעיל' : 'פעיל'} בהצלחה`, 'success');
         
         // Refresh customer details modal ONLY if it is currently open
         const modal = document.getElementById('customer-details-modal');
@@ -2540,8 +2580,8 @@ async function viewCustomerDetails(customerId) {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2>👤 פרטי לקוח</h2>
-                    <button class="modal-close" onclick="closeCustomerDetailsModal()">✕</button>
+                    <h2>פרטי לקוח</h2>
+                    <button class="modal-close" onclick="closeCustomerDetailsModal()">${APP_ICONS.X}</button>
                 </div>
                 <div id="customer-details-content">
                     <div class="spinner"></div>
@@ -2593,17 +2633,27 @@ async function viewCustomerDetails(customerId) {
                     <div style="display: flex; gap: 0.5rem;">
                         <button type="button" class="btn btn-sm ${customer.active !== false ? 'btn-danger' : 'btn-success'}" 
                                 onclick="toggleCustomerActiveStatus(event, '${customer.customer_id}', ${customer.active !== false})">
-                            ${customer.active !== false ? '🚫 הפוך ללא פעיל' : '✅ הפוך לפעיל'}
+                            ${customer.active !== false 
+                                ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 5px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="18" y1="8" x2="23" y2="13"></line><line x1="23" y1="8" x2="18" y2="13"></line></svg> הפוך ללא פעיל' 
+                                : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 5px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg> הפוך לפעיל'}
                         </button>
-                        <button class="btn btn-sm btn-secondary" onclick="switchToEditCustomer('${customer.customer_id}')">✏️ ערוך פרטים</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="switchToEditCustomer('${customer.customer_id}')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 5px;"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg> ערוך פרטים
+                        </button>
                     </div>
                 </div>
 
                 ${customer.primary_contact ? `
                 <div style="background: var(--bg-secondary); border: 1px solid var(--primary-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                         <h4 style="margin: 0; color: var(--primary-color); font-size: 1rem;">⭐ איש קשר מוביל</h4>
-                         <button class="btn btn-sm btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;" onclick="viewContactDetails('${customer.primary_contact.contact_id}'); closeCustomerDetailsModal();">פרטים מלאים ⬅️</button>
+                         <h4 style="margin: 0; color: var(--primary-color); font-size: 1rem; display: flex; align-items: center; gap: 5px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: #fbbf24;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                            איש קשר מוביל
+                         </h4>
+                         <button class="btn btn-sm btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem; display: flex; align-items: center; gap: 5px;" onclick="viewContactDetails('${customer.primary_contact.contact_id}'); closeCustomerDetailsModal();">
+                            פרטים מלאים 
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+                         </button>
                     </div>
                     <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                         <div class="deal-card-info">
@@ -2719,7 +2769,7 @@ async function viewCustomerDetails(customerId) {
                         if (data && data.additional_addresses && Array.isArray(data.additional_addresses) && data.additional_addresses.length > 0) {
                              output += `
                                 <div class="deal-card-info" style="grid-column: 1 / -1; margin-top: 0.5rem; background: #f8fafc; padding: 0.5rem; border-radius: 8px; display: block;">
-                                    <span class="deal-card-label" style="margin-bottom: 0.5rem; display: block;">📍 כתובות נוספות:</span>
+                                    <span class="deal-card-label" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.25rem;">${APP_ICONS.LOCATION} כתובות נוספות:</span>
                                     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                                         ${data.additional_addresses.map(addr => `
                                             <div style="display: flex; align-items: center; justify-content: flex-start; gap: 0.5rem; font-size: 0.95rem;">
@@ -2744,7 +2794,7 @@ async function viewCustomerDetails(customerId) {
             
             <!-- Primary Contact Section -->
             <div style="margin-bottom: 1.5rem;">
-                <h4 style="margin-bottom: 1rem;">⭐ בחירת איש קשר מוביל</h4>
+                <h4 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.STAR_FILL} בחירת איש קשר מוביל</h4>
                 <div style="display: flex; gap: 1rem; align-items: center;">
                     <select id="customer-primary-contact" class="form-select" style="flex: 1;">
                         <option value="">-- ללא איש קשר מוביל --</option>
@@ -2761,7 +2811,7 @@ async function viewCustomerDetails(customerId) {
             <!-- Add Note Section -->
             <div style="margin-bottom: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h4 style="margin: 0;">📝 הוסף הערה חדשה</h4>
+                    <h4 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.NOTE} הוסף הערה חדשה</h4>
                     <button type="button" class="btn btn-sm btn-secondary" onclick="insertNamedLink('customer-new-note')" style="padding: 2px 8px; font-size: 0.8rem;">🔗 הוסף קישור</button>
                 </div>
                 <form onsubmit="addCustomerNote(event, '${customerId}')">
@@ -2775,7 +2825,7 @@ async function viewCustomerDetails(customerId) {
             
             <!-- Deals Section -->
             <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                <h4 style="margin-bottom: 0.5rem; color: var(--text-secondary);">💼 עסקאות</h4>
+                <h4 style="margin-bottom: 0.5rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.BRIEFCASE} עסקאות</h4>
                 <div id="view-customer-deals-list" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 1rem; max-height: 200px; overflow-y: auto;">
                     <div class="spinner"></div>
                 </div>
@@ -2796,7 +2846,7 @@ async function viewCustomerDetails(customerId) {
                 <div class="resource-links-header">
                     <h4 style="margin: 0; color: var(--text-secondary);">🔗 קישורים ומשאבים</h4>
                     <button class="btn btn-primary btn-sm" onclick="openLinkModal('${customerId}', 'customer')">
-                        ➕ הוסף קישור
+                        הוסף קישור
                     </button>
                 </div>
                 <div id="resource-links-container-${customerId}" class="resource-links-container" style="margin-top: 1rem;">
@@ -2871,7 +2921,7 @@ async function loadCustomerContacts(customerId, primaryContactId) {
                 <p style="color: var(--text-tertiary); text-align: center;">
                     אין אנשי קשר משויכים ללקוח זה. 
                     <button class="btn btn-sm btn-primary" onclick="openContactModalForCustomer('${customerId}')" style="margin-right: 0.5rem;">
-                        ➕ הוסף איש קשר
+                        הוסף איש קשר
                     </button>
                 </p>
             `;
@@ -2896,12 +2946,12 @@ async function loadCustomerContacts(customerId, primaryContactId) {
             </p>
             ${customerContacts.map(c => `
                 <div style="display: inline-block; background: var(--bg-secondary); padding: 0.3rem 0.6rem; border-radius: 15px; margin: 0.2rem; font-size: 0.85rem; cursor: pointer;" onclick="viewContactDetails('${c.contact_id}')">
-                    👤 ${c.contact_name}${c.role ? ` - ${c.role}` : ''}
-                    ${c.contact_id === primaryContactId ? '<span style="color: var(--primary-color);">⭐</span>' : ''}
+                    ${APP_ICONS.CONTACT} ${c.contact_name}${c.role ? ` - ${c.role}` : ''}
+                    ${c.contact_id === primaryContactId ? `<span style="color: #fbbf24; margin-left: 5px;">${APP_ICONS.STAR_FILL}</span>` : ''}
                 </div>
             `).join('')}
             <button class="btn btn-sm btn-secondary" onclick="openContactModalForCustomer('${customerId}')" style="margin-top: 0.5rem;">
-                ➕ הוסף איש קשר
+                הוסף איש קשר
             </button>
         `;
         
@@ -2944,7 +2994,7 @@ async function savePrimaryContact(customerId) {
         
         if (error) throw error;
         
-        showAlert('✅ איש הקשר המוביל עודכן בהצלחה', 'success');
+        showAlert(' איש הקשר המוביל עודכן בהצלחה', 'success');
         
         // Reload customers to update cards
         await loadCustomers();
@@ -3018,8 +3068,8 @@ async function loadCustomerNotes(customerId) {
                             ${editedInfo}
                         </div>
                         <div style="display: flex; gap: 0.5rem; margin-right: 1rem;">
-                            <button class="btn btn-sm btn-secondary" onclick="editCustomerNote('${note.activity_id}')" title="ערוך">✏️</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteCustomerNote('${note.activity_id}')" title="מחק">🗑️</button>
+                            <button class="btn btn-sm btn-secondary" onclick="editCustomerNote('${note.activity_id}')" title="ערוך" style="padding: 2px 6px;">${APP_ICONS.EDIT}</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteCustomerNote('${note.activity_id}')" title="מחק" style="padding: 2px 6px;">${APP_ICONS.TRASH}</button>
                         </div>
                     </div>
                 </div>
@@ -3057,7 +3107,7 @@ async function addCustomerNote(event, customerId) {
         logAction('create', 'note', customerId, customerName, `הערה חדשה: ${noteText}`);
         
         document.getElementById('customer-new-note').value = '';
-        showAlert('✅ ההערה נוספה בהצלחה', 'success');
+        showAlert(' ההערה נוספה בהצלחה', 'success');
         
         // Refresh the correct history container
         if (document.getElementById('view-customer-notes-history')) {
@@ -3137,7 +3187,7 @@ async function saveCustomerNoteEdit(activityId) {
         const customerName = document.getElementById('customer-business-name')?.textContent || 'לקוח';
         logAction('update', 'note', activityId, customerName, `עדכון הערה: ${newText}`);
         
-        showAlert('✅ ההערה עודכנה בהצלחה', 'success');
+        showAlert(' ההערה עודכנה בהצלחה', 'success');
         
         const container = document.getElementById('customer-notes-list') || document.getElementById('view-customer-notes-history') || document.getElementById('customer-notes-history');
         if (container) {
@@ -3170,7 +3220,7 @@ function deleteCustomerNote(activityId) {
             // We used activityId as ID, but entity name context helps
             logAction('delete', 'note', activityId, customerName, 'מחיקת הערה');
             
-            showAlert('✅ ההערה נמחקה בהצלחה', 'success');
+            showAlert(' ההערה נמחקה בהצלחה', 'success');
             
             await refreshAllUI();
         } catch (error) {
@@ -3210,7 +3260,7 @@ async function loadContacts() {
             }
         }
         
-        console.log(`✅ Loaded ${contacts.length} contacts`);
+        console.log(` Loaded ${contacts.length} contacts`);
     } catch (error) {
         console.error('❌ Error loading contacts:', error.message || error);
         // Check if table doesn't exist
@@ -3392,12 +3442,12 @@ function filterContacts(preservePage = false) {
                                             ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                                         </div>
                                         <div style="display: flex; gap: 0.5rem;">
-                                            <a href="tel:${cleanNumber}" title="התקשר">
-                                                <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
+                                            <a href="tel:${cleanNumber}" title="התקשר" style="color: var(--primary-color);">
+                                                טלפון
                                             </a>
                                             ${isMobile ? `
-                                            <a href="https://wa.me/${cleanPhone}" target="_blank" title="שלח הודעה בווטסאפ">
-                                                <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
+                                            <a href="https://wa.me/${cleanPhone}" target="_blank" title="שלח הודעה בווטסאפ" style="color: #25D366;">
+                                                ${APP_ICONS.WHATSAPP}
                                             </a>
                                             ` : ''}
                                         </div>
@@ -3416,9 +3466,9 @@ function filterContacts(preservePage = false) {
                             </td>
                             <td>
                                 <div style="display: flex; gap: 0.5rem;">
-                                    <button class="btn btn-sm btn-primary btn-icon" onclick="viewContactDetails('${contact.contact_id}')" title="פרטים">👁️</button>
-                                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editContactById('${contact.contact_id}')" title="ערוך">✏️</button>
-                                    <button class="btn btn-sm btn-danger btn-icon" onclick="deleteContact('${contact.contact_id}')" title="מחק">🗑️</button>
+                                    <button class="btn btn-sm btn-primary btn-icon" onclick="viewContactDetails('${contact.contact_id}')" title="פרטים">${APP_ICONS.EYE}</button>
+                                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editContactById('${contact.contact_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
+                                    <button class="btn btn-sm btn-danger btn-icon" onclick="deleteContact('${contact.contact_id}')" title="מחק">${APP_ICONS.TRASH}</button>
                                 </div>
                             </td>
                         </tr>
@@ -3467,12 +3517,12 @@ function filterContacts(preservePage = false) {
                                         ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                                     </div>
                                     <div style="display: flex; gap: 0.5rem;">
-                                        <a href="tel:${cleanNumber}" title="התקשר">
-                                            <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
+                                        <a href="tel:${cleanNumber}" title="התקשר" style="color: var(--primary-color);">
+                                            התקשר
                                         </a>
                                         ${isMobileNumber(phone) ? `
                                         <a href="https://wa.me/${cleanPhone}" target="_blank" title="שלח הודעה בווטסאפ">
-                                            <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
+                                            ${APP_ICONS.WHATSAPP}
                                         </a>` : ''}
                                     </div>
                                 </div>
@@ -3499,8 +3549,8 @@ function filterContacts(preservePage = false) {
                     ` : ''}
                 </div>
                 <div class="deal-card-footer">
-                    <button class="btn btn-sm btn-secondary" onclick="editContactById('${contact.contact_id}')">✏️ ערוך</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteContact('${contact.contact_id}')">🗑️ מחק</button>
+                    <button class="btn btn-sm btn-secondary" onclick="editContactById('${contact.contact_id}')" style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.EDIT} ערוך</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteContact('${contact.contact_id}')" style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.TRASH} מחק</button>
                 </div>
             `;
             grid.appendChild(card);
@@ -3556,7 +3606,7 @@ function addContactPhoneInput(fullValue = '') {
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'btn btn-danger btn-icon';
-    removeBtn.innerHTML = '✕';
+    removeBtn.innerHTML = APP_ICONS.X;
     removeBtn.onclick = () => div.remove();
     
     div.appendChild(select);
@@ -3575,7 +3625,7 @@ function openContactModal(contact = null) {
             <div class="modal-content">
                 <div class="modal-header">
                     <h2>👤 איש קשר חדש</h2>
-                    <button class="modal-close" onclick="closeContactModal()">✕</button>
+                    <button class="modal-close" onclick="closeContactModal()">${APP_ICONS.X}</button>
                 </div>
                 <form id="contact-form" onsubmit="saveContact(event)">
                     <div class="form-grid">
@@ -3592,7 +3642,7 @@ function openContactModal(contact = null) {
                             <div id="contact-phones-container">
                                 <!-- Phone inputs will be added here -->
                             </div>
-                            <button type="button" class="btn btn-sm btn-secondary" style="margin-top: 0.5rem;" onclick="addContactPhoneInput()">➕ הוסף מספר נוסף</button>
+                            <button type="button" class="btn btn-sm btn-secondary" style="margin-top: 0.5rem;" onclick="addContactPhoneInput()">הוסף מספר נוסף</button>
                         </div>
                         <div class="form-group">
                             <label class="form-label">אימייל</label>
@@ -3641,7 +3691,7 @@ function openContactModal(contact = null) {
         document.getElementById('contact-customer').value = contact.customer_id || '';
         document.getElementById('contact-notes').value = contact.notes || '';
         document.getElementById('contact-form').dataset.contactId = contact.contact_id;
-        document.querySelector('#contact-modal .modal-header h2').textContent = '✏️ ערוך איש קשר';
+        document.querySelector('#contact-modal .modal-header h2').textContent = 'ערוך איש קשר';
         
         // Populate phones
         if (contact.phone) {
@@ -3736,7 +3786,7 @@ async function saveContact(event) {
                 .update({ contact_name: contactData.contact_name })
                 .eq('primary_contact_id', contactId);
 
-            showAlert('✅ איש הקשר עודכן בהצלחה', 'success');
+            showAlert('סטטוס הלקוח עודכן בהצלחה!', 'success');
         } else {
             // Insert
             contactData.created_by = author;
@@ -3745,7 +3795,7 @@ async function saveContact(event) {
                 .insert(contactData);
             
             if (error) throw error;
-            showAlert('✅ איש הקשר נוסף בהצלחה', 'success');
+            showAlert('פרטי איש הקשר עודכנו בהצלחה!', 'success');
         }
         
         // Log action
@@ -3807,7 +3857,7 @@ async function viewContactDetails(contactId) {
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <h2>👤 פרטי איש קשר</h2>
-                    <button class="modal-close" onclick="closeContactDetailsModal()">✕</button>
+                    <button class="modal-close" onclick="closeContactDetailsModal()">${APP_ICONS.X}</button>
                 </div>
                 <div id="contact-details-content">
                     <div class="spinner"></div>
@@ -3848,7 +3898,7 @@ async function viewContactDetails(contactId) {
                         <h3 style="margin: 0; margin-bottom: 0.5rem; color: var(--primary-color);">${contact.contact_name}</h3>
                         <div style="color: var(--text-secondary); margin-bottom: 1.5rem;">${contact.role || 'ללא תפקיד'}</div>
                     </div>
-                    <button class="btn btn-sm btn-secondary" onclick="switchToEditContact('${contact.contact_id}')">✏️ ערוך פרטים</button>
+                    <button class="btn btn-sm btn-secondary btn-icon" onclick="switchToEditContact('${contact.contact_id}')" title="ערוך פרטים">${APP_ICONS.EDIT}</button>
                 </div>
                 
                 <div class="form-grid">
@@ -3880,8 +3930,8 @@ async function viewContactDetails(contactId) {
                                             <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                         </a>
                                         ${isMobile ? `
-                                        <a href="https://wa.me/${cleanPhone}" target="_blank" title="שלח הודעה בווטסאפ">
-                                            <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
+                                        <a href="https://wa.me/${cleanPhone}" target="_blank" title="שלח הודעה בווטסאפ" style="color: #25D366;">
+                                            ${APP_ICONS.WHATSAPP}
                                         </a>
                                         ` : ''}
                                     </div>
@@ -3915,7 +3965,7 @@ async function viewContactDetails(contactId) {
             </div>
             
             <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
-                <h4 style="margin-bottom: 1rem;">📝 הערות</h4>
+                <h4 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.NOTE} הערות</h4>
                 
                 <div class="notes-list" style="max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem;">
                     ${(() => {
@@ -3929,8 +3979,8 @@ async function viewContactDetails(contactId) {
                                         ${note.timestamp !== '-' ? note.timestamp : ''} ${note.author !== '-' ? ' • ' + note.author : ''}
                                     </span>
                                     <div id="contact-note-actions-${index}" style="display: flex; gap: 0.5rem;">
-                                        <button class="btn btn-sm btn-secondary" onclick="editContactNote('${contact.contact_id}', ${index})" title="ערוך" style="padding: 2px 6px; font-size: 0.8rem;">✏️</button>
-                                        <button class="btn btn-sm btn-danger" onclick="deleteContactNote('${contact.contact_id}', ${index})" title="מחק" style="padding: 2px 6px; font-size: 0.8rem;">🗑️</button>
+                                        <button class="btn btn-sm btn-secondary" onclick="editContactNote('${contact.contact_id}', ${index})" title="ערוך" style="padding: 2px 6px; font-size: 0.8rem;">${APP_ICONS.EDIT}</button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteContactNote('${contact.contact_id}', ${index})" title="מחק" style="padding: 2px 6px; font-size: 0.8rem;">${APP_ICONS.TRASH}</button>
                                     </div>
                                 </div>
                                 <div id="contact-note-content-${index}" style="white-space: pre-wrap; font-size: 0.95rem; color: var(--text-primary);">${note.content}</div>
@@ -4006,7 +4056,7 @@ async function addContactNote(contactId) {
             
         if (updateError) throw updateError;
         
-        showAlert('✅ הערה נוספה בהצלחה', 'success');
+        showAlert('הערה נוספה בהצלחה', 'success');
         
         // Update local cache
         const contactIndex = contacts.findIndex(c => c.contact_id === contactId);
@@ -4164,7 +4214,7 @@ function deleteContact(contactId) {
             if (error) throw error;
             
             logAction('delete', 'contact', contactId, contactName, logDescription, deletedContact, null);
-            showAlert('✅ איש הקשר נמחק בהצלחה', 'success');
+            showAlert('איש הקשר נמחק בהצלחה', 'success');
             await refreshAllUI();
         } catch (error) {
             console.error('❌ Error deleting contact:', error);
@@ -4260,7 +4310,7 @@ function filterProducts(preservePage = false) {
     if (filteredProducts.length === 0) {
         container.innerHTML = `
             <div class="text-center" style="padding: 2rem; color: var(--text-tertiary);">
-                <p style="font-size: 1.2rem;">📦 לא נמצאו מוצרים</p>
+                <p style="font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; justify-content: center;">${APP_ICONS.PACKAGE} לא נמצאו מוצרים</p>
                 <p>${products.length > 0 ? 'נסה לשנות את הסינון' : 'הוסף מוצרים למערכת'}</p>
             </div>
         `;
@@ -4290,8 +4340,8 @@ function filterProducts(preservePage = false) {
                         <tr>
                             <td>
                                 ${product.image_url ? 
-                                    `<img src="${product.image_url}" alt="${product.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" data-url="${product.image_url}" data-name="${product.product_name.replace(/"/g, '&quot;')}" onclick="openImageModal(this.dataset.url, this.dataset.name)" onerror="this.outerHTML='<span style=\\'font-size: 1.5rem;\\'>📦</span>'">` : 
-                                    '<span style="font-size: 1.5rem;">📦</span>'}
+                                    `<img src="${product.image_url}" alt="${product.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" data-url="${product.image_url}" data-name="${product.product_name.replace(/"/g, '&quot;')}" onclick="openImageModal(this.dataset.url, this.dataset.name)" onerror="this.outerHTML='<span style=\\'font-size: 1.5rem;\\'>${APP_ICONS.PACKAGE}</span>'">` : 
+                                    `<span style="font-size: 1.5rem;">${APP_ICONS.PACKAGE}</span>`}
                             </td>
                             <td><strong>${product.product_name}</strong></td>
                             <td><span class="badge badge-pending" style="font-size: 0.75rem;">${product.sku || '-'}</span></td>
@@ -4306,8 +4356,8 @@ function filterProducts(preservePage = false) {
                             </td>
                             <td>
                                 <div style="display: flex; gap: 0.5rem;">
-                                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editProductById('${product.product_id}')" title="ערוך">✏️</button>
-                                    <button class="btn btn-sm btn-danger btn-icon" onclick="deleteProduct('${product.product_id}')" title="מחק">🗑️</button>
+                                    <button class="btn btn-sm btn-secondary btn-icon" onclick="editProductById('${product.product_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
+                                    <button class="btn btn-sm btn-danger btn-icon" onclick="deleteProduct('${product.product_id}')" title="מחק">${APP_ICONS.TRASH}</button>
                                 </div>
                             </td>
                         </tr>
@@ -4327,10 +4377,10 @@ function filterProducts(preservePage = false) {
             // Check if product has an image URL
             const imageSection = product.image_url 
                 ? `<div class="product-card-image" data-url="${product.image_url}" data-name="${product.product_name.replace(/"/g, '&quot;')}" onclick="openImageModal(this.dataset.url, this.dataset.name)" style="cursor: pointer;">
-                       <img src="${product.image_url}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='<span class=\\'product-card-image-placeholder\\'>📦</span>'">
+                       <img src="${product.image_url}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='<span class=\\'product-card-image-placeholder\\'>${APP_ICONS.PACKAGE}</span>'">
                    </div>`
                 : `<div class="product-card-image">
-                       <span class="product-card-image-placeholder">📦</span>
+                       <span class="product-card-image-placeholder">${APP_ICONS.PACKAGE}</span>
                    </div>`;
             
             card.innerHTML = `
@@ -4348,10 +4398,10 @@ function filterProducts(preservePage = false) {
                     </div>
                     <div class="product-card-actions">
                         <button class="btn btn-secondary btn-icon" onclick="editProductById('${product.product_id}')" title="ערוך">
-                            ✏️
+                            ${APP_ICONS.EDIT}
                         </button>
                         <button class="btn btn-danger btn-icon" onclick="deleteProduct('${product.product_id}')" title="מחק">
-                            🗑️
+                            ${APP_ICONS.TRASH}
                         </button>
                     </div>
                 </div>
@@ -4513,7 +4563,7 @@ async function saveProduct(event) {
             productData
         );
         
-        showAlert(productId ? '✅ המוצר עודכן בהצלחה!' : '✅ המוצר נוסף בהצלחה!', 'success');
+        showAlert(productId ? 'המוצר עודכן בהצלחה!' : 'המוצר נוסף בהצלחה!', 'success');
         closeProductModal();
         await refreshAllUI();
         
@@ -4547,7 +4597,7 @@ function deleteProduct(productId) {
             // Log the action
             logAction('delete', 'product', productId, productName, logDescription, deletedProduct, { active: false });
             
-            showAlert('✅ המוצר הוסר מהרשימה בהצלחה', 'success');
+            showAlert('המוצר הוסר מהרשימה בהצלחה', 'success');
             await refreshAllUI();
             
         } catch (error) {
@@ -4629,7 +4679,7 @@ async function loadDealsHistory(preservePage = false) {
         if (filteredDeals.length === 0) {
             container.innerHTML = `
                 <div class="text-center" style="padding: 3rem; color: var(--text-tertiary);">
-                    <p style="font-size: 1.2rem;">📋 לא נמצאו עסקאות</p>
+                    <p style="font-size: 1.2rem; display: flex; align-items: center; gap: 0.5rem; justify-content: center;">${APP_ICONS.CALENDAR} לא נמצאו עסקאות</p>
                     <p>נסה לשנות את הפילטרים או צור עסקה חדשה</p>
                 </div>
             `;
@@ -4685,7 +4735,7 @@ async function loadDealsHistory(preservePage = false) {
                                             ${deal.customers.business_name}
                                         </a>
                                     </strong>
-                                </td>
+                               </td>
                                 <td>
                                     ${deal.customers.primary_contact_id ? 
                                         `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500;" onclick="viewContactDetails('${deal.customers.primary_contact_id}')">${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || 'איש קשר'}</span>` 
@@ -4695,13 +4745,13 @@ async function loadDealsHistory(preservePage = false) {
                                 <td>₪${(deal.final_amount || 0).toFixed(2)}</td>
                                 <td>
                                     <div style="display: flex; gap: 0.5rem;">
-                                        <button class="btn btn-sm btn-primary btn-icon" onclick="viewDealDetails('${deal.deal_id}')" title="פרטים">👁️</button>
-                                        <button class="btn btn-sm btn-secondary btn-icon" onclick="editDeal('${deal.deal_id}')" title="ערוך">✏️</button>
-                                        <button class="btn btn-sm btn-secondary btn-icon" onclick="generateQuotePDF('${deal.deal_id}')" title="ייצוא הצעת מחיר (PDF)">📄</button>
+                                        <button class="btn btn-sm btn-primary btn-icon" onclick="viewDealDetails('${deal.deal_id}')" title="פרטים">${APP_ICONS.EYE}</button>
+                                        <button class="btn btn-sm btn-secondary btn-icon" onclick="editDeal('${deal.deal_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
+                                        <button class="btn btn-sm btn-secondary btn-icon" onclick="generateQuotePDF('${deal.deal_id}')" title="ייצוא הצעת מחיר (PDF)">${APP_ICONS.PDF}</button>
                                         <button class="btn btn-sm btn-success btn-icon" onclick="sendDealWhatsApp('${deal.deal_id}', this)" title="שלח ווטסאפ" style="border: 1px solid #25D366; background-color: #25D366; display: inline-flex; align-items: center; justify-content: center;">
-                                            <img src="images/whatsappwhite.png" alt="WhatsApp" style="width: 16px; height: 16px;">
+                                            ${APP_ICONS.WHATSAPP}
                                         </button>
-                                        <button class="btn btn-sm btn-danger btn-icon" onclick="deleteDeal('${deal.deal_id}')" title="מחק">🗑️</button>
+                                        <button class="btn btn-sm btn-danger btn-icon" onclick="deleteDeal('${deal.deal_id}')" title="מחק">${APP_ICONS.TRASH}</button>
                                     </div>
                                 </td>
                             </tr>
@@ -4802,13 +4852,13 @@ function createDealCard(deal) {
             <div class="deal-card-amount">₪${(deal.final_amount || 0).toFixed(2)}</div>
             <div class="deal-card-actions">
                 <button class="btn btn-primary btn-icon" onclick="viewDealDetails('${deal.deal_id}')" title="צפה בפרטים">
-                    👁️
+                    ${APP_ICONS.EYE}
                 </button>
                 <button class="btn btn-secondary btn-icon" onclick="editDeal('${deal.deal_id}')" title="ערוך">
-                    ✏️
+                    ${APP_ICONS.EDIT}
                 </button>
                 <button class="btn btn-danger btn-icon" onclick="deleteDeal('${deal.deal_id}')" title="מחק">
-                    🗑️
+                    ${APP_ICONS.TRASH}
                 </button>
             </div>
         </div>
@@ -4893,7 +4943,7 @@ async function viewDealDetails(dealId) {
                     <div></div> 
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <button class="btn btn-primary btn-compact" onclick="closeDealModal(); editDeal('${deal.deal_id}')">
-                            ✏️ ערוך עסקה
+                            ערוך עסקה
                         </button>
                         <span class="badge ${statusBadgeClass}">${deal.deal_status === 'זכייה' ? 'נסגר' : (deal.deal_status === 'הפסד' ? 'בוטל' : deal.deal_status)}</span>
                     </div>
@@ -5024,7 +5074,7 @@ async function viewDealDetails(dealId) {
                 <div class="resource-links-header">
                     <h3 style="margin: 0;">🔗 קישורים ומשאבים</h3>
                     <button class="btn btn-primary btn-sm" onclick="openLinkModal('${deal.deal_id}', 'deal')">
-                        ➕ הוסף קישור
+                        הוסף קישור
                     </button>
                 </div>
                 <div id="resource-links-container-${deal.deal_id}" class="resource-links-container">
@@ -5088,18 +5138,18 @@ async function loadDealNotes(dealId) {
             return;
         }
         
-        const typeIcons = {
-            'הערה': '📝',
-            'שיחה': '📞',
-            'פגישה': '📅',
-            'מייל': '📧',
-            'משימה': '✅'
+        const typeIconsList = {
+            'הערה': APP_ICONS.NOTE,
+            'שיחה': '',
+            'פגישה': APP_ICONS.CALENDAR,
+            'מייל': APP_ICONS.MAIL,
+            'משימה': APP_ICONS.CHECK_CIRCLE
         };
 
         container.innerHTML = notes.map(note => {
             const createdDate = new Date(note.created_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' });
             const activityDate = note.activity_date ? new Date(note.activity_date).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' }) : null;
-            const icon = typeIcons[note.activity_type] || '📝';
+            const icon = typeIconsList[note.activity_type] || APP_ICONS.NOTE;
             const editedInfo = note.edited_at ? `<div class="note-edited">עריכה על ידי ${note.edited_by || 'לא ידוע'} ב-${new Date(note.edited_at).toLocaleString('he-IL', { hour: '2-digit', minute: '2-digit' })}</div>` : '';
             
             const canPostpone = !note.completed && note.activity_type !== 'הערה';
@@ -5111,15 +5161,15 @@ async function loadDealNotes(dealId) {
                         <span style="font-size: 0.85rem; color: var(--text-tertiary);">${createdDate}</span>
                         <div style="display: flex; gap: 5px;">
                             ${canPostpone ? `
-                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #fbbf24; color: white;" onclick="postponeActivity('${note.activity_id}', 'tomorrow')" title="דחה למחר">☀️</button>
-                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #818cf8; color: white;" onclick="postponeActivity('${note.activity_id}', 'next-week')" title="דחה לשבוע הבא">📅</button>
+                                <button class="btn btn-sm btn-icon" style="background: #fbbf24; color: white;" onclick="postponeActivity('${note.activity_id}', 'tomorrow')" title="דחה למחר">${APP_ICONS.SUN}</button>
+                                <button class="btn btn-sm btn-icon" style="background: #818cf8; color: white;" onclick="postponeActivity('${note.activity_id}', 'next-week')" title="דחה לשבוע הבא">${APP_ICONS.CALENDAR}</button>
                             ` : ''}
-                            <button class="btn btn-sm btn-primary" onclick="editNote('${note.activity_id}')" title="ערוך">✏️</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteNote('${note.activity_id}')" title="מחק">🗑️</button>
+                            <button class="btn btn-sm btn-primary btn-icon" onclick="editNote('${note.activity_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
+                            <button class="btn btn-sm btn-danger btn-icon" onclick="deleteNote('${note.activity_id}')" title="מחק">${APP_ICONS.TRASH}</button>
                         </div>
                     </div>
                     <div class="note-content">
-                        ${activityDate ? `<div style="margin-bottom: 5px; color: var(--primary-color); font-weight: 500;">📅 תאריך יעד/פעילות: ${activityDate}</div>` : ''}
+                        ${activityDate ? `<div style="margin-bottom: 5px; color: var(--primary-color); font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.CALENDAR} תאריך יעד/פעילות: ${activityDate}</div>` : ''}
                         <strong>${note.activity_type}:</strong> ${formatActivityText(note.description)}
                     </div>
                     ${editedInfo}
@@ -5186,7 +5236,7 @@ function deleteNote(activityId) {
                 .delete()
                 .eq('activity_id', activityId);
             if (error) throw error;
-            showAlert('✅ ההערה נמחקה', 'success');
+            showAlert('ההערה נוספה!', 'success');
             await refreshAllUI();
         } catch (err) {
             console.error('❌ Error deleting note:', err);
@@ -5261,7 +5311,7 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                      <div style="font-size: 0.9rem; white-space: pre-wrap;">${formattedContent}</div>
                      <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="editActivityNote(${note.id}, '${activityId}')" type="button" style="background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1rem;" title="ערוך">✏️</button>
+                        <button onclick="editActivityNote(${note.id}, '${activityId}')" type="button" style="background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1rem; color: var(--text-secondary);" title="ערוך">${APP_ICONS.EDIT}</button>
                         <button onclick="deleteActivityNote(${note.id}, '${activityId}')" type="button" style="color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1.1em;" title="מחק">×</button>
                      </div>
                 </div>
@@ -5447,8 +5497,8 @@ function showEditActivityModal(activity) {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 550px;">
                 <div class="modal-header">
-                    <h2>✏️ עריכת פעילות</h2>
-                    <button class="modal-close" onclick="closeEditActivityModal()">✕</button>
+                    <h2>${APP_ICONS.EDIT} עריכת פעילות</h2>
+                    <button class="modal-close" onclick="closeEditActivityModal()">${APP_ICONS.X}</button>
                 </div>
                 <form id="edit-activity-form" onsubmit="saveActivityEdit(event)">
                     <input type="hidden" id="edit-activity-id">
@@ -5457,11 +5507,11 @@ function showEditActivityModal(activity) {
                         <div class="form-group">
                             <label class="form-label">סוג פעילות</label>
                             <select id="edit-activity-type" class="form-select">
-                                <option value="הערה">📝 הערה</option>
-                                <option value="שיחה">📞 שיחה</option>
-                                <option value="פגישה">📅 פגישה</option>
-                                <option value="מייל">📧 מייל</option>
-                                <option value="משימה">✅ משימה</option>
+                                <option value="הערה">הערה</option>
+                                <option value="שיחה">שיחה</option>
+                                <option value="פגישה">פגישה</option>
+                                <option value="מייל">מייל</option>
+                                <option value="משימה">משימה</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -5471,8 +5521,8 @@ function showEditActivityModal(activity) {
                         <div class="form-group">
                             <label class="form-label">סטטוס</label>
                             <select id="edit-activity-status" class="form-select">
-                                <option value="false">⏳ ממתין לביצוע</option>
-                                <option value="true">✅ בוצע</option>
+                                <option value="false">ממתין לביצוע</option>
+                                <option value="true">בוצע</option>
                             </select>
                         </div>
                     </div>
@@ -5494,7 +5544,7 @@ function showEditActivityModal(activity) {
                     
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label class="form-label">קשר ללקוח</label>
-                        <input type="text" id="edit-activity-customer-search" class="form-input" placeholder="🔍 חפש לקוח..." style="margin-bottom: 0.5rem;" onkeyup="filterEditActivityCustomers(this.value)">
+                        <input type="text" id="edit-activity-customer-search" class="form-input" placeholder="חפש לקוח..." style="margin-bottom: 0.5rem;" onkeyup="filterEditActivityCustomers(this.value)">
                         <select id="edit-activity-customer" class="form-select" size="5" onchange="loadCustomerContactsForActivity(this.value, 'edit-activity-contact'); populateEditActivityDeals(null, this.value);">
                             <option value="">-- ללא לקוח --</option>
                         </select>
@@ -5513,7 +5563,7 @@ function showEditActivityModal(activity) {
                     </div>
                     
                     <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                        <h3 style="font-size: 1rem; margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text-primary);">💼 עסקאות</h3>
+                        <h3 style="font-size: 1rem; margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.BRIEFCASE} עסקאות</h3>
                 <div id="edit-activity-deals-list" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 1rem; max-height: 250px; overflow-y: auto; margin-bottom: 1.5rem;">
                     <div class="spinner"></div>
                 </div>
@@ -5524,7 +5574,7 @@ function showEditActivityModal(activity) {
                         </div>
                         <div style="display: flex; gap: 0.5rem; flex-direction: column;">
                             <textarea id="new-activity-note" class="form-textarea" rows="3" placeholder="הוסף הערה..."></textarea>
-                            <button type="button" class="btn btn-secondary" style="align-self: flex-start;" onclick="addActivityNote()">➕ הוסף הערה</button>
+                            <button type="button" class="btn btn-secondary" style="align-self: flex-start;" onclick="addActivityNote()">הוסף הערה</button>
                         </div>
                     </div>
 
@@ -5791,13 +5841,13 @@ async function saveActivityEdit(event) {
                     console.error('All update attempts failed.');
                     throw firstAttemptError; // Throw the original error
                 } else {
-                    showAlert('✅ הפעילות עודכנה (שים לב: נתוני עריכה ואיש קשר לא נשמרו - חסרות עמודות במסד הנתונים)', 'warning');
+                    showAlert(' הפעילות עודכנה (שים לב: נתוני עריכה ואיש קשר לא נשמרו - חסרות עמודות במסד הנתונים)', 'warning');
                 }
             } else {
-                showAlert('✅ הפעילות עודכנה (אך שיוך איש הקשר נכשל - חסרה עמודת contact_id)', 'warning');
+                showAlert(' הפעילות עודכנה (אך שיוך איש הקשר נכשל - חסרה עמודת contact_id)', 'warning');
             }
         } else {
-            showAlert('✅ הפעילות עודכנה בהצלחה', 'success');
+            showAlert(' הפעילות עודכנה בהצלחה', 'success');
         }
 
         // Log the action with detailed objects for the improved email notification
@@ -5881,18 +5931,18 @@ function openNewActivityModal(prefillData = null) {
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 550px;">
                 <div class="modal-header">
-                    <h2>➕ פעילות חדשה</h2>
-                    <button class="modal-close" onclick="closeNewActivityModal()">✕</button>
+                    <h2 style="display: flex; align-items: center; gap: 0.5rem;">פעילות חדשה</h2>
+                    <button class="modal-close" onclick="closeNewActivityModal()">${APP_ICONS.X}</button>
                 </div>
                 <form id="new-activity-form" onsubmit="saveNewActivity(event)">
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">סוג פעילות</label>
                             <select id="new-activity-type" class="form-select" required>
-                                <option value="שיחה">📞 שיחה</option>
-                                <option value="פגישה">📅 פגישה</option>
-                                <option value="מייל">📧 מייל</option>
-                                <option value="משימה" selected>✅ משימה</option>
+                                <option value="שיחה">שיחה</option>
+                                <option value="פגישה">פגישה</option>
+                                <option value="מייל">מייל</option>
+                                <option value="משימה" selected>משימה</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -5911,7 +5961,7 @@ function openNewActivityModal(prefillData = null) {
                     
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label class="form-label">קשר ללקוח</label>
-                        <input type="text" id="new-activity-customer-search" class="form-input" placeholder="🔍 חפש לקוח..." style="margin-bottom: 0.5rem;" onkeyup="filterNewActivityCustomers(this.value)">
+                        <input type="text" id="new-activity-customer-search" class="form-input" placeholder="חפש לקוח..." style="margin-bottom: 0.5rem;" onkeyup="filterNewActivityCustomers(this.value)">
                         <select id="new-activity-customer" class="form-select" size="5" onchange="loadCustomerContactsForActivity(this.value, 'new-activity-contact'); populateNewActivityDeals(this.value)">
                             <option value="">-- ללא לקוח --</option>
                         </select>
@@ -6148,7 +6198,7 @@ async function saveNewActivity(event) {
         // Log the action
         logAction('create', 'activity', newActivity.activity_id, activityData.activity_type, `יצירת פעילות: ${activityData.description || activityData.activity_type}`);
         
-        showAlert('✅ הפעילות נוספה בהצלחה', 'success');
+        showAlert(' הפעילות נוספה בהצלחה', 'success');
         closeNewActivityModal();
         
         // Reload activities
@@ -6181,7 +6231,7 @@ async function updateDealPaymentTerms(dealId, paymentTerms) {
         
         if (error) throw error;
         
-        showAlert('✅ תנאי התשלום עודכנו', 'success');
+        showAlert(' תנאי התשלום עודכנו', 'success');
         
     } catch (error) {
         console.error('❌ Error updating payment terms:', error);
@@ -6222,7 +6272,7 @@ function deleteDeal(dealId) {
             
             logAction('delete', 'deal', dealId, `עסקה - ${customerName}`, logDescription);
             
-            showAlert('✅ העסקה נמחקה בהצלחה', 'success');
+            showAlert(' העסקה נמחקה בהצלחה', 'success');
             await refreshAllUI();
             
         } catch (error) {
@@ -6320,7 +6370,7 @@ async function editDeal(dealId) {
         
         // Duplicate switch logic removed as it's redundant/handled above
 
-        showAlert('📝 עריכת עסקה - ערוך את הפרטים ושמור שוב', 'info');
+        showAlert(' עריכת עסקה - ערוך את הפרטים ושמור שוב', 'info');
         
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -6356,7 +6406,7 @@ function deleteActivity(activityId) {
             const customerName = oldActivity?.customers?.business_name || 'לקוח לא ידוע';
             
             logAction('delete', 'activity', activityId, activityType, `מחיקת פעילות של ${customerName}`, oldActivity, null);
-            showAlert('✅ הפעילות נמחקה בהצלחה', 'success');
+            showAlert(' הפעילות נמחקה בהצלחה', 'success');
             
             await refreshAllUI();
         } catch (error) {
@@ -6815,12 +6865,13 @@ function renderThisWeekActivityCard(activity) {
     });
     
     const typeIcons = {
-        'שיחה': '📞',
-        'פגישה': '📅',
-        'מייל': '📧',
-        'משימה': '✅'
+        'שיחה': '',
+        'פגישה': APP_ICONS.CALENDAR,
+        'מייל': APP_ICONS.MAIL,
+        'משימה': APP_ICONS.CHECK_CIRCLE,
+        'הערה': APP_ICONS.NOTE
     };
-    const icon = typeIcons[activity.activity_type] || '📝';
+    const icon = typeIcons[activity.activity_type] || APP_ICONS.NOTE;
     
     const isCompleted = activity.completed === true;
     const statusClass = isCompleted ? 'badge-won' : 'badge-pending';
@@ -6838,26 +6889,26 @@ function renderThisWeekActivityCard(activity) {
             <div class="deal-card-header" style="margin-bottom: 0.75rem; padding-bottom: 0.75rem;">
                 <div>
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                        <span style="font-size: 1.2rem;">${icon}</span>
+                        <span style="display: flex; align-items: center; color: var(--primary-color);">${icon}</span>
                         <span class="deal-card-title" style="font-size: 1rem;">${activity.activity_type}</span>
-                        <span style="color: var(--text-tertiary); font-size: 0.85rem;">⏰ ${activityTime}</span>
+                        <span style="color: var(--text-tertiary); font-size: 0.85rem; margin-right: auto; display: flex; align-items: center; gap: 4px;"> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> ${activityTime}</span>
                     </div>
-                    <div class="deal-card-date" style="font-size: 0.9rem;">
-                        🏢 ${customer ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customer.customer_id}')" style="color: inherit; text-decoration: underline; font-weight: 500;">${customerName}</a>` : customerName}
+                    <div class="deal-card-date" style="font-size: 0.9rem; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+                        <span>${APP_ICONS.LOCATION}</span> ${customer ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customer.customer_id}')" style="color: inherit; text-decoration: underline; font-weight: 500;">${customerName}</a>` : customerName}
                         ${(contactName && contactId) 
                             ? ` • <a href="javascript:void(0)" onclick="viewContactDetails('${contactId}')" style="color: inherit; text-decoration: underline;">${contactName}</a>` 
                             : (contactName ? ` • ${contactName}` : '')}
                         ${customer?.city ? (() => {
                             const cityName = getCityFromAddress(customer.city);
-                            return cityName ? ` • 📍 ${cityName} ${renderNavigationIcon(customer.city)}` : '';
+                            return cityName ? ` • ${cityName} ${renderNavigationIcon(customer.city)}` : '';
                         })() : ''}
                     </div>
                 </div>
                 <div style="text-align: left;">
                     <span class="badge ${statusClass}">${statusText}</span>
                     ${activity.completed && activity.completed_at ? `
-                        <div style="font-size: 0.75rem; color: var(--success-color); margin-top: 4px;">
-                            📅 ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })} • 🕒 ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                        <div style="font-size: 0.75rem; color: var(--success-color); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                            ${APP_ICONS.CALENDAR} ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })} • ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                     ` : ''}
                 </div>
@@ -6873,7 +6924,6 @@ function renderThisWeekActivityCard(activity) {
                 <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem;">
                     ${phone ? `
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span style="color: var(--text-secondary);">📱</span>
                             <span style="color: var(--text-primary);">${phone}</span>
                             <a href="tel:${phone}" title="התקשר">
                                 <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
@@ -6886,12 +6936,12 @@ function renderThisWeekActivityCard(activity) {
                     ` : ''}
                     ${customer?.email ? `
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <strong>📧</strong> 
+                            ${APP_ICONS.MAIL} 
                             <a href="mailto:${customer.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${customer.email}</a>
                             <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${customer.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                         </div>
                     ` : ''}
-                    ${dealId ? `<span style="color: var(--primary-color);">💼 עסקה${dealAmount ? ` • ₪${dealAmount.toFixed(0)}` : ''}</span>` : ''}
+                    ${dealId ? `<span style="color: var(--primary-color); display: flex; align-items: center; gap: 4px;">${APP_ICONS.BRIEFCASE} עסקה${dealAmount ? ` • ₪${dealAmount.toFixed(0)}` : ''}</span>` : ''}
                 </div>
                 <div style="display: flex; gap: 0.4rem; align-items: center;">
                     ${!isCompleted ? `
@@ -6902,36 +6952,36 @@ function renderThisWeekActivityCard(activity) {
                     ` : `
                         <button class="btn btn-warning btn-icon" style="width: 68px; height: 32px;" 
                                 onclick="toggleActivityCompletion('${activity.activity_id}', false)" title="בטל סימון כבוצע">
-                            ↩️ בטל
+                            בטל
                         </button>
                     `}
                     <button class="btn btn-info btn-icon" style="width: 32px; height: 32px;" 
                             onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">
-                        👁️
+                        ${APP_ICONS.EYE}
                     </button>
                     <button class="btn btn-secondary btn-icon" style="width: 32px; height: 32px;" 
                             onclick="editActivity('${activity.activity_id}')" title="ערוך">
-                        ✏️
+                        ${APP_ICONS.EDIT}
                     </button>
                     ${canPostpone ? `
                         <button class="btn btn-warning btn-icon" style="width: 32px; height: 32px; background: #fbbf24; border-color: #fbbf24;" 
                                 onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">
-                            ☀️
+                            ${APP_ICONS.SUN}
                         </button>
                         <button class="btn btn-icon" style="width: 32px; height: 32px; background: #818cf8; border-color: #818cf8; color: white;" 
                                 onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">
-                            📅
+                            ${APP_ICONS.CALENDAR}
                         </button>
                     ` : ''}
                     ${dealId ? `
                         <button class="btn btn-primary btn-icon" style="width: 32px; height: 32px;" 
                                 onclick="openDealModal('${dealId}')" title="פתח עסקה">
-                            💼
+                            ${APP_ICONS.BRIEFCASE}
                         </button>
                     ` : ''}
                     <button class="btn btn-danger btn-icon" style="width: 32px; height: 32px;" 
                             onclick="deleteActivity('${activity.activity_id}')" title="מחק">
-                        🗑️
+                        ${APP_ICONS.TRASH}
                     </button>
                 </div>
             </div>
@@ -6989,7 +7039,7 @@ async function markActivityComplete(activityId) {
         
         if (error) throw error;
         
-        showAlert('✅ הפעילות סומנה כבוצעה!', 'success');
+        showAlert('הפעילות סומנה כבוצעה!', 'success');
         loadThisWeek();
         
         // Automatically open new activity modal
@@ -7043,7 +7093,7 @@ async function postponeActivity(activityId, type) {
             `דחיית פעילות עבור ${activity.customers?.business_name || 'לקוח'} ל${type === 'tomorrow' ? 'יום הבא' : 'שבוע לאחר מכן'} (${dateStr})`, 
             activity, { activity_date: newDate.toISOString() });
 
-        showAlert(`✅ הפעילות נדחתה ל${type === 'tomorrow' ? 'יום הבא' : 'שבוע לאחר מכן'} (${dateStr})`, 'success');
+        showAlert(` הפעילות נדחתה ל${type === 'tomorrow' ? 'יום הבא' : 'שבוע לאחר מכן'} (${dateStr})`, 'success');
         
         // Refresh the UI
         loadThisWeek();
@@ -7150,14 +7200,14 @@ async function viewActivityDetails(activityId) {
             document.body.appendChild(modal);
         }
         
-        const typeIcons = {
-            'שיחה': '📞',
-            'פגישה': '📅',
-            'מייל': '📧',
-            'משימה': '✅',
-            'הערה': '📝'
+        const typeIconsList = {
+            'שיחה': '',
+            'פגישה': APP_ICONS.CALENDAR,
+            'מייל': APP_ICONS.MAIL,
+            'משימה': APP_ICONS.CHECK_CIRCLE,
+            'הערה': APP_ICONS.NOTE
         };
-        const icon = typeIcons[activity.activity_type] || '📝';
+        const icon = typeIconsList[activity.activity_type] || APP_ICONS.NOTE;
         
         // Resolve customer/contact info
         let customerHtml = '-';
@@ -7185,10 +7235,10 @@ async function viewActivityDetails(activityId) {
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                         <h2>${icon} פרטי פעילות</h2>
-                         <button class="btn btn-sm btn-secondary" onclick="closeViewActivityModal(); editActivity('${activity.activity_id}')" title="ערוך פרטים">✏️</button>
+                         <h2 style="display: flex; align-items: center; gap: 10px;">${APP_ICONS.INFO} פרטי פעילות</h2>
+                         <button class="btn btn-sm btn-secondary btn-icon" onclick="closeViewActivityModal(); editActivity('${activity.activity_id}')" title="ערוך פרטים">${APP_ICONS.EDIT}</button>
                     </div>
-                    <button class="modal-close" onclick="closeViewActivityModal()">✕</button>
+                    <button class="modal-close" onclick="closeViewActivityModal()">${APP_ICONS.X}</button>
                 </div>
                 
                 <div class="form-grid">
@@ -7206,7 +7256,7 @@ async function viewActivityDetails(activityId) {
                             ${activity.completed ? '<span class="badge badge-won">בוצע</span>' : '<span class="badge badge-pending">ממתין</span>'}
                             ${activity.completed && activity.completed_at ? `
                                 <div style="font-size: 0.8rem; color: var(--success-color); margin-top: 5px;">
-                                    <strong>ביצוע:</strong> 📅 ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })} • 🕒 ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                                    <strong>ביצוע:</strong> <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CALENDAR} ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })} • ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
                             ` : ''}
                         </span>
@@ -7249,7 +7299,7 @@ async function viewActivityDetails(activityId) {
                 </div>
                 
                 <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--text-primary);">📝 הערות</h3>
+                    <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.NOTE} הערות</h3>
                     <div id="view-activity-notes-list" style="margin-bottom: 1rem; max-height: 200px; overflow-y: auto; background: var(--bg-secondary); padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border-color);">
                         <div class="spinner"></div>
                     </div>
@@ -7454,7 +7504,8 @@ async function loadActivities(preservePage = false) {
         if (filteredActivities.length === 0) {
             container.innerHTML = `
                 <div class="text-center" style="padding: 3rem; color: var(--text-tertiary);">
-                    <p style="font-size: 1.2rem;">📋 לא נמצאו פעילויות</p>
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">${APP_ICONS.NOTE}</div>
+                    <p style="font-size: 1.2rem;">לא נמצאו פעילויות</p>
                     <p>נסה לשנות את הפילטרים</p>
                 </div>
             `;
@@ -7462,13 +7513,12 @@ async function loadActivities(preservePage = false) {
         }
         
         const typeIcons = {
-            'שיחה': '📞',
-            'פגישה': '📅',
-            'מייל': '📧',
-            'משימה': '✅'
+            'שיחה': '',
+            'פגישה': APP_ICONS.CALENDAR,
+            'מייל': APP_ICONS.MAIL,
+            'משימה': APP_ICONS.CHECK_CIRCLE,
+            'הערה': APP_ICONS.NOTE
         };
-        
-        // Update view buttons styling - Sync with viewState
         const cardsBtn = document.getElementById('activities-view-cards');
         const tableBtn = document.getElementById('activities-view-table');
         if (cardsBtn && tableBtn) {
@@ -7512,7 +7562,7 @@ async function loadActivities(preservePage = false) {
                     </thead>
                     <tbody>
                         ${pagedActivities.map(activity => {
-                            const icon = typeIcons[activity.activity_type] || '📝';
+                            const icon = typeIcons[activity.activity_type] || APP_ICONS.NOTE;
                             const activityDate = activity.activity_date 
                                 ? new Date(activity.activity_date).toLocaleDateString('he-IL')
                                 : '-';
@@ -7574,18 +7624,17 @@ async function loadActivities(preservePage = false) {
                                     <td>
                                         <div style="display: flex; gap: 0.25rem; align-items: center; justify-content: flex-start; flex-wrap: nowrap;">
                                             ${canPostpone ? `
-                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">☀️</button>
-                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">📅</button>
+                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">${APP_ICONS.SUN}</button>
+                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">${APP_ICONS.CALENDAR}</button>
                                             ` : ''}
-                                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">💼</button>` : ''}
-                                            <button class="btn btn-sm btn-info" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">👁️</button>
-                                            <button class="btn btn-sm btn-secondary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
-                                            <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
-                                                    style="padding: 0.3rem 0.5rem; font-size: 0.8rem;"
+                                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">${APP_ICONS.BRIEFCASE}</button>` : ''}
+                                            <button class="btn btn-sm btn-info btn-icon" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">${APP_ICONS.EYE}</button>
+                                            <button class="btn btn-sm btn-secondary btn-icon" onclick="editActivity('${activity.activity_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
+                                            <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'} btn-icon" 
                                                     onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})" title="${activity.completed ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
-                                                ${activity.completed ? '↩️' : '✓'}
+                                                ${activity.completed ? APP_ICONS.UNDO : APP_ICONS.CHECK_CIRCLE}
                                             </button>
-                                            <button class="btn btn-sm btn-danger" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" onclick="deleteActivity('${activity.activity_id}')" title="מחק">🗑️</button>
+                                            <button class="btn btn-sm btn-danger btn-icon" onclick="deleteActivity('${activity.activity_id}')" title="מחק">${APP_ICONS.TRASH}</button>
                                         </div>
                                     </td>
                                 </tr>
@@ -7610,7 +7659,7 @@ async function loadActivities(preservePage = false) {
                     card.style.background = 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)';
                 }
                 
-                const icon = typeIcons[activity.activity_type] || '📝';
+                const icon = typeIcons[activity.activity_type] || APP_ICONS.NOTE;
                 const createdDate = new Date(activity.created_at).toLocaleString('he-IL', {
                     year: 'numeric',
                     month: 'long',
@@ -7683,16 +7732,16 @@ async function loadActivities(preservePage = false) {
                             <button class="btn btn-sm ${activity.completed ? 'btn-secondary' : 'btn-success'}" 
                                     style="padding: 0.2rem 0.4rem; font-size: 0.7rem; width: 60px;"
                                     onclick="toggleActivityCompletion('${activity.activity_id}', ${!activity.completed})" title="${activity.completed ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
-                                ${activity.completed ? '↩️ בטל' : '✓ בוצע'}
+                                ${activity.completed ? 'בטל' : '✓ בוצע'}
                             </button>
-                            <button class="btn btn-sm btn-info" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">👁️</button>
-                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">✏️</button>
+                            <button class="btn btn-sm btn-info" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">${APP_ICONS.EYE}</button>
+                            <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
                             ${canPostpone ? `
-                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">☀️</button>
-                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">📅</button>
+                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">${APP_ICONS.SUN}</button>
+                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">${APP_ICONS.CALENDAR}</button>
                             ` : ''}
-                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">💼</button>` : ''}
-                            <button class="btn btn-sm btn-danger" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="deleteActivity('${activity.activity_id}')" title="מחק">🗑️</button>
+                            ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">${APP_ICONS.BRIEFCASE}</button>` : ''}
+                            <button class="btn btn-sm btn-danger" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="deleteActivity('${activity.activity_id}')" title="מחק">${APP_ICONS.TRASH}</button>
                         </div>
                     </div>
                     <div class="deal-card-body" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">
@@ -7718,7 +7767,7 @@ async function loadActivities(preservePage = false) {
                                 </div>
                             ` : ''}
                             <div><strong>נוצר:</strong> ${activity.created_by || 'מערכת'}</div>
-                            ${activity.completed && activity.completed_at ? `<div><strong>בוצע:</strong> <span style="color: var(--success-color);">📅 ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })} • 🕒 ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span></div>` : ''}
+                            ${activity.completed && activity.completed_at ? `<div><strong>בוצע:</strong> <span style="color: var(--success-color); display: flex; align-items: center; gap: 4px;">${APP_ICONS.CALENDAR} ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })} • ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span></div>` : ''}
                         </div>
                         <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.3rem;">נוצר: ${createdDate}</div>
                     </div>
@@ -7765,7 +7814,7 @@ async function toggleActivityCompletion(activityId, completed) {
         
         if (error) throw error;
         
-        showAlert(completed ? '✅ הפעילות סומנה כבוצעה' : '↩️ הפעילות סומנה כממתינה', 'success');
+        showAlert(completed ? ' הפעילות סומנה כבוצעה' : ' הפעילות סומנה כממתינה', 'success');
         
         // Reload activities
         loadActivities();
@@ -7903,8 +7952,8 @@ async function generateQuotePDF(specificDealId = null) {
             <div class="quote-section" style="display: flex; justify-content: space-between; align-items: start; border-bottom: 3px solid #2563eb; padding-bottom: 2rem; margin-bottom: 2rem;">
                 <div>
                     <img src="images/logo.png" alt="אנפי ייבוא ושיווק" style="height: 80px; margin-bottom: 1rem;">
-                    <p style="color: #64748b; margin: 0.25rem 0;">📍 תל אביב</p>
-                    <p style="color: #64748b; margin: 0.25rem 0;">📞 טלפון: 050-6946650</p>
+                    <p style="color: #64748b; margin: 0.25rem 0; display: flex; align-items: center; gap: 4px;">${APP_ICONS.LOCATION} תל אביב</p>
+                    <p style="color: #64748b; margin: 0.25rem 0;">טלפון: 050-6946650</p>
                     <p style="color: #64748b; margin: 0.25rem 0;">✉️ אימייל: anfi@bezeqint.net</p>
                 </div>
                 
@@ -8057,7 +8106,7 @@ async function generateQuotePDF(specificDealId = null) {
         // Clean up
         document.body.removeChild(quoteContainer);
         
-        showAlert('✅ הצעת המחיר יוצאה בהצלחה!', 'success');
+        showAlert('הצעת המחיר יוצאה בהצלחה!', 'success');
         
     } catch (error) {
         console.error('❌ Error generating PDF:', error);
@@ -8159,8 +8208,15 @@ function showAlert(message, type = 'info') {
     
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type}`;
-    alertDiv.textContent = message;
     alertDiv.style.whiteSpace = 'pre-line';
+    
+    let icon = '';
+    if (type === 'success') icon = APP_ICONS.CHECK_CIRCLE;
+    else if (type === 'error') icon = APP_ICONS.X_CIRCLE;
+    else if (type === 'warning') icon = APP_ICONS.SUN;
+    else icon = APP_ICONS.INFO;
+
+    alertDiv.innerHTML = `<span style="display: flex; align-items: center; gap: 10px;">${icon} ${message}</span>`;
     
     toastContainer.appendChild(alertDiv);
     
@@ -8581,7 +8637,7 @@ async function handleImportFile(event, type) {
     const overlay = document.createElement('div');
     overlay.id = 'import-loading-overlay';
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);color:white;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:10000;font-size:1.5rem;font-weight:bold;font-family:Segoe UI, sans-serif;';
-    overlay.innerHTML = '<div>⏳ מעבד נתונים...</div><div style="font-size:1rem;margin-top:10px;font-weight:normal;">אנא המתן, פעולה זו עשויה לקחת מספר רגעים</div>';
+    overlay.innerHTML = '<div>معבד נתונים...</div><div style="font-size:1rem;margin-top:10px;font-weight:normal;">אנא המתן, פעולה זו עשויה לקחת מספר רגעים</div>';
     document.body.appendChild(overlay);
     
     try {
@@ -8593,7 +8649,7 @@ async function handleImportFile(event, type) {
         await new Promise(r => setTimeout(r, 100));
 
         const data = await readExcelFile(file);
-        console.log(`✅ Loaded CSV/Excel data: ${data.length} rows`);
+        console.log(`Loaded CSV/Excel data: ${data.length} rows`);
         if (data.length > 0) {
             console.log('First row headers:', Object.keys(data[0]));
         } else {
@@ -8923,7 +8979,7 @@ async function loadAuditLog() {
         if (filteredLogs.length === 0) {
             container.innerHTML = `
                 <div class="text-center" style="padding: 3rem; color: var(--text-tertiary);">
-                    <p style="font-size: 1.3rem;">📋 אין פעולות להצגה</p>
+                    <p style="font-size: 1.3rem; display: flex; align-items: center; gap: 0.5rem; justify-content: center;">${APP_ICONS.NOTE} אין פעולות להצגה</p>
                     <p>לא נמצאו רשומות ביומן הפעולות${actionFilter || entityFilter || dateFilter ? ' לפי הסינון שנבחר' : ''}</p>
                 </div>
             `;
@@ -8932,9 +8988,9 @@ async function loadAuditLog() {
         
         // Action type icons and labels
         const actionLabels = {
-            'create': { icon: '➕', label: 'יצירה', class: 'badge-won' },
-            'update': { icon: '✏️', label: 'עדכון', class: 'badge-pending' },
-            'delete': { icon: '🗑️', label: 'מחיקה', class: 'badge-lost' }
+            'create': { icon: APP_ICONS.PLUS, label: 'יצירה', class: 'badge-won' },
+            'update': { icon: APP_ICONS.EDIT, label: 'עדכון', class: 'badge-pending' },
+            'delete': { icon: APP_ICONS.TRASH, label: 'מחיקה', class: 'badge-lost' }
         };
         
         // Entity type labels
@@ -9008,7 +9064,7 @@ async function loadAuditLog() {
                     itemChangesHtml = `
                         <div class="audit-changes-box">
                             <div class="audit-changes-title">
-                                <span>📋</span> פירוט שינויים
+                                <span>${APP_ICONS.NOTE}</span> פירוט שינויים
                             </div>
                             <div class="audit-changes-list">
                                 ${log.new_value.itemChanges.map(change => `
@@ -9139,7 +9195,7 @@ async function loadAuditLog() {
                         itemChangesHtml = `
                             <div class="audit-changes-box">
                                 <div class="audit-changes-title">
-                                    <span>📋</span> פירוט שינויים
+                                    <span>${APP_ICONS.NOTE}</span> פירוט שינויים
                                 </div>
                                 <div class="audit-changes-list">
                                     ${changes.map(c => `
@@ -9175,7 +9231,7 @@ async function loadAuditLog() {
                         itemChangesHtml = `
                             <div class="audit-changes-box">
                                 <div class="audit-changes-title">
-                                    <span>🗑️</span> נתוני הרשומה שנמחקה
+                                    <span>${APP_ICONS.TRASH}</span> נתוני הרשומה שנמחקה
                                 </div>
                                 <div class="audit-changes-list">
                                     ${info.map(line => `
@@ -9589,7 +9645,7 @@ async function loadReports() {
         }
         renderProductsChart(filteredItems, dealsStatusMap);
 
-        showAlert('✅ הדוחות עודכנו בהצלחה', 'success');
+        showAlert('הדוחות עודכנו בהצלחה', 'success');
     } catch (error) {
         console.error('❌ Error loading reports:', error);
         showAlert('שגיאה בטעינת דוחות: ' + error.message, 'error');
@@ -9809,7 +9865,7 @@ function exportToExcel(data, headers, fileName) {
         
         XLSX.writeFile(wb, fullFileName);
         
-        showAlert('✅ הקובץ יוצא בהצלחה', 'success');
+        showAlert('הקובץ יוצא בהצלחה', 'success');
     } catch (error) {
         console.error('Export error:', error);
         showAlert('שגיאה בייצוא הנתונים: ' + error.message, 'error');
@@ -10246,7 +10302,7 @@ async function loadCustomerDeals(customerId, containerId = 'view-customer-deals-
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span class="badge ${statusBadgeClass}" style="font-size: 0.75rem;">${statusDisplay}</span>
-                        <button class="btn btn-sm btn-primary" onclick="viewDealDetails('${deal.deal_id}'); closeCustomerDetailsModal();" title="צפה בעסקה">👁️</button>
+                        <button class="btn btn-sm btn-primary" onclick="viewDealDetails('${deal.deal_id}'); closeCustomerDetailsModal();" title="צפה בפרטים">${APP_ICONS.EYE}</button>
                     </div>
                 </div>
             `;
@@ -10462,7 +10518,7 @@ async function exportInteractiveReport() {
         ${insightsHTML}
     </div>
 
-    <h2 style="font-size: 1.2rem; margin-bottom: 1rem;">📊 גרפים ומגמות</h2>
+    <h2 style="font-size: 1.2rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg> גרפים ומגמות</h2>
     <div class="charts-grid">
         <div class="chart-box">
             <h3>מכירות חודשיות</h3>
@@ -10500,7 +10556,7 @@ async function exportInteractiveReport() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        showAlert('✅ הדוח יוצא בהצלחה!', 'success');
+        showAlert('הדוח יוצא בהצלחה!', 'success');
 
     } catch (error) {
         console.error('Export Error:', error);
@@ -10706,7 +10762,7 @@ function renderGlobalSearchResults(results, query) {
                 <td>${highlight(c.primary_contact?.contact_name || c.contact_name || '-', query)}</td>
                 <td>${highlight(c.phone || '-', query)}</td>
                 <td>${highlight(c.city || '-', query)}</td>
-                <td><button class="btn btn-sm btn-secondary" onclick="viewCustomerDetails('${c.customer_id}')">👁️ צפה</button></td>
+                <td><button class="btn btn-sm btn-secondary" onclick="viewCustomerDetails('${c.customer_id}')">${APP_ICONS.EYE} צפה</button></td>
              </tr>`;
         });
         html += `</tbody></table></div>`;
@@ -10775,7 +10831,7 @@ function renderGlobalSearchResults(results, query) {
                 <td>${phoneHtml}</td>
                 <td>${emailHtml}</td>
                 <td>${highlight(c.role || '-', query)}</td>
-                <td><button class="btn btn-sm btn-secondary" onclick="viewContactDetails('${c.contact_id}')">👁️ צפה</button></td>
+                <td><button class="btn btn-sm btn-secondary" onclick="viewContactDetails('${c.contact_id}')">${APP_ICONS.EYE} צפה</button></td>
              </tr>`;
         });
         html += `</tbody></table></div>`;
@@ -10784,7 +10840,7 @@ function renderGlobalSearchResults(results, query) {
     // Products
     if (results.products.length > 0) {
         foundAny = true;
-        html += `<h3 style="margin-top: 2rem; color: var(--text-primary);">📦 מוצרים (${results.products.length})</h3>`;
+        html += `<h3 style="margin-top: 2rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.PACKAGE} מוצרים (${results.products.length})</h3>`;
         html += `<div class="table-responsive"><table class="items-table" style="width:100%">
             <thead><tr><th>שם המוצר</th><th>מק"ט</th><th>מחיר</th><th>פעולות</th></tr></thead>
             <tbody>`;
@@ -10802,7 +10858,7 @@ function renderGlobalSearchResults(results, query) {
     // Activities
     if (results.activities.length > 0) {
         foundAny = true;
-        html += `<h3 style="margin-top: 2rem; color: var(--text-primary);">📅 פעילויות (${results.activities.length})</h3>`;
+        html += `<h3 style="margin-top: 2rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.CALENDAR} פעילויות (${results.activities.length})</h3>`;
         html += `<div class="table-responsive"><table class="items-table" style="width:100%">
             <thead><tr><th>סוג</th><th>תאריך</th><th>לקוח</th><th>תיאור</th><th>פעולות</th></tr></thead>
             <tbody>`;
@@ -10820,8 +10876,8 @@ function renderGlobalSearchResults(results, query) {
                                  </td>
                 <td>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button class="btn btn-sm btn-info" onclick="viewActivityDetails('${a.activity_id}')">👁️ צפה</button>
-                        <button class="btn btn-sm btn-secondary" onclick="editActivity('${a.activity_id}')">✏️ ערוך</button>
+                        <button class="btn btn-sm btn-info" onclick="viewActivityDetails('${a.activity_id}')">${APP_ICONS.EYE} צפה</button>
+                        <button class="btn btn-sm btn-secondary" onclick="editActivity('${a.activity_id}')">${APP_ICONS.EDIT} ערוך</button>
                     </div>
                 </td>
              </tr>`;
@@ -10832,7 +10888,7 @@ function renderGlobalSearchResults(results, query) {
     // Deals
      if (results.deals.length > 0) {
         foundAny = true;
-        html += `<h3 style="margin-top: 2rem; color: var(--text-primary);">💼 עסקאות (${results.deals.length})</h3>`;
+        html += `<h3 style="margin-top: 2rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.BRIEFCASE} עסקאות (${results.deals.length})</h3>`;
         html += `<div class="table-responsive"><table class="items-table" style="width:100%">
             <thead><tr><th>לקוח</th><th>תאריך</th><th>סכום</th><th>סטטוס</th><th>פעולות</th></tr></thead>
             <tbody>`;
@@ -10844,7 +10900,7 @@ function renderGlobalSearchResults(results, query) {
                 <td>${date}</td>
                 <td>₪${d.final_amount || 0}</td>
                 <td>${d.deal_status}</td>
-                <td><button class="btn btn-sm btn-secondary" onclick="viewDealDetails('${d.deal_id}')">👁️ צפה</button></td>
+                <td><button class="btn btn-sm btn-secondary" onclick="viewDealDetails('${d.deal_id}')">${APP_ICONS.EYE} צפה</button></td>
              </tr>`;
         });
         html += `</tbody></table></div>`;
@@ -11029,9 +11085,9 @@ function renderSuppliersList(list) {
                                 ${s.website ? `<a href="${s.website.startsWith('http') ? s.website : 'http://' + s.website}" target="_blank">${s.website}</a>` : '-'}
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-info" onclick="viewSupplierDetails('${s.supplier_id}')">👁️</button>
-                                <button class="btn btn-sm btn-secondary" onclick="openSupplierModal('${s.supplier_id}')">✏️</button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteSupplier('${s.supplier_id}')">🗑️</button>
+                                <button class="btn btn-sm btn-info btn-icon" onclick="viewSupplierDetails('${s.supplier_id}')">${APP_ICONS.EYE}</button>
+                                <button class="btn btn-sm btn-secondary btn-icon" onclick="openSupplierModal('${s.supplier_id}')">${APP_ICONS.EDIT}</button>
+                                <button class="btn btn-sm btn-danger btn-icon" onclick="deleteSupplier('${s.supplier_id}')">${APP_ICONS.TRASH}</button>
                             </td>
                         </tr>
                     `).join('')}
@@ -11126,7 +11182,7 @@ function addSupplierEmailRow(email = '', role = 'כללי') {
             <option value="מחסן" ${role === 'מחסן' ? 'selected' : ''}>מחסן</option>
             <option value="אחר" ${role === 'אחר' ? 'selected' : ''}>אחר</option>
         </select>
-        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">🗑️</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">${APP_ICONS.TRASH}</button>
     `;
     container.appendChild(div);
 }
@@ -11301,7 +11357,7 @@ async function viewSupplierDetails(id) {
                                         <td>${currencySymbol}${(parseFloat(o.total_amount) || 0).toLocaleString()}</td>
                                         <td><span class="badge ${getStatusBadgeClass(o.order_status)}">${o.order_status}</span></td>
                                         <td>
-                                            <button class="btn btn-sm btn-secondary btn-icon" onclick="viewSupplierOrder('${o.order_id}', '${s.supplier_id}')" title="צפה בהזמנה">👁️</button>
+                                            <button class="btn btn-sm btn-secondary btn-icon" onclick="viewSupplierOrder('${o.order_id}', '${s.supplier_id}')" title="צפה בפרטים">${APP_ICONS.EYE}</button>
                                         </td>
                                     </tr>
                                 `}).join('')}
@@ -11486,9 +11542,9 @@ function renderSupplierOrdersList(list) {
                             <td>${rateInfo}</td>
                             <td><span class="badge ${getStatusBadgeClass(o.order_status)}">${o.order_status}</span></td>
                             <td>
-                                <button class="btn btn-sm btn-info" onclick="viewSupplierOrder('${o.order_id}', '${o.supplier_id}')" title="צפה">👁️</button>
-                                <button class="btn btn-sm btn-secondary" onclick="openSupplierOrderModal('${o.order_id}')" title="ערוך">✏️</button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteSupplierOrder('${o.order_id}')" title="מחק">🗑️</button>
+                                <button class="btn btn-sm btn-info" onclick="viewSupplierOrder('${o.order_id}', '${o.supplier_id}')" title="צפה">${APP_ICONS.EYE}</button>
+                                <button class="btn btn-sm btn-secondary" onclick="openSupplierOrderModal('${o.order_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteSupplierOrder('${o.order_id}')" title="מחק">${APP_ICONS.TRASH}</button>
                             </td>
                         </tr>
                     `}).join('')}
@@ -11768,7 +11824,7 @@ function renderSupplierOrderItems() {
                                    (!item.product_id && item.description === p.product_name);
                 productOptions += `<option value="${p.product_id}" ${isSelected ? 'selected' : ''}>${p.product_name}</option>`;
             });
-            productOptions += '<option value="__NEW__" style="font-weight: bold; color: var(--primary-color);">➕ הוסף מוצר חדש...</option>';
+            productOptions += `<option value="__NEW__" style="font-weight: bold; color: var(--primary-color);">הוסף מוצר חדש...</option>`;
 
             // Build color options
             let colorOptions = `<option value="" ${!item.color ? 'selected' : ''}>בחר...</option>`;
@@ -11814,7 +11870,7 @@ function renderSupplierOrderItems() {
                     <td style="text-align: center;"><input type="text" class="form-input table-input" value="${item.quantity || 1}" inputmode="decimal" dir="ltr" onchange="updateOrderItem(${index}, 'quantity', this.value)" style="width: 60px; text-align: center;"></td>
                     <td style="text-align: center;"><input type="text" class="form-input table-input" value="${item.unit_price || 0}" inputmode="decimal" dir="ltr" onchange="updateOrderItem(${index}, 'unit_price', this.value)" style="width: 90px; text-align: center;"></td>
                     <td style="vertical-align: middle; font-weight: bold; color: var(--primary-dark); text-align: center;">${currencySymbol}${itemTotal.toLocaleString()}</td>
-                    <td style="text-align: center;"><button type="button" class="btn btn-sm btn-danger btn-icon" onclick="removeSupplierOrderItem(${index})" title="הסר">🗑️</button></td>
+                    <td style="text-align: center;"><button type="button" class="btn btn-sm btn-danger btn-icon" onclick="removeSupplierOrderItem(${index})" title="הסר">${APP_ICONS.TRASH}</button></td>
                 `;
             }
             tbody.appendChild(tr);
@@ -12036,8 +12092,8 @@ function renderOrderNotes(fullText) {
         actionsEl.style.cssText = 'position: absolute; top: 5px; left: 5px; display: flex; gap: 5px; opacity: 1;'; 
         
         actionsEl.innerHTML = `
-            <button type="button" class="btn btn-sm btn-light" style="padding: 1px 4px; font-size: 0.8rem;" onclick="enableInlineEdit(${index})" title="ערוך">✏️</button>
-            <button type="button" class="btn btn-sm btn-light" style="padding: 1px 4px; font-size: 0.8rem; color: red;" onclick="deleteOrderNote(${index})" title="מחק">🗑️</button>
+            <button type="button" class="btn btn-sm btn-light" style="padding: 1px 4px; font-size: 0.8rem;" onclick="enableInlineEdit(${index})" title="ערוך">${APP_ICONS.EDIT}</button>
+            <button type="button" class="btn btn-sm btn-light" style="padding: 1px 4px; font-size: 0.8rem; color: #ef4444;" onclick="deleteOrderNote(${index})" title="מחק">${APP_ICONS.TRASH}</button>
         `;
         
         noteEl.appendChild(actionsEl);
@@ -12052,7 +12108,7 @@ async function addSupplierOrderNote() {
     
     const user = localStorage.getItem('crm_username') || 'משתמש';
     const timestamp = new Date().toLocaleString('he-IL', { hour12: false });
-    const newEntry = `📅 ${timestamp} | ${user}:\n${text}`; // Note: Separator added during join/save
+    const newEntry = `[${timestamp}] | ${user}:\n${text}`; // Note: Separator added during join/save
     
     await saveNoteChange(newEntry, 'add');
     input.value = '';
@@ -12070,7 +12126,7 @@ function enableInlineEdit(index) {
     
     // Split header and content
     const noteParts = notes[index].split('\n');
-    const header = noteParts[0]; // "📅 DATE | USER:"
+    const header = noteParts[0]; // "[ DATE ] | USER:"
     const content = noteParts.slice(1).join('\n'); // Everything else is content
     
     // Replace block content with editor
@@ -12198,7 +12254,7 @@ async function saveSupplierOrder(event) {
         const now = new Date();
         const timestamp = now.toLocaleDateString('he-IL') + ', ' + now.toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'});
         const userName = sessionStorage.getItem('userName') || 'שחר'; 
-        const header = `📅 ${timestamp} | ${userName}:`;
+        const header = `[${timestamp}] | ${userName}:`;
         const newNoteEntry = `${header}\n${newNoteContent}`;
         
         if (finalNotes) {
@@ -12653,7 +12709,7 @@ async function exportSupplierOrderHTML() {
 <body>
     <div class="no-print-actions no-print">
         <button class="btn-print" onclick="window.print()">🖨️ הדפס / שמור PDF</button>
-        <button class="btn-print" style="background:#64748b" onclick="window.close()">✖️ סגור</button>
+        <button class="btn-print" style="background:#64748b" onclick="window.close()">${APP_ICONS.X} סגור</button>
     </div>
 
     <div class="container">
@@ -12668,7 +12724,7 @@ async function exportSupplierOrderHTML() {
         <div class="info-grid">
             <div class="info-card">
                 <div class="card-header">
-                    <span>🏢</span>
+                    <span>${APP_ICONS.LOCATION}</span>
                     <h3>פרטי ספק</h3>
                 </div>
                 <div style="font-size: 18px; font-weight: 700; color: #111827;" dir="auto">${supplierName}</div>
@@ -12676,7 +12732,7 @@ async function exportSupplierOrderHTML() {
             
             <div class="info-card">
                 <div class="card-header">
-                    <span>📋</span>
+                    <span>${APP_ICONS.NOTE}</span>
                     <h3>פרטי הזמנה</h3>
                 </div>
                 <table class="info-table">
@@ -13081,7 +13137,7 @@ function insertNamedLink(textareaId) {
     // Update title
     const modalTitle = document.getElementById('markdown-link-modal-title');
     if (modalTitle) {
-        modalTitle.textContent = isEdit ? '✏️ עריכת קישור' : '🔗 הוספת קישור לטקסט';
+        modalTitle.innerHTML = isEdit ? `${APP_ICONS.EDIT} עריכת קישור` : `🔗 הוספת קישור לטקסט`;
     }
     
     // Open modal
@@ -13217,19 +13273,19 @@ function viewSupplierOrder(orderId) {
 // ============================================
 
 const NAV_SECTIONS = [
-    { id: 'deals', name: '➕ עסקה חדשה', icon: '➕' },
-    { id: 'thisweek', name: '📅 השבוע', icon: '📅' },
-    { id: 'history', name: '💼 עסקאות', icon: '💼' },
-    { id: 'activities', name: '📝 פעילויות', icon: '📝' },
-    { id: 'customers', name: '🏢 לקוחות', icon: '🏢' },
-    { id: 'contacts', name: '👤 אנשי קשר', icon: '👤' },
-    { id: 'suppliers', name: '🏭 ספקים', icon: '🏭' },
-    { id: 'supplier-orders', name: '🚛 הזמנות רכש', icon: '🚛' },
-    { id: 'products', name: '📦 מוצרים', icon: '📦' },
-    { id: 'auditlog', name: '📋 פעולות', icon: '📋' },
-    { id: 'reports', name: '📊 דוחות', icon: '📊' },
-    { id: 'search', name: '🔍 חיפוש', icon: '🔍' },
-    { id: 'settings', name: '⚙️ הגדרות', icon: '⚙️' }
+    { id: 'deals', name: 'עסקה חדשה', icon: APP_ICONS.PLUS },
+    { id: 'thisweek', name: 'השבוע', icon: APP_ICONS.CALENDAR },
+    { id: 'history', name: 'עסקאות', icon: APP_ICONS.BRIEFCASE },
+    { id: 'activities', name: 'פעילויות', icon: APP_ICONS.NOTE },
+    { id: 'customers', name: 'לקוחות', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>' },
+    { id: 'contacts', name: 'אנשי קשר', icon: APP_ICONS.CONTACT },
+    { id: 'suppliers', name: 'ספקים', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>' },
+    { id: 'supplier-orders', name: 'הזמנות רכש', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>' },
+    { id: 'products', name: 'מוצרים', icon: APP_ICONS.PACKAGE },
+    { id: 'auditlog', name: 'פעולות', icon: APP_ICONS.NOTE },
+    { id: 'reports', name: 'דוחות', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>' },
+    { id: 'search', name: 'חיפוש', icon: APP_ICONS.SEARCH },
+    { id: 'settings', name: 'הגדרות', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>' },
 ];
 
 // Color Management Logic
@@ -13301,8 +13357,8 @@ function renderOrderColors() {
                 </td>
                 <td style="padding: 8px 12px; text-align: center;">
                     <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                        <button class="btn btn-secondary btn-icon" onclick="editOrderColor('${c.color_id}')" style="width:28px; height:28px;" title="ערוך">✏️</button>
-                        <button class="btn btn-secondary btn-icon" onclick="deleteOrderColor('${c.color_id}')" style="width:28px; height:28px; color: #ef4444;" title="מחק">🗑️</button>
+                        <button class="btn btn-secondary btn-icon" onclick="editOrderColor('${c.color_id}')" style="width:28px; height:28px;" title="ערוך">${APP_ICONS.EDIT}</button>
+                        <button class="btn btn-secondary btn-icon" onclick="deleteOrderColor('${c.color_id}')" style="width:28px; height:28px; color: #ef4444;" title="מחק">${APP_ICONS.TRASH}</button>
                     </div>
                 </td>
             </tr>
@@ -13510,7 +13566,7 @@ function renderGenericSettingList(key, container) {
         html += `
             <div style="background: #f1f5f9; padding: 0.4rem 0.8rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; border: 1px solid #e2e8f0; transition: all 0.2s;">
                 <span style="font-weight: 500; color: var(--text-primary);">${item}</span>
-                <button onclick="deleteSystemSetting('${key}', ${index})" style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0; display: flex; align-items: center; font-size: 1.1rem; border-radius: 50%; width: 18px; height: 18px; justify-content: center; hover: background: #e2e8f0;">✕</button>
+                <button onclick="deleteSystemSetting('${key}', ${index})" style="background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0; display: flex; align-items: center; font-size: 1.1rem; border-radius: 50%; width: 18px; height: 18px; justify-content: center; hover: background: #e2e8f0;">${APP_ICONS.X}</button>
             </div>
         `;
     });
@@ -13854,7 +13910,7 @@ async function openLinkModal(entityId, entityType, linkId = null) {
     document.getElementById('link-entity-type').value = entityType;
     
     if (linkId) {
-        title.innerHTML = '✏️ עריכת קישור';
+        title.innerHTML = `${APP_ICONS.EDIT} עריכת קישור`;
         // Fetch specific link data
         try {
             const { data, error } = await supabaseClient
@@ -13983,8 +14039,8 @@ function renderResourceLinks(links, container, entityId, entityType) {
                         <div class="link-url-text">${link.url}</div>
                     </div>
                     <div class="link-actions">
-                        <button class="link-action-btn" onclick="openLinkModal('${entityId}', '${entityType}', '${link.link_id}')" title="ערוך">✏️</button>
-                        <button class="link-action-btn delete" onclick="deleteResourceLink('${link.link_id}', '${entityId}', '${entityType}')" title="מחק">🗑️</button>
+                        <button class="link-action-btn" onclick="openLinkModal('${entityId}', '${entityType}', '${link.link_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
+                        <button class="link-action-btn delete" onclick="deleteResourceLink('${link.link_id}', '${entityId}', '${entityType}')" title="מחק">${APP_ICONS.TRASH}</button>
                     </div>
                 </div>
             `).join('')}
