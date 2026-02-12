@@ -26,7 +26,13 @@ const APP_ICONS = {
     STAR_FILL: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>',
     PACKAGE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>',
     PLUS: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
-    X: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>'
+    X: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+    EXPORT: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
+    CLOCK: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
+    USER: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
+    SETTINGS: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>',
+    SAVE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>',
+    REFRESH: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>'
 };
 
 // Supabase Configuration
@@ -112,12 +118,14 @@ function getCityFromAddress(address) {
 
 function renderNavigationIcon(address) {
     if (!address) return '';
+    const icon = APP_ICONS.LOCATION.replace('width="16"', 'width="20"').replace('height="16"', 'height="20"');
     return `
-        <img src="images/map.png" alt="Map" 
-             style="width: 20px; height: 20px; cursor: pointer; vertical-align: middle; margin-right: 5px;" 
-             data-address="${address.replace(/"/g, '&quot;')}"
-             onclick="openNavigationMenu(this.dataset.address, event)"
-             title="נווט לכתובת">
+        <span style="display: inline-flex; align-items: center; justify-content: center; cursor: pointer; vertical-align: middle; margin-right: 5px; color: var(--primary-color);" 
+              data-address="${address.replace(/"/g, '&quot;')}"
+              onclick="openNavigationMenu(this.dataset.address, event)"
+              title="נווט לכתובת">
+            ${icon.replace('<svg ', '<svg style="transform: translateY(1px);" ')}
+        </span>
     `;
 }
 
@@ -278,9 +286,13 @@ function renderPagination(totalItems, currentPage, viewName) {
             </div>
             
             <div style="display: flex; align-items: center; gap: 1rem;">
-                <button class="btn btn-secondary btn-sm" onclick="changePage('${viewName}', ${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>➡️ הקודם</button>
+                <button class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;" onclick="changePage('${viewName}', ${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                    ${APP_ICONS.CHEVRON_RIGHT} הקודם
+                </button>
                 <span style="font-size: 0.9rem; color: var(--text-secondary);">עמוד ${currentPage} מתוך ${totalPages}</span>
-                <button class="btn btn-secondary btn-sm" onclick="changePage('${viewName}', ${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>הבא ⬅️</button>
+                <button class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;" onclick="changePage('${viewName}', ${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>
+                    הבא ${APP_ICONS.CHEVRON_LEFT}
+                </button>
             </div>
         </div>
     `;
@@ -2877,7 +2889,7 @@ async function viewCustomerDetails(customerId) {
                     <select id="customer-primary-contact" class="form-select" style="flex: 1;">
                         <option value="">-- ללא איש קשר מוביל --</option>
                     </select>
-                    <button type="button" class="btn btn-primary" onclick="savePrimaryContact('${customerId}')">💾 שמור</button>
+                    <button type="button" class="btn btn-primary" onclick="savePrimaryContact('${customerId}')">${APP_ICONS.SAVE} שמור</button>
                 </div>
                 <div id="customer-contacts-list" style="margin-top: 1rem;">
                     <div class="spinner"></div>
@@ -2897,7 +2909,7 @@ async function viewCustomerDetails(customerId) {
                         <textarea id="customer-new-note" class="form-textarea" rows="4" 
                                   placeholder="הקלד הערה חדשה..." required></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">💾 שמור הערה</button>
+                    <button type="submit" class="btn btn-primary">${APP_ICONS.SAVE} שמור הערה</button>
                 </form>
             </div>
             
@@ -3115,7 +3127,7 @@ async function loadCustomerNotes(customerId) {
                 <div class="note-item" style="background: var(--bg-secondary); padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem;">
                     <textarea id="edit-customer-note-${note.activity_id}" class="form-textarea" rows="3" style="width: 100%; margin-bottom: 0.5rem;" required>${note.description}</textarea>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="saveCustomerNoteEdit('${note.activity_id}')" class="btn btn-sm btn-primary">💾 שמור</button>
+                        <button onclick="saveCustomerNoteEdit('${note.activity_id}')" class="btn btn-sm btn-primary">${APP_ICONS.SAVE} שמור</button>
                         <button onclick="cancelCustomerNoteEdit()" class="btn btn-sm btn-secondary">ביטול</button>
                     </div>
                 </div>`;
@@ -3738,7 +3750,7 @@ function openContactModal(contact = null) {
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">💾 שמור</button>
+                        <button type="submit" class="btn btn-primary">${APP_ICONS.SAVE} שמור</button>
                         <button type="button" class="btn btn-secondary" onclick="closeContactModal()">ביטול</button>
                     </div>
                 </form>
@@ -4072,7 +4084,7 @@ async function viewContactDetails(contactId) {
                     <textarea id="view-contact-new-note" class="form-textarea" rows="3" placeholder="הקלד הערה..."></textarea>
                 </div>
                 
-                <button class="btn btn-primary" style="margin-top: 0.75rem;" onclick="addContactNote('${contact.contact_id}')">💾 הוסף הערה</button>
+                <button class="btn btn-primary" style="margin-top: 0.75rem;" onclick="addContactNote('${contact.contact_id}')">${APP_ICONS.SAVE} הוסף הערה</button>
             </div>
         `;
         
@@ -4236,7 +4248,7 @@ function editContactNote(contactId, index) {
     noteContentDiv.innerHTML = `
         <textarea id="edit-contact-note-input-${index}" class="form-textarea" rows="3" style="width: 100%; margin-bottom: 0.5rem;">${originalContent}</textarea>
         <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-sm btn-primary" onclick="saveContactNoteEdit('${contactId}', ${index})">💾 שמור</button>
+            <button class="btn btn-sm btn-primary" onclick="saveContactNoteEdit('${contactId}', ${index})">${APP_ICONS.SAVE} שמור</button>
             <button class="btn btn-sm btn-secondary" onclick="viewContactDetails('${contactId}')">ביטול</button>
         </div>
     `;
@@ -5378,7 +5390,7 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
                 <div style="background: var(--bg-primary); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid var(--border-color);">
                     <textarea id="edit-note-input-${note.id}" class="form-textarea" rows="3" style="width: 100%; margin-bottom: 0.5rem;">${note.content}</textarea>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="saveActivityNoteEdit(${note.id}, '${activityId}')" class="btn btn-sm btn-primary">💾 שמור</button>
+                        <button onclick="saveActivityNoteEdit(${note.id}, '${activityId}')" class="btn btn-sm btn-primary">${APP_ICONS.SAVE} שמור</button>
                         <button onclick="cancelActivityNoteEdit('${activityId}')" class="btn btn-sm btn-secondary">ביטול</button>
                     </div>
                 </div>`;
@@ -5657,7 +5669,7 @@ function showEditActivityModal(activity) {
                     </div>
 
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">💾 שמור שינויים</button>
+                        <button type="submit" class="btn btn-primary">${APP_ICONS.SAVE} שמור שינויים</button>
                         <button type="button" class="btn btn-secondary" onclick="closeEditActivityModal()">ביטול</button>
                     </div>
                 </form>
@@ -6065,7 +6077,7 @@ function openNewActivityModal(prefillData = null) {
                     </div>
                     
                     <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">💾 שמור פעילות</button>
+                        <button type="submit" class="btn btn-primary">${APP_ICONS.SAVE} שמור פעילות</button>
                         <button type="button" class="btn btn-secondary" onclick="closeNewActivityModal()">ביטול</button>
                     </div>
                 </form>
@@ -6798,7 +6810,10 @@ async function loadThisWeek() {
         if (pastKeys.length > 0) {
             html += `
                 <div style="display: flex; justify-content: flex-start; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                    <h4 style="margin: 0; color: var(--text-secondary);">🗓️ סיכום ימים קודמים בשבוע</h4>
+                    <h4 style="margin: 0; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: translateY(1px);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> 
+                        סיכום ימים קודמים בשבוע
+                    </h4>
                     <button class="btn btn-sm btn-secondary" onclick="toggleAllPastDays(this)" data-state="collapsed" style="font-size: 0.8rem; padding: 0.25rem 0.75rem;">
                          הרחב הכל
                     </button>
@@ -7393,7 +7408,7 @@ async function viewActivityDetails(activityId) {
                     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                         <textarea id="view-activity-new-note" class="form-textarea" placeholder="הוסף הערה חדשה..." rows="3"></textarea>
                         <div style="display: flex; justify-content: flex-end;">
-                            <button type="button" class="btn btn-primary" onclick="addActivityNoteFromView('${activityId}')">💾 הוסף</button>
+                            <button type="button" class="btn btn-primary" onclick="addActivityNoteFromView('${activityId}')">${APP_ICONS.SAVE} הוסף</button>
                         </div>
                     </div>
                 </div>
@@ -9354,10 +9369,10 @@ async function loadAuditLog() {
 
                             <div class="audit-item-meta">
                                 <div class="audit-performer">
-                                    <span>👤</span> ${log.performed_by}
+                                    ${APP_ICONS.USER} ${log.performed_by}
                                 </div>
                                 <div class="audit-time">
-                                    <span>⏰</span> ${time}
+                                    ${APP_ICONS.CLOCK} ${time}
                                 </div>
                             </div>
                         </div>
@@ -11697,7 +11712,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
         modal.classList.add('read-only-mode');
         title.textContent = 'פרטי הזמנה';
         saveBtn.style.display = 'inline-block'; 
-        saveBtn.innerHTML = '💾 שמור שינויים'; 
+        saveBtn.innerHTML = `${APP_ICONS.SAVE} שמור שינויים`; 
         if (addBtn) addBtn.style.display = 'none';
         
         // Show edit button
@@ -11725,7 +11740,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
         
         title.textContent = orderId ? 'ערוך הזמנה' : 'הזמנה חדשה';
         saveBtn.style.display = 'inline-block';
-        saveBtn.innerHTML = '💾 שמור שינויים'; 
+        saveBtn.innerHTML = `${APP_ICONS.SAVE} שמור שינויים`; 
         if (addBtn) addBtn.style.display = 'inline-block';
         
         // Hide edit button
