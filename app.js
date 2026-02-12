@@ -415,6 +415,9 @@ async function initializeApp() {
     // Start activity reminders
     startActivityReminderCheck();
     
+    // Initialize custom navigation
+    initCustomNavigation();
+    
     console.log(' CRM System ready!');
 }
 
@@ -519,6 +522,81 @@ function navigateSection(direction) {
         // Manually trigger change event
         const event = new Event('change');
         navSelect.dispatchEvent(event);
+        // Sync custom navigation
+        syncCustomNavigation();
+    }
+}
+
+// ============================================
+// Custom Navigation (SVG Support)
+// ============================================
+
+function initCustomNavigation() {
+    const trigger = document.getElementById('nav-trigger');
+    const menu = document.getElementById('nav-menu');
+    const container = document.getElementById('main-navigation-custom');
+    const hiddenSelect = document.getElementById('main-navigation');
+    
+    if (!trigger || !menu || !container || !hiddenSelect) return;
+
+    // Populate menu
+    menu.innerHTML = NAV_SECTIONS.map(section => `
+        <div class="custom-dropdown-item" data-value="${section.id}">
+            ${section.icon}
+            <span>${section.name}</span>
+        </div>
+    `).join('');
+
+    // Toggle menu
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        container.classList.toggle('active');
+    });
+
+    // Handle selection
+    menu.querySelectorAll('.custom-dropdown-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const value = item.dataset.value;
+            selectNavigationItem(value);
+            container.classList.remove('active');
+        });
+    });
+
+    // Close on click outside
+    document.addEventListener('click', () => {
+        container.classList.remove('active');
+    });
+
+    // Initial sync
+    syncCustomNavigation();
+}
+
+function selectNavigationItem(value) {
+    const hiddenSelect = document.getElementById('main-navigation');
+    if (hiddenSelect) {
+        hiddenSelect.value = value;
+        hiddenSelect.dispatchEvent(new Event('change'));
+        syncCustomNavigation();
+    }
+}
+
+function syncCustomNavigation() {
+    const hiddenSelect = document.getElementById('main-navigation');
+    const triggerIcon = document.getElementById('nav-trigger-icon');
+    const triggerText = document.getElementById('nav-trigger-text');
+    const menu = document.getElementById('nav-menu');
+    
+    if (!hiddenSelect || !triggerIcon || !triggerText || !menu) return;
+
+    const section = NAV_SECTIONS.find(s => s.id === hiddenSelect.value);
+    if (section) {
+        triggerIcon.innerHTML = section.icon;
+        triggerText.textContent = section.name;
+        
+        // Highlight selected in menu
+        menu.querySelectorAll('.custom-dropdown-item').forEach(item => {
+            item.classList.toggle('selected', item.dataset.value === section.id);
+        });
     }
 }
 
@@ -3994,7 +4072,7 @@ async function viewContactDetails(contactId) {
                     <textarea id="view-contact-new-note" class="form-textarea" rows="3" placeholder="הקלד הערה..."></textarea>
                 </div>
                 
-                <button class="btn btn-primary" onclick="addContactNote('${contact.contact_id}')">💾 הוסף הערה</button>
+                <button class="btn btn-primary" style="margin-top: 0.75rem;" onclick="addContactNote('${contact.contact_id}')">💾 הוסף הערה</button>
             </div>
         `;
         
@@ -5161,8 +5239,8 @@ async function loadDealNotes(dealId) {
                         <span style="font-size: 0.85rem; color: var(--text-tertiary);">${createdDate}</span>
                         <div style="display: flex; gap: 5px;">
                             ${canPostpone ? `
-                                <button class="btn btn-sm btn-icon" style="background: #fbbf24; color: white;" onclick="postponeActivity('${note.activity_id}', 'tomorrow')" title="דחה למחר">${APP_ICONS.SUN}</button>
-                                <button class="btn btn-sm btn-icon" style="background: #818cf8; color: white;" onclick="postponeActivity('${note.activity_id}', 'next-week')" title="דחה לשבוע הבא">${APP_ICONS.CALENDAR}</button>
+                                <button class="btn btn-sm btn-icon" style="background: #fbbf24; color: white;" onclick="postponeActivity('${note.activity_id}', 'tomorrow')" title="דחה ליום העסקים הבא">${APP_ICONS.SUN}</button>
+                                <button class="btn btn-sm btn-icon" style="background: #818cf8; color: white;" onclick="postponeActivity('${note.activity_id}', 'next-week')" title="דחה בשבוע">${APP_ICONS.CALENDAR}</button>
                             ` : ''}
                             <button class="btn btn-sm btn-primary btn-icon" onclick="editNote('${note.activity_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
                             <button class="btn btn-sm btn-danger btn-icon" onclick="deleteNote('${note.activity_id}')" title="מחק">${APP_ICONS.TRASH}</button>
@@ -5572,7 +5650,7 @@ function showEditActivityModal(activity) {
                         <div id="activity-notes-list" style="margin-bottom: 1rem; max-height: 150px; overflow-y: auto; background: var(--bg-secondary); padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border-color);">
                             <!-- Notes will be loaded here -->
                         </div>
-                        <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                        <div style="display: flex; gap: 0.85rem; flex-direction: column;">
                             <textarea id="new-activity-note" class="form-textarea" rows="3" placeholder="הוסף הערה..."></textarea>
                             <button type="button" class="btn btn-secondary" style="align-self: flex-start;" onclick="addActivityNote()">הוסף הערה</button>
                         </div>
@@ -6965,11 +7043,11 @@ function renderThisWeekActivityCard(activity) {
                     </button>
                     ${canPostpone ? `
                         <button class="btn btn-warning btn-icon" style="width: 32px; height: 32px; background: #fbbf24; border-color: #fbbf24;" 
-                                onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">
+                                onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה ליום העסקים הבא">
                             ${APP_ICONS.SUN}
                         </button>
                         <button class="btn btn-icon" style="width: 32px; height: 32px; background: #818cf8; border-color: #818cf8; color: white;" 
-                                onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">
+                                onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה בשבוע">
                             ${APP_ICONS.CALENDAR}
                         </button>
                     ` : ''}
@@ -7069,6 +7147,13 @@ async function postponeActivity(activityId, type) {
         
         if (type === 'tomorrow') {
             newDate.setDate(newDate.getDate() + 1);
+            
+            // Skip Friday and Saturday (5 and 6) and move to Sunday (0)
+            if (newDate.getDay() === 5) {
+                newDate.setDate(newDate.getDate() + 2);
+            } else if (newDate.getDay() === 6) {
+                newDate.setDate(newDate.getDate() + 1);
+            }
         } else if (type === 'next-week') {
             newDate.setDate(newDate.getDate() + 7);
         }
@@ -7087,13 +7172,15 @@ async function postponeActivity(activityId, type) {
 
         if (updateError) throw updateError;
 
+        const dayName = newDate.toLocaleDateString('he-IL', { weekday: 'long' });
         const dateStr = newDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
+        const targetDesc = type === 'tomorrow' ? `יום ${dayName}` : 'שבוע';
         
         logAction('update', 'activity', activityId, activity.activity_type, 
-            `דחיית פעילות עבור ${activity.customers?.business_name || 'לקוח'} ל${type === 'tomorrow' ? 'יום הבא' : 'שבוע לאחר מכן'} (${dateStr})`, 
+            `דחיית פעילות עבור ${activity.customers?.business_name || 'לקוח'} ל${targetDesc} (${dateStr})`, 
             activity, { activity_date: newDate.toISOString() });
 
-        showAlert(` הפעילות נדחתה ל${type === 'tomorrow' ? 'יום הבא' : 'שבוע לאחר מכן'} (${dateStr})`, 'success');
+        showAlert(` הפעילות נדחתה ל${targetDesc === 'שבוע' ? 'בעוד שבוע' : targetDesc} (${dateStr})`, 'success');
         
         // Refresh the UI
         loadThisWeek();
@@ -7624,8 +7711,8 @@ async function loadActivities(preservePage = false) {
                                     <td>
                                         <div style="display: flex; gap: 0.25rem; align-items: center; justify-content: flex-start; flex-wrap: nowrap;">
                                             ${canPostpone ? `
-                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">${APP_ICONS.SUN}</button>
-                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">${APP_ICONS.CALENDAR}</button>
+                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה ליום העסקים הבא">${APP_ICONS.SUN}</button>
+                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה בשבוע">${APP_ICONS.CALENDAR}</button>
                                             ` : ''}
                                             ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">${APP_ICONS.BRIEFCASE}</button>` : ''}
                                             <button class="btn btn-sm btn-info btn-icon" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">${APP_ICONS.EYE}</button>
@@ -7737,8 +7824,8 @@ async function loadActivities(preservePage = false) {
                             <button class="btn btn-sm btn-info" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">${APP_ICONS.EYE}</button>
                             <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
                             ${canPostpone ? `
-                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה למחר">${APP_ICONS.SUN}</button>
-                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה לשבוע הבא">${APP_ICONS.CALENDAR}</button>
+                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה ליום העסקים הבא">${APP_ICONS.SUN}</button>
+                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה בשבוע">${APP_ICONS.CALENDAR}</button>
                             ` : ''}
                             ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">${APP_ICONS.BRIEFCASE}</button>` : ''}
                             <button class="btn btn-sm btn-danger" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="deleteActivity('${activity.activity_id}')" title="מחק">${APP_ICONS.TRASH}</button>
@@ -13273,19 +13360,19 @@ function viewSupplierOrder(orderId) {
 // ============================================
 
 const NAV_SECTIONS = [
-    { id: 'deals', name: 'עסקה חדשה', icon: APP_ICONS.PLUS },
-    { id: 'thisweek', name: 'השבוע', icon: APP_ICONS.CALENDAR },
-    { id: 'history', name: 'עסקאות', icon: APP_ICONS.BRIEFCASE },
-    { id: 'activities', name: 'פעילויות', icon: APP_ICONS.NOTE },
-    { id: 'customers', name: 'לקוחות', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>' },
-    { id: 'contacts', name: 'אנשי קשר', icon: APP_ICONS.CONTACT },
-    { id: 'suppliers', name: 'ספקים', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>' },
-    { id: 'supplier-orders', name: 'הזמנות רכש', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>' },
-    { id: 'products', name: 'מוצרים', icon: APP_ICONS.PACKAGE },
-    { id: 'auditlog', name: 'פעולות', icon: APP_ICONS.NOTE },
-    { id: 'reports', name: 'דוחות', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>' },
-    { id: 'search', name: 'חיפוש', icon: APP_ICONS.SEARCH },
-    { id: 'settings', name: 'הגדרות', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>' },
+    { id: 'deals', name: 'עסקה חדשה', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>' },
+    { id: 'thisweek', name: 'השבוע', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>' },
+    { id: 'history', name: 'עסקאות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>' },
+    { id: 'activities', name: 'פעילויות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>' },
+    { id: 'customers', name: 'לקוחות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>' },
+    { id: 'contacts', name: 'אנשי קשר', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>' },
+    { id: 'suppliers', name: 'ספקים', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>' },
+    { id: 'supplier-orders', name: 'הזמנות רכש', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>' },
+    { id: 'products', name: 'מוצרים', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>' },
+    { id: 'auditlog', name: 'פעולות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>' },
+    { id: 'reports', name: 'דוחות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>' },
+    { id: 'search', name: 'חיפוש', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>' },
+    { id: 'settings', name: 'הגדרות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>' },
 ];
 
 // Color Management Logic
@@ -13772,10 +13859,10 @@ function renderQuickNav() {
     prefs.forEach(prefId => {
         const section = NAV_SECTIONS.find(s => s.id === prefId);
         if (section) {
-            // Strip emoji for clean button text if desired, or keep it. Keeping it matches dropdown.
             html += `
-                <button type="button" class="btn btn-secondary" onclick="quickNavigate('${section.id}')" style="justify-content: center; padding: 0.75rem; font-weight: 500; border-radius: 8px; box-shadow: var(--shadow-sm); transition: all 0.2s;">
-                    ${section.name}
+                <button type="button" class="btn btn-secondary" onclick="quickNavigate('${section.id}')" style="justify-content: center; padding: 0.75rem; font-weight: 600; border-radius: 12px; box-shadow: var(--shadow-sm); transition: all 0.2s; display: flex; align-items: center; gap: 8px;">
+                    <span style="display: flex; align-items: center; color: var(--primary-color);">${section.icon}</span>
+                    <span>${section.name}</span>
                 </button>
             `;
         }
@@ -13802,8 +13889,13 @@ async function configureQuickNav() {
     
     // Build Options HTML
     const buildOptions = (selectedId) => {
+        const emojis = {
+            'deals': '➕', 'thisweek': '📅', 'history': '💼', 'activities': '✅',
+            'customers': '👥', 'contacts': '📇', 'suppliers': '🚚', 'supplier-orders': '📄',
+            'products': '📦', 'auditlog': '📋', 'reports': '📊', 'search': '🔍', 'settings': '⚙️'
+        };
         return NAV_SECTIONS.map(s => `
-            <option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${s.name}</option>
+            <option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${emojis[s.id] || ''} ${s.name}</option>
         `).join('');
     };
     
