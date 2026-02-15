@@ -32,7 +32,9 @@ const APP_ICONS = {
     USER: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
     SETTINGS: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>',
     SAVE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>',
-    REFRESH: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>'
+    REFRESH: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>',
+    CHEVRON_LEFT: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>',
+    CHEVRON_RIGHT: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>'
 };
 
 // Supabase Configuration
@@ -429,6 +431,9 @@ async function initializeApp() {
     
     // Initialize custom navigation
     initCustomNavigation();
+    
+    // Load custom logo
+    loadCustomLogo();
     
     console.log(' CRM System ready!');
 }
@@ -4430,7 +4435,7 @@ function filterProducts(preservePage = false) {
                         <tr>
                             <td>
                                 ${product.image_url ? 
-                                    `<img src="${product.image_url}" alt="${product.product_name}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" data-url="${product.image_url}" data-name="${product.product_name.replace(/"/g, '&quot;')}" onclick="openImageModal(this.dataset.url, this.dataset.name)" onerror="this.outerHTML='<span style=\\'font-size: 1.5rem;\\'>${APP_ICONS.PACKAGE}</span>'">` : 
+                                    `<img src="${product.image_url}" alt="${product.product_name.replace(/"/g, '&quot;')}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" data-url="${product.image_url}" data-name="${product.product_name.replace(/"/g, '&quot;')}" onclick="openImageModal(this.dataset.url, this.dataset.name)" onerror="this.src='images/placeholder.png'; this.onerror=null;">` : 
                                     `<span style="font-size: 1.5rem;">${APP_ICONS.PACKAGE}</span>`}
                             </td>
                             <td><strong>${product.product_name}</strong></td>
@@ -4467,7 +4472,7 @@ function filterProducts(preservePage = false) {
             // Check if product has an image URL
             const imageSection = product.image_url 
                 ? `<div class="product-card-image" data-url="${product.image_url}" data-name="${product.product_name.replace(/"/g, '&quot;')}" onclick="openImageModal(this.dataset.url, this.dataset.name)" style="cursor: pointer;">
-                       <img src="${product.image_url}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='<span class=\\'product-card-image-placeholder\\'>${APP_ICONS.PACKAGE}</span>'">
+                       <img src="${product.image_url}" alt="${product.product_name.replace(/"/g, '&quot;')}" onerror="this.parentElement.innerHTML='<span class=\\'product-card-image-placeholder\\'>${APP_ICONS.PACKAGE}</span>'">
                    </div>`
                 : `<div class="product-card-image">
                        <span class="product-card-image-placeholder">${APP_ICONS.PACKAGE}</span>
@@ -13904,13 +13909,13 @@ async function configureQuickNav() {
     
     // Build Options HTML
     const buildOptions = (selectedId) => {
-        const emojis = {
-            'deals': '➕', 'thisweek': '📅', 'history': '💼', 'activities': '✅',
-            'customers': '👥', 'contacts': '📇', 'suppliers': '🚚', 'supplier-orders': '📄',
-            'products': '📦', 'auditlog': '📋', 'reports': '📊', 'search': '🔍', 'settings': '⚙️'
+        const icons = {
+            'deals': APP_ICONS.PLUS, 'thisweek': APP_ICONS.CALENDAR, 'history': APP_ICONS.BRIEFCASE, 'activities': APP_ICONS.CHECK_CIRCLE,
+            'customers': APP_ICONS.CONTACT, 'contacts': APP_ICONS.CONTACT, 'suppliers': APP_ICONS.PACKAGE, 'supplier-orders': APP_ICONS.NOTE,
+            'products': APP_ICONS.PACKAGE, 'auditlog': APP_ICONS.NOTE, 'reports': APP_ICONS.BRIEFCASE, 'search': APP_ICONS.SEARCH, 'settings': APP_ICONS.SETTINGS
         };
         return NAV_SECTIONS.map(s => `
-            <option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${emojis[s.id] || ''} ${s.name}</option>
+            <option value="${s.id}" ${s.id === selectedId ? 'selected' : ''}>${icons[s.id] || ''} ${s.name}</option>
         `).join('');
     };
     
@@ -14250,3 +14255,75 @@ document.addEventListener('DOMContentLoaded', () => {
         modalObserver.observe(modal, { attributes: true });
     });
 });
+// Logo Management Functions
+function loadCustomLogo() {
+    const logoUrl = localStorage.getItem('custom_logo_url');
+    const headerLogoContainer = document.getElementById('header-logo');
+    
+    if (!headerLogoContainer) return;
+    
+    if (logoUrl) {
+        // Replace placeholder div with img
+        const img = document.createElement('img');
+        img.src = logoUrl;
+        img.alt = 'Logo';
+        img.style.cssText = 'height: 42px; width: auto; margin-top: 3px;';
+        img.onerror = () => {
+            // If custom logo fails, show placeholder
+            headerLogoContainer.innerHTML = 'לוגו';
+            headerLogoContainer.style.cssText = 'height: 42px; width: 120px; background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 0.9rem; margin-top: 3px;';
+        };
+        
+        // Replace content
+        headerLogoContainer.innerHTML = '';
+        headerLogoContainer.appendChild(img);
+        headerLogoContainer.style.cssText = '';
+    }
+    
+    // Load into settings if on settings tab
+    const settingsInput = document.getElementById('settings-logo-url');
+    if (settingsInput) {
+        settingsInput.value = logoUrl || '';
+        updateLogoPreview();
+    }
+}
+
+function updateLogoPreview() {
+    const input = document.getElementById('settings-logo-url');
+    const preview = document.getElementById('logo-preview');
+    const placeholder = document.getElementById('logo-placeholder');
+    
+    if (!input || !preview || !placeholder) return;
+    
+    const url = input.value.trim();
+    
+    if (url) {
+        preview.src = url;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+        
+        preview.onerror = () => {
+            preview.style.display = 'none';
+            placeholder.style.display = 'flex';
+        };
+    } else {
+        preview.style.display = 'none';
+        placeholder.style.display = 'flex';
+    }
+}
+
+function saveLogoSettings() {
+    const input = document.getElementById('settings-logo-url');
+    if (!input) return;
+    
+    const url = input.value.trim();
+    
+    if (url) {
+        localStorage.setItem('custom_logo_url', url);
+    } else {
+        localStorage.removeItem('custom_logo_url');
+    }
+    
+    loadCustomLogo();
+    showAlert('הלוגו נשמר בהצלחה', 'success');
+}
