@@ -5393,6 +5393,9 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
             if (isEditing) {
                 return `
                 <div style="background: var(--bg-primary); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 0.25rem;">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="insertNamedLink('edit-note-input-${note.id}')" title="הוסף קישור עם שם" style="padding: 2px 8px; font-size: 0.8rem;">🔗 הוסף קישור</button>
+                    </div>
                     <textarea id="edit-note-input-${note.id}" class="form-textarea" rows="3" style="width: 100%; margin-bottom: 0.5rem;">${note.content}</textarea>
                     <div style="display: flex; gap: 0.5rem;">
                         <button onclick="saveActivityNoteEdit(${note.id}, '${activityId}')" class="btn btn-sm btn-primary">${APP_ICONS.SAVE} שמור</button>
@@ -5668,6 +5671,10 @@ function showEditActivityModal(activity) {
                             <!-- Notes will be loaded here -->
                         </div>
                         <div style="display: flex; gap: 0.85rem; flex-direction: column;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: -0.5rem;">
+                                <label class="form-label">הערה חדשה</label>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="insertNamedLink('new-activity-note')" title="הוסף קישור עם שם" style="padding: 2px 8px; font-size: 0.8rem;">🔗 הוסף קישור</button>
+                            </div>
                             <textarea id="new-activity-note" class="form-textarea" rows="3" placeholder="הוסף הערה..."></textarea>
                             <button type="button" class="btn btn-secondary" style="align-self: flex-start;" onclick="addActivityNote()">הוסף הערה</button>
                         </div>
@@ -7411,6 +7418,10 @@ async function viewActivityDetails(activityId) {
                         <div class="spinner"></div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label class="form-label" style="margin: 0;">הערה חדשה</label>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="insertNamedLink('view-activity-new-note')" title="הוסף קישור עם שם" style="padding: 2px 8px; font-size: 0.8rem;">🔗 הוסף קישור</button>
+                        </div>
                         <textarea id="view-activity-new-note" class="form-textarea" placeholder="הוסף הערה חדשה..." rows="3"></textarea>
                         <div style="display: flex; justify-content: flex-end;">
                             <button type="button" class="btn btn-primary" onclick="addActivityNoteFromView('${activityId}')">${APP_ICONS.SAVE} הוסף</button>
