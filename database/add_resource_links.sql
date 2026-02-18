@@ -15,6 +15,20 @@ CREATE TABLE IF NOT EXISTS resource_links (
 -- Index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_resource_links_entity ON resource_links(entity_id, entity_type);
 
+-- Enable RLS
+ALTER TABLE resource_links ENABLE ROW LEVEL SECURITY;
+
+-- Policies for resource_links
+DROP POLICY IF EXISTS "Enable read access for all users" ON resource_links;
+DROP POLICY IF EXISTS "Enable insert access for all users" ON resource_links;
+DROP POLICY IF EXISTS "Enable update access for all users" ON resource_links;
+DROP POLICY IF EXISTS "Enable delete access for all users" ON resource_links;
+
+CREATE POLICY "Enable read access for all users" ON resource_links FOR SELECT USING (true);
+CREATE POLICY "Enable insert access for all users" ON resource_links FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable update access for all users" ON resource_links FOR UPDATE USING (true);
+CREATE POLICY "Enable delete access for all users" ON resource_links FOR DELETE USING (true);
+
 -- Trigger for updated_at if not exists (already exists in schema.sql for other tables)
 DO $$ 
 BEGIN

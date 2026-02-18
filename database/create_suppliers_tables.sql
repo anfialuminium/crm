@@ -81,7 +81,8 @@ BEGIN
     
     RETURN COALESCE(NEW, OLD);
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public;
 
 -- Trigger for order total
 CREATE TRIGGER update_supplier_order_total_on_item_change

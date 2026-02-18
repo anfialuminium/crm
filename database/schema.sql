@@ -144,7 +144,8 @@ BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public;
 
 -- Apply trigger to customers
 CREATE TRIGGER update_customers_updated_at
@@ -185,7 +186,8 @@ BEGIN
     
     RETURN COALESCE(NEW, OLD);
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public;
 
 -- Trigger to auto-update deal totals when items change
 CREATE TRIGGER update_deal_total_on_item_change
