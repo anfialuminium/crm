@@ -27,6 +27,9 @@
                 <button onclick="showScreen('new-deal')" class="btn-big btn-success">
                     <span>➕ עסקה חדשה</span>
                 </button>
+                <button onclick="showScreen('orders')" class="btn-big btn-accent" style="background-color: #6366f1; color: white;">
+                    <span>📦 הזמנות רכש (ספקים)</span>
+                </button>
                 <button onclick="showScreen('history')" class="btn-big btn-primary">
                     <span>📋 היסטוריית עסקאות וחיפוש</span>
                 </button>
@@ -124,6 +127,25 @@
 
                 <div id="acc-deals-list">
                     <!-- Deals will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Supplier Orders Screen -->
+        <div id="screen-orders" class="hidden">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="section-title" style="margin-bottom: 0;">📦 הזמנות רכש</h2>
+                    <button onclick="showScreen('main')" class="btn-big btn-outline" style="width: auto; padding: 10px 20px; font-size: 1rem;">🏠 חזור</button>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-size: 0.9rem; color: var(--text-secondary);">חפש ספק:</label>
+                    <input type="text" id="acc-orders-search" class="input-big" placeholder="שם הספק..." onkeyup="loadSupplierOrders()">
+                </div>
+
+                <div id="acc-orders-list">
+                    <!-- Orders will be loaded here -->
                 </div>
             </div>
         </div>

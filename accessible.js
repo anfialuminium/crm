@@ -186,6 +186,11 @@ function showScreen(screenId) {
         loadAccDeals('acc-deals-list', '', m, y);
     }
 
+    if (screenId === 'orders') {
+        document.getElementById('acc-orders-search').value = '';
+        loadSupplierOrders();
+    }
+
     if (screenId === 'new-deal') {
         resetNewDealForm();
     }
@@ -1334,3 +1339,140 @@ function setupOverflowTooltips() {
     }
 }
 
+// --- Supplier Orders Logic ---
+
+async function loadSupplierOrders() {
+    const container = document.getElementById('acc-orders-list');
+    if (!container) return;
+    
+    const searchQuery = document.getElementById('acc-orders-search').value.toLowerCase();
+
+    try {
+        let query = supabaseClient
+            .from('supplier_orders')
+            .select(`
+                *,
+                suppliers (supplier_name)
+            `)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        const { data: orders, error } = await query;
+        if (error) throw error;
+
+        let filtered = orders || [];
+        if (searchQuery) {
+            filtered = filtered.filter(o => 
+                (o.suppliers?.supplier_name || '').toLowerCase().includes(searchQuery)
+            );
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = `<div class="text-center" style="padding:40px;"><p>${searchQuery ? 'לא נמצאו הזמנות מתאימות' : 'אין הזמנות להצגה'}</p></div>`;
+            return;
+        }
+
+        container.innerHTML = filtered.map(o => {
+            const date = formatAccDate(o.created_at);
+            const status = o.order_status || 'חדש';
+            const statusColor = status === 'התקבל' ? 'var(--success-color)' : (status === 'בוטל' ? 'var(--error-color)' : 'var(--warning-color)');
+            
+            return `
+                <div class="deal-card">
+                    <div class="deal-info">
+                        <h3>${o.suppliers?.supplier_name || 'ספק לא ידוע'}</h3>
+                        <p>📅 ${date} | <span style="color: ${statusColor}; font-weight: 700;">${status}</span></p>
+                    </div>
+                    <div class="deal-amount" style="text-align: left; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">סה"כ:</span>
+                        <span>₪${(o.total_amount || 0).toLocaleString()}</span>
+                    </div>
+                    <button onclick="viewOrderDetails('${o.order_id}')" class="btn-big btn-outline" style="width:auto; margin:0; padding:8px 16px; font-size:1rem;">פרטים</button>
+                </div>
+            `;
+        }).join('');
+
+    } catch (err) {
+        console.error('❌ שגיאה בטעינת הזמנות רכש:', err);
+        container.innerHTML = '<p class="text-center">שגיאה בטעינת הנתונים</p>';
+    }
+}
+
+async function viewOrderDetails(orderId) {
+    try {
+        const { data: items, error } = await supabaseClient
+            .from('supplier_order_items')
+            .select('*')
+            .eq('order_id', orderId);
+
+        if (error) throw error;
+
+        const { data: order, error: oError } = await supabaseClient
+            .from('supplier_orders')
+            .select('*, suppliers(supplier_name)')
+            .eq('order_id', orderId)
+            .single();
+        
+        if (oError) throw oError;
+
+        let html = `<h2 class="section-title">הזמנה מאת ${order.suppliers?.supplier_name || 'ספק'}</h2>`;
+        html += `<p style="margin-top: -15px; margin-bottom: 20px; color: var(--text-secondary);">📅 ${formatAccDate(order.created_at)} | סטטוס: ${order.order_status}</p>`;
+        html += '<div style="font-size:1.2rem; margin-top:20px;">';
+        
+        let subtotal = 0;
+        
+        items.forEach(item => {
+            const parts = [];
+            if (item.sku) parts.push(`מק"ט: ${item.sku}`);
+            if (item.color) parts.push(`צבע: ${item.color}`);
+            const detailsStr = parts.length > 0 ? `<br><span style="color:var(--text-secondary); font-size:1.1rem;">${parts.join(' | ')}</span>` : '';
+
+            const itemTotal = (item.quantity || 0) * (item.unit_price || 0);
+            subtotal += itemTotal;
+
+            html += `
+                <div style="border-bottom:1px solid #eee; padding:12px 0;">
+                    <strong>${item.description || 'פריט'}</strong>${detailsStr}<br>
+                    כמות: ${item.quantity || 0} | מחיר: ₪${(item.unit_price || 0).toLocaleString()} | סה"כ: ₪${itemTotal.toLocaleString()}
+                </div>
+            `;
+        });
+
+        const total = order.total_amount || subtotal;
+        const downPayment = order.down_payment || 0;
+        const balance = total - downPayment;
+
+        html += `
+            <div style="margin-top: 24px; padding-top: 16px; border-top: 2px dashed var(--border-color);">
+                <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 4px;">
+                    <span>סה"כ הזמנה:</span>
+                    <span>₪${total.toLocaleString()}</span>
+                </div>
+                ${downPayment > 0 ? `
+                <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: #059669; margin-bottom: 4px;">
+                    <span>מקדמה ששולמה:</span>
+                    <span>₪${downPayment.toLocaleString()}</span>
+                </div>
+                ` : ''}
+                <div style="display: flex; justify-content: space-between; font-size: 1.4rem; font-weight: 800; color: var(--primary-color); margin-top: 8px;">
+                    <span>יתרה לתשלום:</span>
+                    <span>₪${balance.toLocaleString()}</span>
+                </div>
+            </div>
+            ${order.notes ? `
+            <div style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 12px; border-right: 4px solid var(--primary-color);">
+                <strong style="display: block; margin-bottom: 5px;">הערות:</strong>
+                <div style="font-size: 1rem; white-space: pre-wrap;">${order.notes}</div>
+            </div>
+            ` : ''}
+        </div>`;
+
+        const modalBody = document.getElementById('acc-modal-body');
+        modalBody.innerHTML = html;
+        document.getElementById('acc-modal').classList.add('active');
+
+    } catch (err) {
+        console.error('❌ שגיאה בטעינת פרטי הזמנה:', err);
+        showAlert('שגיאה בטעינת פרטי ההזמנה', 'error');
+    }
+}
