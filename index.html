@@ -290,12 +290,21 @@
                     </div>
 
                     <table class="items-table" id="items-table">
+                        <colgroup>
+                            <col style="width: 25%;"> <!-- Product -->
+                            <col style="width: 10%;"> <!-- Qty -->
+                            <col style="width: 15%;"> <!-- Price -->
+                            <col id="deal-color-col" style="width: 15%;"> <!-- Color -->
+                            <col style="width: 15%;"> <!-- Size -->
+                            <col style="width: 10%;"> <!-- Total -->
+                            <col style="width: 10%;"> <!-- Actions -->
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>מוצר</th>
                                 <th>כמות</th>
                                 <th>מחיר יחידה</th>
-                                <th>צבע</th>
+                                <th id="deal-color-head">צבע</th>
                                 <th>מידה</th>
                                 <th>סה"כ</th>
                                 <th>פעולות</th>
@@ -1570,6 +1579,14 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">מטבע רכש</label>
+                        <select id="supplier-currency" class="form-select">
+                            <option value="ILS">₪ - שקל חדש</option>
+                            <option value="USD">$ - דולר אמריקאי</option>
+                            <option value="EUR">€ - אירו</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">איש קשר</label>
                         <input type="text" id="supplier-contact-name" class="form-input">
                     </div>
@@ -1651,8 +1668,7 @@
                     </div>
                 </div>
 
-                <!-- Read Only Mode Header -->
-                <div id="supplier-order-view-header" style="display: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+                <div id="supplier-order-view-header" style="display: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
                     <div>
                         <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">ספק</label>
                         <div id="view-order-supplier" dir="auto" style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 0.25rem;"></div>
@@ -1660,6 +1676,10 @@
                     <div style="display: flex; flex-direction: column; align-items: start;">
                         <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">סטטוס</label>
                         <div id="view-order-status" class="badge" style="font-size: 1rem; margin-top: 0.25rem;"></div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: start;">
+                        <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">תשלום</label>
+                        <div id="view-order-payment-status" class="badge" style="font-size: 1rem; margin-top: 0.25rem;"></div>
                     </div>
                     <div>
                         <label class="form-label" style="color: var(--text-tertiary); font-size: 0.85rem;">תאריך ביצוע</label>
@@ -1682,20 +1702,26 @@
                     <div class="table-responsive">
                     <table class="items-table" style="min-width: 1000px;">
                         <colgroup>
-                            <col style="width: 35%;"> <!-- Description -->
-                            <col style="width: 20%;"> <!-- Color -->
-                            <col style="width: 15%;"> <!-- SKU -->
-                            <col style="width: 8%;">  <!-- Quantity -->
-                            <col style="width: 10%;"> <!-- Price -->
-                            <col style="width: 8%;">  <!-- Total -->
+                            <col style="width: 25%;"> <!-- Description -->
+                            <col id="po-color-col" style="width: 12%;"> <!-- Color -->
+                            <col id="po-size-col" style="width: 12%;"> <!-- Size -->
+                            <col style="width: 10%;"> <!-- SKU -->
+                            <col id="po-qty-carton-col" style="width: 8%;"> <!-- Qty per Carton / Qty -->
+                            <col id="po-cartons-col" style="width: 8%;">  <!-- Cartons -->
+                            <col id="po-total-units-col" style="width: 8%;"> <!-- Total Units -->
+                            <col style="width: 8%;"> <!-- Price -->
+                            <col style="width: 6%;">  <!-- Total -->
                             <col style="width: 4%;">  <!-- Delete -->
                         </colgroup>
                         <thead>
                             <tr>
                                 <th>תיאור / פריט</th>
-                                <th>צבע</th>
+                                <th id="po-color-head">צבע</th>
+                                <th id="po-size-head">מידה</th>
                                 <th>מק"ט (אופציונלי)</th>
-                                <th style="text-align: center;">כמות</th>
+                                <th id="po-qty-carton-head" style="text-align: center;">כמות בקרטון</th>
+                                <th id="po-cartons-head" style="text-align: center;">קרטונים</th>
+                                <th id="po-total-units-head" style="text-align: center;">סה"כ יחידות</th>
                                 <th style="text-align: center;">מחיר יח'</th>
                                 <th style="text-align: center;">סה"כ</th>
                                 <th></th>
@@ -1717,10 +1743,14 @@
                     </div>
                     <div class="summary-row" id="down-payment-input-row" style="border-bottom: 1px dashed rgba(255,255,255,0.3); padding: 10px 0;">
                         <span class="summary-label" style="font-size: 0.9rem; opacity: 0.9;">מקדמה ששולמה:</span>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
                             <input type="text" id="order-down-payment" class="form-input" 
                                    style="width: 130px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 4px 8px; border-radius: 6px; text-align: left; font-weight: 600; unicode-bidi: bidi-override;"
                                    value="" inputmode="decimal" dir="ltr" onchange="renderSupplierOrderItems()" placeholder="מקדמה...">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; color: white; font-size: 0.9rem; cursor: pointer; user-select: none;">
+                                <input type="checkbox" id="order-is-paid" onchange="renderSupplierOrderItems()" style="width: 16px; height: 16px; cursor: pointer;">
+                                שולם במלואו
+                            </label>
                         </div>
                     </div>
                      <div class="summary-row" style="border-top: none; padding-top: 10px;">

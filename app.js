@@ -436,6 +436,18 @@ async function initializeApp() {
     loadCustomLogo();
     
     console.log(' CRM System ready!');
+    
+    // Check if cartons column exists in supplier_order_items
+    try {
+        const { error } = await supabaseClient.from('supplier_order_items').select('cartons').limit(1);
+        if (error) {
+            console.warn('⚠️ Column "cartons" not detected in supplier_order_items table. Please add it via SQL.');
+            window.hasCartonsColumn = false;
+        } else {
+            console.log('✅ Column "cartons" detected in supplier_order_items table.');
+            window.hasCartonsColumn = true;
+        }
+    } catch(e) { window.hasCartonsColumn = false; }
 }
 
 async function checkSchemaCapabilities() {
@@ -892,21 +904,36 @@ function renderDealItems() {
     const tbody = document.getElementById('items-tbody');
     tbody.innerHTML = '';
     
+    // Check if any product in the deal is NOT a wheel (thus might need color)
+    const hasAnyColor = dealItems.some(item => {
+        const prod = products.find(p => p.product_id === item.product_id);
+        if (!prod) return true;
+        const isWheel = (prod.category === 'גלגלים' || prod.product_name.includes('גלגל'));
+        const isElectricLock = (prod.product_name && prod.product_name.includes('מנעול חשמלי'));
+        return !isWheel && !isElectricLock;
+    });
+
+    const colorCol = document.getElementById('deal-color-col');
+    const colorHead = document.getElementById('deal-color-head');
+    if (colorCol) colorCol.style.display = hasAnyColor ? '' : 'none';
+    if (colorHead) colorHead.style.display = hasAnyColor ? '' : 'none';
+    
     dealItems.forEach((item, index) => {
-        const row = createItemRow(item, index);
+        const row = createItemRow(item, index, hasAnyColor);
         tbody.appendChild(row);
     });
     
     calculateTotal();
 }
 
-function createItemRow(item, index) {
+function createItemRow(item, index, hasAnyColor = true) {
     const tr = document.createElement('tr');
     tr.className = 'item-row';
     tr.id = item.id;
     
     // Find the full product object once for checks
     const product = products.find(p => p.product_id === item.product_id);
+    const isWheel = product && (product.category === 'גלגלים' || product.product_name.includes('גלגל'));
     
     // Categorized Product selection
     const productCell = document.createElement('td');
@@ -971,8 +998,10 @@ function createItemRow(item, index) {
         const selectedOption = e.target.options[e.target.selectedIndex];
         item.product_id = e.target.value;
         if (selectedOption && e.target.value) {
+            const prod = products.find(p => p.product_id === e.target.value);
+            const isWheel = prod && (prod.category === 'גלגלים' || prod.product_name.includes('גלגל'));
             item.unit_price = parseFloat(selectedOption.dataset.price) || 0;
-            item.requires_color = selectedOption.dataset.requiresColor === 'true';
+            item.requires_color = (selectedOption.dataset.requiresColor === 'true') && !isWheel;
             item.requires_size = selectedOption.dataset.requiresSize === 'true';
         } else {
             item.unit_price = 0;
@@ -1212,8 +1241,9 @@ function createItemRow(item, index) {
     }
     
     // Color
+    const isElectricLock = product && product.product_name && product.product_name.includes('מנעול חשמלי');
     const colorCell = document.createElement('td');
-    if (item.requires_color) {
+    if (item.requires_color && !isWheel && !isElectricLock) {
         const isBrush = product && (
             (product.category && product.category.includes('מברשות')) || 
             (product.product_name && product.product_name.includes('מברשת'))
@@ -1439,7 +1469,9 @@ function createItemRow(item, index) {
     tr.appendChild(productCell);
     tr.appendChild(quantityCell);
     tr.appendChild(priceCell);
-    tr.appendChild(colorCell);
+    if (hasAnyColor) {
+        tr.appendChild(colorCell);
+    }
     tr.appendChild(sizeCell);
     tr.appendChild(totalCell);
     tr.appendChild(actionsCell);
@@ -11182,8 +11214,9 @@ function renderSuppliersList(list) {
                         <th style="width: 10%;">קטגוריה</th>
                         <th style="width: 10%;">איש קשר</th>
                         <th style="width: 10%;">טלפון</th>
-                        <th style="width: 20%;">אימייל</th>
-                        <th style="width: 20%;">אתר</th>
+                        <th style="width: 15%;">אימייל</th>
+                        <th style="width: 15%;">אתר</th>
+                        <th style="width: 80px;">מטבע</th>
                         <th style="width: 140px;">פעולות</th>
                     </tr>
                 </thead>
@@ -11202,6 +11235,7 @@ function renderSuppliersList(list) {
                             <td style="white-space: nowrap;">
                                 ${s.website ? `<a href="${s.website.startsWith('http') ? s.website : 'http://' + s.website}" target="_blank">${s.website}</a>` : '-'}
                             </td>
+                            <td><span class="badge" style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);">${s.currency || 'ILS'}</span></td>
                             <td>
                                 <button class="btn btn-sm btn-info btn-icon" onclick="viewSupplierDetails('${s.supplier_id}')">${APP_ICONS.EYE}</button>
                                 <button class="btn btn-sm btn-secondary btn-icon" onclick="openSupplierModal('${s.supplier_id}')">${APP_ICONS.EDIT}</button>
@@ -11230,6 +11264,7 @@ function openSupplierModal(supplierId = null) {
     document.getElementById('supplier-email').value = '';
     document.getElementById('supplier-website').value = '';
     document.getElementById('supplier-address').value = '';
+    document.getElementById('supplier-currency').value = 'ILS';
     document.getElementById('supplier-notes').value = '';
     
     // Reset additional emails
@@ -11247,6 +11282,7 @@ function openSupplierModal(supplierId = null) {
             document.getElementById('supplier-email').value = supplier.email || '';
             document.getElementById('supplier-website').value = supplier.website || '';
             document.getElementById('supplier-address').value = supplier.address || '';
+            document.getElementById('supplier-currency').value = supplier.currency || 'ILS';
             document.getElementById('supplier-address').value = supplier.address || '';
             
             // Handle Extra Data (Workaround for missing columns)
@@ -11257,6 +11293,9 @@ function openSupplierModal(supplierId = null) {
                 notes = parts[0]; // The real notes
                 try {
                     extraData = JSON.parse(parts[1]);
+                    if (extraData.currency && !supplier.currency) {
+                        document.getElementById('supplier-currency').value = extraData.currency;
+                    }
                 } catch(e) { console.error('Failed to parse extra data', e); }
             }
             
@@ -11333,6 +11372,7 @@ async function saveSupplier(event) {
 
     const extendedData = {
         ...basicData,
+        currency: document.getElementById('supplier-currency').value,
         website: document.getElementById('supplier-website').value,
         additional_emails: additionalEmails
     };
@@ -11353,7 +11393,8 @@ async function saveSupplier(event) {
                  
                  const extraDataPayload = {
                      website: extendedData.website,
-                     additional_emails: extendedData.additional_emails
+                     additional_emails: extendedData.additional_emails,
+                     currency: extendedData.currency
                  };
                  
                  // Append to notes with delimiter
@@ -11370,8 +11411,6 @@ async function saveSupplier(event) {
                  // Success with workaround - don't scare the user, just work.
                  showAlert(supplierId ? 'הספק עודכן בהצלחה' : 'הספק נוצר בהצלחה', 'success');
                  closeSupplierModal();
-                 showAlert(supplierId ? 'הספק עודכן בהצלחה' : 'הספק נוצר בהצלחה', 'success');
-                 closeSupplierModal();
                  await loadSuppliers();
                  filterSuppliers();
                  return;
@@ -11380,11 +11419,9 @@ async function saveSupplier(event) {
         }
         
         showAlert(supplierId ? 'הספק עודכן בהצלחה' : 'הספק נוצר בהצלחה', 'success');
-        
-        closeSupplierModal();
         closeSupplierModal();
         await loadSuppliers(); 
-        filterSuppliers(); // Refresh list UI
+        filterSuppliers(); 
         
         // Log action
         logAction(
@@ -11508,7 +11545,7 @@ async function loadSupplierOrders() {
         // Build query
         let query = supabaseClient
             .from('supplier_orders')
-            .select('*, suppliers(supplier_name, contact_name, address, email)') // added address/email for currency logic
+            .select('*, suppliers(supplier_name, contact_name, address, email, notes)') // removed currency to avoid error
             .order('created_at', { ascending: false });
             
         // Filters
@@ -11545,33 +11582,57 @@ async function loadSupplierOrders() {
 
         // Pre-fetch exchange rates for display
         const ordersWithRates = await Promise.all(supplierOrders.map(async (o) => {
-            let currencySymbol = '₪';
-            let isUSD = false;
-            const s = o.suppliers;
-            if (s && ((s.address && s.address.toLowerCase().includes('china')) || 
-                     (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
-                     (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
-                     (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
-                     (s.email && s.email.endsWith('.cn')))) {
-                currencySymbol = '$';
-                isUSD = true;
+            let orderNotes = o.notes || '';
+            let orderExtraData = {};
+            if (orderNotes.includes('<<<EXTRA_DATA>>>')) {
+                try { orderExtraData = JSON.parse(orderNotes.split('<<<EXTRA_DATA>>>')[1]); } catch(e){}
             }
 
-            if (isUSD) {
+            const isPaid = o.is_paid || orderExtraData.is_paid || false;
+            let currency = o.currency || orderExtraData.currency || 'ILS';
+            let currencySymbol = '₪';
+            let isUSDLegacy = false; // For old heuristic
+            const s = o.suppliers;
+
+            if (s) {
+                if (s.currency && s.currency !== 'ILS') {
+                    currency = s.currency;
+                    currencySymbol = (s.currency === 'USD' ? '$' : '€');
+                } else {
+                    // Backwards compatibility / Heuristic from notes
+                    const notes = s.notes || '';
+                    let extraData = {};
+                    if (notes.includes('<<<EXTRA_DATA>>>')) {
+                        try { extraData = JSON.parse(notes.split('<<<EXTRA_DATA>>>')[1]); } catch(e){}
+                    }
+                    
+                    if (extraData.currency && extraData.currency !== 'ILS') {
+                        currency = extraData.currency;
+                        currencySymbol = (extraData.currency === 'USD' ? '$' : '€');
+                    } else if ((s.address && s.address.toLowerCase().includes('china')) || 
+                             (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
+                             (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
+                             (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
+                             (s.email && s.email.endsWith('.cn'))) {
+                        currency = 'USD';
+                        currencySymbol = '$';
+                        isUSDLegacy = true; // Mark as legacy USD
+                    }
+                }
+            }
+
+            if (currency !== 'ILS') {
                 const dateStr = o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-                let rate = 3.6; // Default fallback
+                let rate = (currency === 'USD' ? 3.6 : 3.8); // Default fallback
                 try {
-                     // Check cache if implemented globally, or fetch simple
-                     // Using a simple fetch here for now, optimizable via shared cache
                      const today = new Date().toISOString().split('T')[0];
                      const queryDate = dateStr > today ? today : dateStr;
-                     const res = await fetch(`https://api.frankfurter.app/${queryDate}?from=USD&to=ILS`);
+                     const res = await fetch(`https://api.frankfurter.app/${queryDate}?from=${currency}&to=ILS`);
                      if (res.ok) {
                          const json = await res.json();
                          rate = json.rates.ILS;
                      } else {
-                         // fallback to latest if date specific fails
-                         const resLat = await fetch(`https://api.frankfurter.app/latest?from=USD&to=ILS`);
+                         const resLat = await fetch(`https://api.frankfurter.app/latest?from=${currency}&to=ILS`);
                          if(resLat.ok) {
                              const jsonLat = await resLat.json();
                              rate = jsonLat.rates.ILS;
@@ -11580,11 +11641,11 @@ async function loadSupplierOrders() {
                 } catch(e) { console.error('Rate fetch failed', e); }
                 
                 const amount = (parseFloat(o.total_amount) || 0) - (parseFloat(o.down_payment) || 0);
-                return { ...o, currencySymbol, isUSD, rate, ilsAmount: amount * rate };
+                return { ...o, is_paid: isPaid, currency, currencySymbol, isUSDLegacy, rate, ilsAmount: amount * rate };
             }
             
             const amount = (parseFloat(o.total_amount) || 0) - (parseFloat(o.down_payment) || 0);
-            return { ...o, currencySymbol, isUSD, rate: 1, ilsAmount: amount };
+            return { ...o, is_paid: isPaid, currency, currencySymbol, isUSDLegacy, rate: 1, ilsAmount: amount };
         }));
 
         renderSupplierOrdersList(ordersWithRates);
@@ -11626,20 +11687,35 @@ function renderSupplierOrdersList(list) {
                         
                         // Format Original / Rate info
                         let rateInfo = '-';
-                        if (o.isUSD) {
+                         if (o.currency && o.currency !== 'ILS') {
+                            const currencySym = (o.currency === 'USD' ? '$' : '€');
                             const totalVal = parseFloat(o.total_amount) || 0;
                             const downPay = parseFloat(o.down_payment) || 0;
                             const balanceVal = totalVal - downPay;
                             
                             rateInfo = `
                                 <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.2;">
-                                    <div title="סה״כ לפני מקדמה">$${totalVal.toLocaleString()}</div>
-                                    ${downPay > 0 ? `<div style="color: #ef4444; font-size: 0.75rem;">-$${downPay.toLocaleString()}</div>` : ''}
-                                    <div style="font-weight: 700; border-top: 1px dashed #ccc; margin-top: 2px;">$${balanceVal.toLocaleString()}</div>
-                                    <div style="font-size: 0.75rem; color: #64748b;">שער: ${o.rate.toFixed(3)}</div>
+                                    <div title="סה״כ לפני מקדמה">${currencySym}${totalVal.toLocaleString()}</div>
+                                    ${downPay > 0 ? `<div style="color: #ef4444; font-size: 0.75rem;">-${currencySym}${downPay.toLocaleString()}</div>` : ''}
+                                    <div style="font-weight: 700; border-top: 1px dashed #ccc; margin-top: 2px;">${currencySym}${balanceVal.toLocaleString()}</div>
+                                    <div style="font-size: 0.75rem; color: #64748b;">שער (${o.currency}): ${o.rate.toFixed(3)}</div>
                                 </div>
                             `;
-                        } else if (parseFloat(o.down_payment) > 0) {
+                         } else if (o.isUSDLegacy) { // Legacy USD check
+                             const totalVal = parseFloat(o.total_amount) || 0;
+                             const downPay = parseFloat(o.down_payment) || 0;
+                             const balanceVal = totalVal - downPay;
+                             
+                             rateInfo = `
+                                 <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.2;">
+                                     <div title="סה״כ לפני מקדמה">$${totalVal.toLocaleString()}</div>
+                                     ${downPay > 0 ? `<div style="color: #ef4444; font-size: 0.75rem;">-$${downPay.toLocaleString()}</div>` : ''}
+                                     <div style="font-weight: 700; border-top: 1px dashed #ccc; margin-top: 2px;">$${balanceVal.toLocaleString()}</div>
+                                     <div style="font-size: 0.75rem; color: #64748b;">שער: ${o.rate.toFixed(3)}</div>
+                                 </div>
+                             `;
+                         }
+ else if (parseFloat(o.down_payment) > 0) {
                             const totalVal = parseFloat(o.total_amount) || 0;
                             const downPay = parseFloat(o.down_payment) || 0;
                             rateInfo = `
@@ -11658,7 +11734,12 @@ function renderSupplierOrdersList(list) {
                             <td>${o.expected_date ? new Date(o.expected_date).toLocaleDateString('he-IL') : '-'}</td>
                             <td style="font-weight: 600; color: var(--primary-color);">${ilsDisplay}</td>
                             <td>${rateInfo}</td>
-                            <td><span class="badge ${getStatusBadgeClass(o.order_status)}">${o.order_status}</span></td>
+                            <td>
+                                <div style="display: flex; flex-direction: column; gap: 4px; align-items: start;">
+                                    <span class="badge ${getStatusBadgeClass(o.order_status)}">${o.order_status}</span>
+                                    ${o.is_paid ? '<span class="badge badge-won" style="font-size: 0.75rem; padding: 2px 6px;">שולם</span>' : ''}
+                                </div>
+                            </td>
                             <td>
                                 <button class="btn btn-sm btn-info" onclick="viewSupplierOrder('${o.order_id}', '${o.supplier_id}')" title="צפה">${APP_ICONS.EYE}</button>
                                 <button class="btn btn-sm btn-secondary" onclick="openSupplierOrderModal('${o.order_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
@@ -11695,7 +11776,7 @@ function viewSupplierOrder(orderId, supplierId) {
 // Global/Module variables for modal context
 let modalCurrencySymbol = '₪';
 let modalExchangeRate = 1;
-let modalIsUSD = false;
+let modalCurrency = 'ILS'; // New state to hold current order currency
 
 async function openSupplierOrderModal(orderId = null, readOnly = false) {
     const modal = document.getElementById('supplier-order-modal');
@@ -11706,7 +11787,11 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
     // Reset global currency state
     modalCurrencySymbol = '₪';
     modalExchangeRate = 1;
-    modalIsUSD = false;
+    modalCurrency = 'ILS';
+    
+    // Reset payment checkbox
+    const paidCheckbox = document.getElementById('order-is-paid');
+    if (paidCheckbox) paidCheckbox.checked = false;
     
     // UI Adjustments for Read Only
     const title = document.querySelector('#supplier-order-modal h2');
@@ -11783,7 +11868,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             // Fetch order
             const { data: order, error } = await supabaseClient
                 .from('supplier_orders')
-                .select('*, suppliers(supplier_name, address, email)')
+                .select('*, suppliers(supplier_name, address, email, notes)')
                 .eq('order_id', orderId)
                 .single();
                 
@@ -11791,49 +11876,74 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             
             document.getElementById('edit-supplier-order-id').value = order.order_id;
             
+            // Handle Extra Data (Workaround for missing columns)
+            let rawNotes = order.notes || '';
+            let extraData = {};
+            if (rawNotes.includes('<<<EXTRA_DATA>>>')) {
+                const parts = rawNotes.split('<<<EXTRA_DATA>>>');
+                rawNotes = parts[0]; 
+                try {
+                    extraData = JSON.parse(parts[1]);
+                } catch(e) { console.error('Failed to parse extra data', e); }
+            }
+
+            const effectiveIsPaid = order.is_paid || extraData.is_paid || false;
+            const effectiveCurrency = order.currency || extraData.currency || 'ILS';
+
             // Populate Inputs
             document.getElementById('order-supplier-select').value = order.supplier_id;
             document.getElementById('order-status').value = order.order_status;
             document.getElementById('order-expected-date').value = order.expected_date ? order.expected_date.split('T')[0] : '';
             document.getElementById('order-creation-date').value = order.created_at ? order.created_at.split('T')[0] : '';
-            document.getElementById('order-notes').value = order.notes || '';
+            document.getElementById('order-notes').value = rawNotes;
             document.getElementById('order-down-payment').value = order.down_payment || 0;
+            if (paidCheckbox) paidCheckbox.checked = effectiveIsPaid;
+            
+            // View Mode Payment Status
+            const paymentBadge = document.getElementById('view-order-payment-status');
+            if (paymentBadge) {
+                if (effectiveIsPaid) {
+                    paymentBadge.textContent = 'שולם במלואו';
+                    paymentBadge.className = 'badge badge-won'; // Green
+                } else if (order.down_payment > 0) {
+                    paymentBadge.textContent = 'שולמה מקדמה';
+                    paymentBadge.className = 'badge badge-pending'; // Orange/Blue
+                } else {
+                    paymentBadge.textContent = 'לא שולם';
+                    paymentBadge.className = 'badge badge-lost'; // Red
+                }
+            }
             
             // Calculate Currency Info
             const s = order.suppliers;
-            if (s && ((s.address && s.address.toLowerCase().includes('china')) || 
-                     (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
-                     (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
-                     (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
-                     (s.email && s.email.endsWith('.cn')))) {
-                modalCurrencySymbol = '$';
-                modalIsUSD = true;
-                
-                // Fetch rate
-                const dateStr = order.created_at ? new Date(order.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-                const today = new Date().toISOString().split('T')[0];
-                const queryDate = dateStr > today ? today : dateStr;
-                
-                try {
-                     const res = await fetch(`https://api.frankfurter.app/${queryDate}?from=USD&to=ILS`);
-                     if (res.ok) {
-                         const json = await res.json();
-                         modalExchangeRate = json.rates.ILS;
-                     } else {
-                         // Fallback
-                         const fallbackRes = await fetch('https://api.frankfurter.app/latest?from=USD&to=ILS');
-                         if(fallbackRes.ok) {
-                             const fbJson = await fallbackRes.json();
-                             modalExchangeRate = fbJson.rates.ILS;
-                         } else {
-                             modalExchangeRate = 3.6;
-                         }
-                     }
-                } catch(e) {
-                    console.error('Modal rate fetch error', e);
-                    modalExchangeRate = 3.6;
+            if (s) {
+                if (s.currency && s.currency !== 'ILS') {
+                    modalCurrency = s.currency;
+                    modalCurrencySymbol = (s.currency === 'USD' ? '$' : '€');
+                } else {
+                    // Backwards compatibility / Heuristic
+                    const notes = s.notes || '';
+                    let extraData = {};
+                    if (notes.includes('<<<EXTRA_DATA>>>')) {
+                        try { extraData = JSON.parse(notes.split('<<<EXTRA_DATA>>>')[1]); } catch(e){}
+                    }
+                    
+                    if (extraData.currency && extraData.currency !== 'ILS') {
+                        modalCurrency = extraData.currency;
+                        modalCurrencySymbol = (extraData.currency === 'USD' ? '$' : '€');
+                    } else if ((s.address && s.address.toLowerCase().includes('china')) || 
+                             (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
+                             (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
+                             (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
+                             (s.email && s.email.endsWith('.cn'))) {
+                        modalCurrency = 'USD';
+                        modalCurrencySymbol = '$';
+                    }
                 }
             }
+
+            // Always attempt to fetch the rate initially based on the loaded order date
+            await updateOrderExchangeRate();
 
             // Render Notes History
             renderOrderNotes(order.notes || '');
@@ -11860,18 +11970,44 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
                 
             // Fix legacy items where color is inside description
             currentOrderItems = (items || []).map(item => {
-                const legacyMatch = item.description && typeof item.description === 'string' 
-                    ? item.description.match(/(.*)\s\((.+)\)$/) 
-                    : null;
+                let desc = item.description || '';
+                let cartons = item.cartons || 1;
+                let qtyPerCarton = item.qty_per_carton || item.quantity; // Default to quantity if column missing
                 
-                if (!item.color && legacyMatch) {
-                    return {
-                        ...item,
-                        description: legacyMatch[1].trim(),
-                        color: legacyMatch[2].trim()
-                    };
+                // 1. Parse Carton Breakdown from Description if present: "Name (Color) [399 x 100]"
+                const cartonMatch = desc.match(/(.*)\s\[(\d+)\s*x\s*([\d.]+)\]$/);
+                if (cartonMatch) {
+                    desc = cartonMatch[1].trim();
+                    cartons = parseFloat(cartonMatch[2]);
+                    qtyPerCarton = parseFloat(cartonMatch[3]);
+                } else if (item.cartons && item.cartons > 1) {
+                    // If we have columns but no desc match, qtyPerCarton should be derived if qty_per_carton col is somehow empty
+                    if (!item.qty_per_carton && item.quantity) {
+                        qtyPerCarton = item.quantity / item.cartons;
+                    }
                 }
-                return item;
+
+                // 2. Parse Color/Size from Description: "Name (Color, Size)"
+                const detailsMatch = desc.match(/(.*)\s\((.+)\)$/);
+                let color = item.color || '';
+                let size = item.size || '';
+                
+                if (detailsMatch) {
+                    desc = detailsMatch[1].trim();
+                    const details = detailsMatch[2].split(',').map(d => d.trim());
+                    // Heuristic: if item doesn't have color/size from columns, take from description
+                    if (!color && details.length > 0) color = details[0];
+                    if (!size && details.length > 1) size = details[1];
+                }
+                
+                return {
+                    ...item,
+                    description: desc,
+                    color: color,
+                    size: size,
+                    cartons: cartons,
+                    quantity: qtyPerCarton // In UI, quantity field stores "qty per carton"
+                };
             });
             
         } catch (e) {
@@ -11891,8 +12027,89 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
         // or just default
     }
     
+    // Add event listeners once if not already added
+    const dateInput = document.getElementById('order-creation-date');
+    const supplierSelect = document.getElementById('order-supplier-select');
+    
+    if (dateInput && !dateInput.dataset.listener) {
+        dateInput.addEventListener('change', () => updateOrderExchangeRate());
+        dateInput.dataset.listener = 'true';
+    }
+    if (supplierSelect && !supplierSelect.dataset.listener) {
+        supplierSelect.addEventListener('change', () => updateOrderExchangeRate());
+        supplierSelect.dataset.listener = 'true';
+    }
+
     renderSupplierOrderItems();
     modal.classList.add('active');
+}
+
+async function updateOrderExchangeRate() {
+    const supplierId = document.getElementById('order-supplier-select').value;
+    const dateVal = document.getElementById('order-creation-date').value;
+    
+    // Reset defaults
+    modalCurrency = 'ILS';
+    modalCurrencySymbol = '₪';
+    
+    if (supplierId) {
+        const s = suppliers.find(sup => sup.supplier_id === supplierId);
+        if (s) {
+            if (s.currency && s.currency !== 'ILS') {
+                modalCurrency = s.currency;
+                modalCurrencySymbol = (s.currency === 'USD' ? '$' : '€');
+            } else {
+                // Heuristic/ExtraData fallback
+                const notes = s.notes || '';
+                let extraData = {};
+                if (notes.includes('<<<EXTRA_DATA>>>')) {
+                    try { extraData = JSON.parse(notes.split('<<<EXTRA_DATA>>>')[1]); } catch(e){}
+                }
+                
+                if (extraData.currency && extraData.currency !== 'ILS') {
+                    modalCurrency = extraData.currency;
+                    modalCurrencySymbol = (extraData.currency === 'USD' ? '$' : '€');
+                } else if ((s.address && s.address.toLowerCase().includes('china')) || 
+                         (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
+                         (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
+                         (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
+                         (s.email && s.email.endsWith('.cn'))) {
+                    modalCurrency = 'USD';
+                    modalCurrencySymbol = '$';
+                }
+            }
+        }
+    }
+
+    if (modalCurrency === 'ILS') {
+        modalExchangeRate = 1;
+        renderSupplierOrderItems();
+        return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const queryDate = dateVal && dateVal <= today ? dateVal : today;
+
+    try {
+        const res = await fetch(`https://api.frankfurter.app/${queryDate}?from=${modalCurrency}&to=ILS`);
+        if (res.ok) {
+            const json = await res.json();
+            modalExchangeRate = json.rates.ILS;
+        } else {
+            const fallbackRes = await fetch(`https://api.frankfurter.app/latest?from=${modalCurrency}&to=ILS`);
+            if (fallbackRes.ok) {
+                const fbJson = await fallbackRes.json();
+                modalExchangeRate = fbJson.rates.ILS;
+            } else {
+                modalExchangeRate = (modalCurrency === 'USD' ? 3.6 : 3.8);
+            }
+        }
+    } catch (e) {
+        console.error('Exchange rate fetch error:', e);
+        modalExchangeRate = (modalCurrency === 'USD' ? 3.6 : 3.8);
+    }
+
+    renderSupplierOrderItems();
 }
 
 function closeSupplierOrderModal() {
@@ -11906,13 +12123,66 @@ function renderSupplierOrderItems() {
     
     tbody.innerHTML = '';
     let total = 0;
+
+    const hasAnyColor = currentOrderItems.some(item => {
+        const prod = products.find(p => (item.product_id && p.product_id === item.product_id) || (!item.product_id && p.product_name === item.description));
+        if (!prod) return true; // Default to showing if product not found (e.g. new item being added)
+        const isWheel = (prod.category === 'גלגלים' || prod.product_name.includes('גלגל'));
+        const isElectricLock = (prod.product_name && prod.product_name.includes('מנעול חשמלי'));
+        return !isWheel && !isElectricLock;
+    });
+
+    const colorCol = document.getElementById('po-color-col');
+    const colorHead = document.getElementById('po-color-head');
+    if (colorCol) colorCol.style.display = hasAnyColor ? '' : 'none';
+    if (colorHead) colorHead.style.display = hasAnyColor ? '' : 'none';
+
+    // Check if any product in the order needs size (Pull handles, Brushes, Mesh)
+    const hasAnySize = currentOrderItems.some(item => {
+        const prod = products.find(p => (item.product_id && p.product_id === item.product_id) || (!item.product_id && p.product_name === item.description));
+        if (!prod) return false;
+        return (
+            (prod.product_name && (prod.product_name.includes('ידית משיכה') || prod.product_name.includes('מברשת'))) ||
+            (prod.category && prod.category.includes('מברשות')) ||
+            isMeshProduct(prod)
+        );
+    });
+
+    const sizeCol = document.getElementById('po-size-col');
+    const sizeHead = document.getElementById('po-size-head');
+    if (sizeCol) sizeCol.style.display = hasAnySize ? '' : 'none';
+    if (sizeHead) sizeHead.style.display = hasAnySize ? '' : 'none';
+
+    // Check if any product in the order is hardware (needs cartons)
+    const hasAnyCartons = currentOrderItems.some(item => {
+        const prod = products.find(p => (item.product_id && p.product_id === item.product_id) || (!item.product_id && p.product_name === item.description));
+        if (!prod) return false;
+        return (
+            prod.category === 'גלגלים' || 
+            prod.category === 'פרזול' || 
+            (prod.product_name && (prod.product_name.includes('גלגל') || prod.product_name.includes('מחבר')))
+        );
+    });
+
+    const qtyCartonCol = document.getElementById('po-qty-carton-col');
+    const qtyCartonHead = document.getElementById('po-qty-carton-head');
+    const cartonsCol = document.getElementById('po-cartons-col');
+    const cartonsHead = document.getElementById('po-cartons-head');
+    const totalUnitsCol = document.getElementById('po-total-units-col');
+    const totalUnitsHead = document.getElementById('po-total-units-head');
+
+    if (qtyCartonHead) qtyCartonHead.textContent = hasAnyCartons ? 'כמות בקרטון' : 'כמות';
+    if (cartonsCol) cartonsCol.style.display = hasAnyCartons ? '' : 'none';
+    if (cartonsHead) cartonsHead.style.display = hasAnyCartons ? '' : 'none';
+    if (totalUnitsCol) totalUnitsCol.style.display = hasAnyCartons ? '' : 'none';
+    if (totalUnitsHead) totalUnitsHead.style.display = hasAnyCartons ? '' : 'none';
     
     // Determine currency based on supplier selected in dropdown if specific order not loaded/overriding
     const supplierId = document.getElementById('order-supplier-select')?.value;
     let currencySymbol = modalCurrencySymbol;
     
     // Simplistic check if user changes supplier in edit mode to one that is foreign
-    if (!modalIsUSD && supplierId) { // Only override if not already determined by order load (or could be dynamic)
+    if (modalCurrency === 'ILS' && supplierId) { // Only override if not already determined by order load (or could be dynamic)
        const supplier = suppliers.find(s => s.supplier_id == supplierId);
        if (supplier && (
            (supplier.address && supplier.address.toLowerCase().includes('china')) || 
@@ -11929,33 +12199,58 @@ function renderSupplierOrderItems() {
     } else {
         emptyState.style.display = 'none';
         currentOrderItems.forEach((item, index) => {
-            const itemTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+            const qtyPerCarton = parseFloat(item.quantity) || 0;
+            const cartons = parseFloat(item.cartons || 1);
+            const totalUnits = qtyPerCarton * cartons;
+            const itemTotal = totalUnits * (parseFloat(item.unit_price) || 0);
             total += itemTotal;
+            
+            const prod = products.find(p => (item.product_id && p.product_id === item.product_id) || (!item.product_id && p.product_name === item.description));
+            const isWheel = prod && (prod.category === 'גלגלים' || prod.product_name.includes('גלגל'));
+            const isElectricLock = prod && prod.product_name && prod.product_name.includes('מנעול חשמלי');
+            const requiresCartons = prod && (
+                prod.category === 'גלגלים' || 
+                prod.category === 'פרזול' || 
+                (prod.product_name && (prod.product_name.includes('גלגל') || prod.product_name.includes('מחבר')))
+            );
+
+            // If not hardware, enforce 1 carton
+            if (!requiresCartons) {
+                item.cartons = 1;
+            }
             
             const tr = document.createElement('tr');
             
             // Build product options
             let productOptions = '<option value="">בחר מוצר...</option>';
             products.forEach(p => {
-                // Exact match by ID is preferred, fallback to name match
                 const isSelected = (item.product_id && item.product_id === p.product_id) || 
                                    (!item.product_id && item.description === p.product_name);
                 productOptions += `<option value="${p.product_id}" ${isSelected ? 'selected' : ''}>${p.product_name}</option>`;
             });
-            productOptions += `<option value="__NEW__" style="font-weight: bold; color: var(--primary-color);">הוסף מוצר חדש...</option>`;
+            productOptions += `<option value="__CUSTOM__" style="font-weight: bold; color: var(--secondary-color);">פריט בהתאמה אישית (לא במחירון)...</option>`;
+            productOptions += `<option value="__NEW__" style="font-weight: bold; color: var(--primary-color);">הוסף מוצר חדש למערכת...</option>`;
 
             // Build color options
             let colorOptions = `<option value="" ${!item.color ? 'selected' : ''}>בחר...</option>`;
+            const isPullHandle = prod && prod.product_name && prod.product_name.includes('ידית משיכה');
             
-            // Use dynamic colors from DB
-            const dynamicColors = orderColors.map(c => c.color_name);
-            dynamicColors.forEach(c => {
-                colorOptions += `<option value="${c}" ${item.color === c ? 'selected' : ''}>${c}</option>`;
-            });
+            if (isPullHandle) {
+                const pullColors = ['נירוסטה', 'שחור'];
+                pullColors.forEach(c => {
+                    colorOptions += `<option value="${c}" ${item.color === c ? 'selected' : ''}>${c}</option>`;
+                });
+            } else {
+                // Use dynamic colors from DB
+                const dynamicColors = orderColors.map(c => c.color_name);
+                dynamicColors.forEach(c => {
+                    colorOptions += `<option value="${c}" ${item.color === c ? 'selected' : ''}>${c}</option>`;
+                });
 
-            // Handle cases where existing item has a color not in current list
-            if (item.color && !dynamicColors.includes(item.color)) {
-                colorOptions += `<option value="${item.color}" selected>${item.color}</option>`;
+                // Handle cases where existing item has a color not in current list
+                if (item.color && !dynamicColors.includes(item.color)) {
+                    colorOptions += `<option value="${item.color}" selected>${item.color}</option>`;
+                }
             }
 
 
@@ -11964,9 +12259,14 @@ function renderSupplierOrderItems() {
                 // Read Only View - Plain Text
                 tr.innerHTML = `
                     <td><span style="font-weight: 500;">${item.description || '-'}</span></td>
-                    <td>${item.color || '-'}</td>
+                    ${hasAnyColor ? `<td>${(isWheel || isElectricLock) ? '-' : (item.color || '-')}</td>` : ''}
+                    ${hasAnySize ? `<td>${item.size || '-'}</td>` : ''}
                     <td>${item.sku || '-'}</td>
-                    <td style="text-align: center;">${item.quantity || 0}</td>
+                    <td style="text-align: center;">${qtyPerCarton}</td>
+                    ${hasAnyCartons ? `
+                    <td style="text-align: center;">${requiresCartons ? cartons : ''}</td>
+                    <td style="text-align: center; font-weight: bold;">${totalUnits}</td>
+                    ` : ''}
                     <td style="text-align: center;">${item.unit_price || 0}</td>
                     <td style="vertical-align: middle; font-weight: bold; color: var(--primary-dark); text-align: center;">${currencySymbol}${itemTotal.toLocaleString()}</td>
                     <td></td>
@@ -11979,13 +12279,36 @@ function renderSupplierOrderItems() {
                             ${productOptions}
                         </select>
                     </td>
+                    ${hasAnyColor ? `
                     <td>
+                        ${(isWheel || isElectricLock) ? '<div style="text-align:center; color:var(--text-tertiary);">-</div>' : `
                         <select class="form-select table-input" onchange="updateOrderItem(${index}, 'color', this.value)" style="width: 100%">
                             ${colorOptions}
                         </select>
+                        `}
                     </td>
+                    ` : ''}
+                    ${hasAnySize ? `
+                    <td>
+                        ${isPullHandle ? `
+                        <select class="form-select table-input" onchange="updateOrderItem(${index}, 'size', this.value)" style="width: 100%">
+                            <option value="">בחר</option>
+                            ${['35/50', '50/70', '70/100', '90/120'].map(s => `<option value="${s}" ${item.size === s ? 'selected' : ''}>${s}</option>`).join('')}
+                        </select>
+                        ` : `<input type="text" class="form-input table-input" value="${item.size || ''}" onchange="updateOrderItem(${index}, 'size', this.value)" placeholder="מידה" style="width: 100%">`}
+                    </td>
+                    ` : ''}
                     <td><input type="text" class="form-input table-input" value="${item.sku || ''}" onchange="updateOrderItem(${index}, 'sku', this.value)" placeholder="מק״ט" style="width: 100%"></td>
                     <td style="text-align: center;"><input type="text" class="form-input table-input" value="${item.quantity || 1}" inputmode="decimal" dir="ltr" onchange="updateOrderItem(${index}, 'quantity', this.value)" style="width: 60px; text-align: center;"></td>
+                    ${hasAnyCartons ? `
+                    <td style="text-align: center;">
+                        ${requiresCartons ? 
+                            `<input type="text" class="form-input table-input" value="${item.cartons || 1}" inputmode="decimal" dir="ltr" onchange="updateOrderItem(${index}, 'cartons', this.value)" style="width: 60px; text-align: center;">` 
+                            : ''
+                        }
+                    </td>
+                    <td style="text-align: center; font-weight: bold; vertical-align: middle;">${totalUnits}</td>
+                    ` : ''}
                     <td style="text-align: center;"><input type="text" class="form-input table-input" value="${item.unit_price || 0}" inputmode="decimal" dir="ltr" onchange="updateOrderItem(${index}, 'unit_price', this.value)" style="width: 90px; text-align: center;"></td>
                     <td style="vertical-align: middle; font-weight: bold; color: var(--primary-dark); text-align: center;">${currencySymbol}${itemTotal.toLocaleString()}</td>
                     <td style="text-align: center;"><button type="button" class="btn btn-sm btn-danger btn-icon" onclick="removeSupplierOrderItem(${index})" title="הסר">${APP_ICONS.TRASH}</button></td>
@@ -11999,36 +12322,25 @@ function renderSupplierOrderItems() {
     const downPaymentInput = document.getElementById('order-down-payment');
     const downPaymentRow = document.getElementById('down-payment-input-row');
     
+    const isPaid = document.getElementById('order-is-paid')?.checked;
+    
     const downPayment = parseFloat(downPaymentInput?.value) || 0;
-    const finalTotal = total - downPayment;
+    const finalTotal = isPaid ? 0 : (total - downPayment);
     
     // Update subtotal (total items)
     if (subtotalEl) {
         subtotalEl.textContent = `${currencySymbol}${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     }
 
+    if (isPaid && finalTotal === 0) {
+        if (downPaymentRow) downPaymentRow.style.opacity = '0.5';
+    } else {
+        if (downPaymentRow) downPaymentRow.style.opacity = '1';
+    }
+
     let totalHtml = `<span style="font-size: 1.4rem; display: block;">${currencySymbol}${finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
-    
-    if (modalIsUSD && modalExchangeRate) {
-        const ilsTotal = finalTotal * modalExchangeRate;
-        const ilsSubtotal = total * modalExchangeRate;
-        const ilsDownPayment = downPayment * modalExchangeRate;
-
-        // Update subtotal label to show ILS too if USD
-        if (subtotalEl) {
-            subtotalEl.innerHTML = `
-                <div>${currencySymbol}${total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                <div style="font-size: 0.8rem; opacity: 0.8;">₪${ilsSubtotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-            `;
-        }
-
-        totalHtml = `
-            <div style="text-align: left;">
-                <div style="font-size: 1.4rem; line-height: 1;">${currencySymbol}${finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                <div style="font-size: 1.1rem; margin-top: 5px; border-top: 1px dashed rgba(255,255,255,0.3); padding-top: 5px; font-weight: 700;">₪${ilsTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 2px;">שער המרה: ${modalExchangeRate.toFixed(3)}</div>
-            </div>
-        `;
+    if (modalCurrency !== 'ILS' && modalExchangeRate) {
+        totalHtml += `<div style="font-size: 0.9rem; opacity: 0.8; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.4);">שער: ${modalExchangeRate.toFixed(3)} | סה"כ בשקלים: ₪${(finalTotal * modalExchangeRate).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>`;
     }
     
     totalEl.innerHTML = totalHtml;
@@ -12051,6 +12363,20 @@ async function handleProductSelect(index, selectEl) {
         // Reset select to previous valid value or empty for now
         selectEl.value = ''; 
         await addNewProductPrompt(index);
+        return;
+    }
+
+    if (value === '__CUSTOM__') {
+        const customName = prompt('הזן שם למוצר:');
+        if (customName && customName.trim()) {
+            currentOrderItems[index].description = customName.trim();
+            currentOrderItems[index].product_id = null;
+            currentOrderItems[index].sku = '';
+            currentOrderItems[index].unit_price = 0;
+            renderSupplierOrderItems();
+        } else {
+            selectEl.value = ''; // Reset if cancelled
+        }
         return;
     }
     
@@ -12143,8 +12469,10 @@ function addSupplierOrderItem() {
     currentOrderItems.push({
         description: '',
         color: '',
+        size: '',
         sku: '',
-        quantity: 1,
+        quantity: 1, // Quantity per carton
+        cartons: 1,
         unit_price: 0
     });
     renderSupplierOrderItems();
@@ -12382,60 +12710,106 @@ async function saveSupplierOrder(event) {
         }
     }
 
+    const totalAmount = parseFloat(document.getElementById('supplier-order-subtotal').textContent.replace(/[^\d.-]/g, ''));
+
     const orderData = {
         supplier_id: document.getElementById('order-supplier-select').value,
         order_status: document.getElementById('order-status').value,
-        expected_date: document.getElementById('order-expected-date').value || null,
+        expected_date: document.getElementById('order-expected-date').value ? new Date(document.getElementById('order-expected-date').value).toISOString() : null,
         created_at: document.getElementById('order-creation-date').value ? new Date(document.getElementById('order-creation-date').value).toISOString() : new Date().toISOString(),
         notes: finalNotes,
         down_payment: parseFloat(document.getElementById('order-down-payment').value) || 0,
-        total_amount: parseFloat(document.getElementById('supplier-order-subtotal').textContent.replace(/[^\d.-]/g, ''))
+        is_paid: document.getElementById('order-is-paid').checked,
+        total_amount: totalAmount,
+        currency: modalCurrency // Store current currency with the order
     };
     
     try {
         let savedOrderId = orderId;
         
-        if (orderId) {
-            // Fetch old state for logging
-            const { data: oldOrder } = await supabaseClient.from('supplier_orders').select('*').eq('order_id', orderId).single();
+        const performSave = async (data) => {
+            if (orderId) {
+                return await supabaseClient.from('supplier_orders').update(data).eq('order_id', orderId);
+            } else {
+                data.created_by = author;
+                return await supabaseClient.from('supplier_orders').insert(data).select().single();
+            }
+        };
 
-            // Update Order
-            const { error } = await supabaseClient.from('supplier_orders').update(orderData).eq('order_id', orderId);
-            if (error) throw error;
+        let result = await performSave(orderData);
+
+        // Fallback for missing columns
+        if (result.error && (result.status === 400 || result.error.code === '42703')) {
+            console.warn('Supplier Order save failed with new columns, attempting fallback...', result.error);
+            const extraDataPayload = {
+                currency: orderData.currency,
+                is_paid: orderData.is_paid
+            };
             
-            // Log update
-            logAction('update', 'supplier_order', orderId, 'הזמנה', `עדכון הזמנה - סטטוס: ${orderData.order_status}`, oldOrder, orderData);
-            await refreshAllUI();
+            const safeOrderData = { ...orderData };
+            delete safeOrderData.currency;
+            delete safeOrderData.is_paid;
+            
+            // Append to notes for persistence
+            safeOrderData.notes = (orderData.notes || '') + '<<<EXTRA_DATA>>>' + JSON.stringify(extraDataPayload);
+            
+            result = await performSave(safeOrderData);
+        }
 
-            // Delete existing items (simple replace strategy)
-            await supabaseClient.from('supplier_order_items').delete().eq('order_id', orderId);
+        if (result.error) throw result.error;
+
+        if (orderId) {
+            savedOrderId = orderId;
+            logAction('update', 'supplier_order', orderId, 'הזמנה', `עדכון הזמנה - סטטוס: ${orderData.order_status}`);
         } else {
-            // Create Order
-            orderData.created_by = author;
-            const { data, error } = await supabaseClient.from('supplier_orders').insert(orderData).select().single();
-            if (error) throw error;
-            savedOrderId = data.order_id;
-
-            // Log creation
+            savedOrderId = result.data.order_id;
             logAction('create', 'supplier_order', savedOrderId, 'הזמנה', `יצירת הזמנה חדשה בסכום ₪${orderData.total_amount.toFixed(0)}`);
-            await refreshAllUI();
+        }
+
+        await refreshAllUI();
+
+        if (orderId) {
+            // Delete existing items for clean replace
+            await supabaseClient.from('supplier_order_items').delete().eq('order_id', orderId);
         }
         
         // Insert Items
         if (currentOrderItems.length > 0) {
             const itemsToInsert = currentOrderItems.map(item => {
                 let dbDescription = item.description;
-                if (item.color && item.color.trim()) {
-                    dbDescription = `${item.description} (${item.color})`;
+                const details = [];
+                if (item.color && item.color.trim()) details.push(item.color.trim());
+                if (item.size && item.size.trim()) details.push(item.size.trim());
+                
+                if (details.length > 0) {
+                    dbDescription = `${item.description} (${details.join(', ')})`;
                 }
 
-                return {
+                const qtyPerCarton = parseFloat(item.quantity) || 0;
+                const cartons = parseFloat(item.cartons || 1);
+                const totalUnits = qtyPerCarton * cartons;
+
+                // Add breakdown to description as a persistent fallback
+                let finalDesc = dbDescription;
+                if (cartons > 1) {
+                    finalDesc = `${dbDescription} [${cartons} x ${qtyPerCarton}]`;
+                }
+
+                const itemObj = {
                     order_id: savedOrderId,
-                    description: dbDescription,
+                    description: finalDesc,
                     sku: item.sku,
-                    quantity: parseFloat(item.quantity),
+                    quantity: totalUnits, // Store total units in the standard quantity column for correct DB totals
                     unit_price: parseFloat(item.unit_price)
                 };
+
+                // Add extra columns if schema supports them
+                if (window.hasCartonsColumn) {
+                    itemObj.cartons = cartons;
+                    itemObj.qty_per_carton = qtyPerCarton;
+                }
+                
+                return itemObj;
             });
             
             const { error: itemsError } = await supabaseClient.from('supplier_order_items').insert(itemsToInsert);

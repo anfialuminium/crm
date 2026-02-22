@@ -371,6 +371,7 @@ function updateItemProduct(id, productId, btn) {
     
     const isBrush = product && (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות')));
     const isMesh = product && !isBrush && (product.product_name.includes('רשת') || (product.category && product.category.includes('רשתות')));
+    const isWheel = product && (product.category === 'גלגלים' || product.product_name.includes('גלגל'));
 
     // Check if size is required
     const sizeContainer = document.getElementById(`size-container-${id}`);
@@ -488,7 +489,7 @@ function updateItemProduct(id, productId, btn) {
                 `).join('')}
             </div>
         `;
-    } else if (isRegularHandle || (product && product.requires_color)) {
+    } else if ((isRegularHandle || (product && product.requires_color)) && !isWheel) {
         colorContainer.classList.remove('hidden');
         if (orderColors.length === 2) {
             if (!item.color) item.color = orderColors[0].color_name;
@@ -1170,8 +1171,9 @@ async function viewDealDetails(dealId) {
         
         items.forEach(item => {
             const parts = [];
+            const isWheel = item.products?.category === 'גלגלים' || item.products?.product_name?.includes('גלגל');
             if (item.size) parts.push(`מידה: ${item.size}`);
-            if (item.color) parts.push(`צבע: ${item.color}`);
+            if (item.color && !isWheel) parts.push(`צבע: ${item.color}`);
             if (item.is_fin_brush) parts.push('מברשת סנפיר');
             if (item.is_roll) parts.push('גליל');
             const detailsStr = parts.length > 0 ? `<br><span style="color:var(--text-secondary); font-size:1.1rem;">${parts.join(' | ')}</span>` : '';
@@ -1423,8 +1425,9 @@ async function viewOrderDetails(orderId) {
         
         items.forEach(item => {
             const parts = [];
+            const isWheel = item.description && item.description.includes('גלגל');
             if (item.sku) parts.push(`מק"ט: ${item.sku}`);
-            if (item.color) parts.push(`צבע: ${item.color}`);
+            if (item.color && !isWheel) parts.push(`צבע: ${item.color}`);
             const detailsStr = parts.length > 0 ? `<br><span style="color:var(--text-secondary); font-size:1.1rem;">${parts.join(' | ')}</span>` : '';
 
             const itemTotal = (item.quantity || 0) * (item.unit_price || 0);
