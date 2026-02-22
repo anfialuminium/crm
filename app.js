@@ -11249,7 +11249,7 @@ function renderSuppliersList(list) {
                     ${list.map(s => `
                         <tr>
                             <td style="white-space: nowrap;" title="${s.supplier_name}" dir="auto">
-                                <strong>${s.supplier_name}</strong>
+                                <strong>${fixBiDi(s.supplier_name)}</strong>
                             </td>
                             <td><span class="badge badge-pending">${s.category || '-'}</span></td>
                             <td>${s.contact_name || '-'}</td>
@@ -11537,7 +11537,7 @@ async function viewSupplierDetails(id) {
         content.innerHTML = `
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                 <div>
-                     <h3>${s.supplier_name}</h3>
+                     <h3>${fixBiDi(s.supplier_name)}</h3>
                      <p><strong>קטגוריה:</strong> ${s.category || '-'}</p>
                      <p><strong>איש קשר:</strong> ${s.contact_name || '-'}</p>
                      <p><strong>טלפון:</strong> <span style="direction: ltr; display: inline-block;">${s.phone || '-'}</span></p>
@@ -11817,7 +11817,7 @@ function renderSupplierOrdersList(list) {
                         return `
                         <tr>
                             <td><strong>${o.order_number ? '#' + o.order_number : '#' + o.order_id.slice(0, 6).toUpperCase()}</strong></td>
-                            <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${o.suppliers?.supplier_name || ''}" dir="auto">${o.suppliers?.supplier_name || 'לא ידוע'}</td>
+                            <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${o.suppliers?.supplier_name || ''}" dir="auto">${fixBiDi(o.suppliers?.supplier_name || 'לא ידוע')}</td>
                             <td>${new Date(o.created_at).toLocaleDateString('he-IL')}</td>
                             <td>${o.expected_date ? new Date(o.expected_date).toLocaleDateString('he-IL') : '-'}</td>
                             <td style="font-weight: 600; color: var(--primary-color);">${ilsDisplay}</td>
@@ -13647,7 +13647,7 @@ function renderMentionSuggestions(deals, orders, contacts, query) {
         const orderNum = order.order_number || order.order_id.slice(0,8);
         html += `
             <div class="mention-item" onclick="insertMention('Order', '${order.order_id}', 'הזמנה: ${order.suppliers?.supplier_name || 'ללא שם'}')">
-                <div class="mention-main">${order.suppliers?.supplier_name || 'ספק'} <span class="mention-type order">רכש</span></div>
+                <div class="mention-main">${fixBiDi(order.suppliers?.supplier_name || 'ספק')} <span class="mention-type order">רכש</span></div>
                 <div class="mention-sub">#${orderNum}</div>
             </div>
         `;
@@ -14813,5 +14813,6 @@ function saveLogoSettings() {
 
 function fixBiDi(text) {
     if (!text) return '';
-    return `<bdi>${text.replace(/\[([^\]]+)\]/g, '<span dir="ltr">[$1]</span>')}</bdi>`;
+    // Force LTR for dimensions in brackets and use dir="auto" for automatic English/Hebrew alignment
+    return `<bdi dir="auto">${text.replace(/\[([^\]]+)\]/g, '<span dir="ltr">[$1]</span>')}</bdi>`;
 }

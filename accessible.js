@@ -1403,7 +1403,7 @@ async function loadSupplierOrders() {
             return `
                 <div class="deal-card">
                     <div class="deal-info">
-                        <h3>${o.suppliers?.supplier_name || 'ספק לא ידוע'}</h3>
+                        <h3>${fixBiDi(o.suppliers?.supplier_name || 'ספק לא ידוע')}</h3>
                         <p>📅 ${date} | <span class="badge" style="background: ${statusColor}11; color: ${statusColor}; border: 1px solid ${statusColor}33;">${status}</span></p>
                     </div>
                     <div class="deal-amount">
@@ -1510,6 +1510,6 @@ async function viewOrderDetails(orderId) {
 
 function fixBiDi(text) {
     if (!text) return '';
-    // Force LTR for dimensions in brackets and ensure isolation with bdi
-    return `<bdi>${text.replace(/\[([^\]]+)\]/g, '<span dir="ltr">[$1]</span>')}</bdi>`;
+    // Force LTR for dimensions in brackets and use dir="auto" for automatic English/Hebrew alignment
+    return `<bdi dir="auto">${text.replace(/\[([^\]]+)\]/g, '<span dir="ltr">[$1]</span>')}</bdi>`;
 }
