@@ -1137,13 +1137,13 @@ async function loadAccDeals(containerId, searchQuery = '', month = '', year = ''
                 <div class="deal-card">
                     <div class="deal-info">
                         <h3>${d.customers.business_name}</h3>
-                        <p>📅 ${date} | 📝 ${d.deal_status === 'זכייה' ? 'נסגר' : d.deal_status}</p>
+                        <p>📅 ${date} | <span class="badge" style="background: rgba(37, 99, 235, 0.1); color: var(--primary-color); border: 1px solid rgba(37, 99, 235, 0.2);">${d.deal_status === 'זכייה' ? 'נסגר' : d.deal_status}</span></p>
                     </div>
-                    <div class="deal-amount" style="text-align: left; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+                    <div class="deal-amount">
                         <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">לפני מע"מ: ₪${(d.final_amount || 0).toLocaleString()}</span>
                         <span style="white-space: nowrap;">₪${((d.final_amount || 0) * 1.18).toLocaleString()} <small style="font-size: 0.7rem; font-weight: normal;">(כולל מע"מ)</small></span>
                     </div>
-                    <button onclick="viewDealDetails('${d.deal_id}')" class="btn-big btn-outline" style="width:auto; margin:0; padding:8px 16px; font-size:1rem;">פרטים</button>
+                    <button onclick="viewDealDetails('${d.deal_id}')" class="btn-big btn-outline">פרטים</button>
                 </div>
             `;
         }).join('');
@@ -1249,6 +1249,27 @@ function setupOverflowTooltips() {
         
         // Skip some elements
         if (!target || target.tagName === 'BODY' || target.tagName === 'HTML' || target.classList.contains('custom-tooltip')) return;
+
+        // Ensure tooltip only shows for elements within the top-most active modal/window
+        // This prevents tooltips from lower-level modals (behind the current one) from showing up
+        const activeContainers = Array.from(document.querySelectorAll('.modal.active, .details-modal.active, [id*="modal"].active'))
+            .filter(el => {
+                const style = window.getComputedStyle(el);
+                return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetWidth > 0;
+            });
+
+        if (activeContainers.length > 0) {
+            // Sort by z-index descending to find top-most
+            activeContainers.sort((a, b) => {
+                const zA = parseInt(window.getComputedStyle(a).zIndex) || 0;
+                const zB = parseInt(window.getComputedStyle(b).zIndex) || 0;
+                return zB - zA;
+            });
+            
+            const topContainer = activeContainers[0];
+            // If the element being hovered is NOT inside the top-most container, ignore it
+            if (!topContainer.contains(target)) return;
+        }
 
         // Check for overflow
         const isOverflowing = target.clientWidth > 0 && (target.scrollWidth > target.clientWidth + 1 || target.scrollHeight > target.clientHeight + 1);
@@ -1383,13 +1404,13 @@ async function loadSupplierOrders() {
                 <div class="deal-card">
                     <div class="deal-info">
                         <h3>${o.suppliers?.supplier_name || 'ספק לא ידוע'}</h3>
-                        <p>📅 ${date} | <span style="color: ${statusColor}; font-weight: 700;">${status}</span></p>
+                        <p>📅 ${date} | <span class="badge" style="background: ${statusColor}11; color: ${statusColor}; border: 1px solid ${statusColor}33;">${status}</span></p>
                     </div>
-                    <div class="deal-amount" style="text-align: left; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+                    <div class="deal-amount">
                         <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">סה"כ:</span>
                         <span>₪${(o.total_amount || 0).toLocaleString()}</span>
                     </div>
-                    <button onclick="viewOrderDetails('${o.order_id}')" class="btn-big btn-outline" style="width:auto; margin:0; padding:8px 16px; font-size:1rem;">פרטים</button>
+                    <button onclick="viewOrderDetails('${o.order_id}')" class="btn-big btn-outline">פרטים</button>
                 </div>
             `;
         }).join('');

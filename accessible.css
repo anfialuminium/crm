@@ -167,31 +167,79 @@ input[inputmode="decimal"] {
     unicode-bidi: plaintext !important;
 }
 
-/* Deals List */
+/* Deals & Orders List */
 .deal-card {
     background: white;
     border: 2px solid var(--border-color);
     border-radius: 16px;
-    padding: 20px;
+    padding: 24px;
     margin-bottom: 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 16px;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+}
+
+.deal-info {
+    flex: 1 1 200px; /* Grow, shrink, but try to stay at least 200px */
+    min-width: 0; /* Allow text wrapping */
 }
 
 .deal-info h3 {
     font-size: var(--font-size-lg);
     margin-bottom: 4px;
+    word-break: break-word; /* Important for long names */
+    line-height: 1.2;
 }
 
 .deal-info p {
     color: var(--text-secondary);
+    font-size: 0.95rem;
 }
 
 .deal-amount {
     font-size: var(--font-size-lg);
-    font-weight: 700;
+    font-weight: 800;
     color: var(--success-color);
+    text-align: left;
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.deal-card .badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.deal-card .btn-big {
+    margin: 0;
+    padding: 12px 24px;
+    width: auto;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+    .deal-card {
+        padding: 16px;
+        gap: 12px;
+    }
+    
+    .deal-info {
+        flex: 1 1 100%; /* Force wrap the amount/button if info is wide */
+        margin-bottom: 8px;
+    }
+    
+    .deal-amount {
+        flex: 1 1 auto;
+        align-items: flex-start;
+        text-align: right;
+    }
 }
 
 /* Modals */

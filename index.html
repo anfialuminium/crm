@@ -1587,8 +1587,8 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">איש קשר</label>
-                        <input type="text" id="supplier-contact-name" class="form-input">
+                        <label class="form-label">איש קשר ראשי</label>
+                        <input type="text" id="supplier-contact-name" class="form-input" placeholder="שם איש קשר">
                     </div>
                     <div class="form-group">
                         <label class="form-label">טלפון</label>
@@ -1599,8 +1599,17 @@
                         <input type="email" id="supplier-email" class="form-input">
                     </div>
                     <div class="form-group" style="grid-column: 1 / -1;">
-                        <label class="form-label">מיילים נוספים</label>
-                        <div id="supplier-additional-emails-container" style="margin-bottom: 0.5rem;"></div>
+                        <label class="form-label">אנשי קשר נוספים</label>
+                        <div id="supplier-additional-contacts-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;"></div>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addSupplierContactRow()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+                            הוסף איש קשר
+                        </button>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label class="form-label">מיילים נוספים למשלוח</label>
+                        <div id="supplier-additional-emails-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;"></div>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="addSupplierEmailRow()">הוסף מייל נוסף</button>
                     </div>
                     <div class="form-group">

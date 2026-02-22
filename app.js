@@ -9536,6 +9536,27 @@ function setupOverflowTooltips() {
         // Skip some elements
         if (!target || target.tagName === 'BODY' || target.tagName === 'HTML' || target.classList.contains('custom-tooltip')) return;
 
+        // Ensure tooltip only shows for elements within the top-most active modal/window
+        // This prevents tooltips from lower-level modals (behind the current one) from showing up
+        const activeContainers = Array.from(document.querySelectorAll('.modal.active, .details-modal.active, [class*="-modal"].active'))
+            .filter(el => {
+                const style = window.getComputedStyle(el);
+                return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetWidth > 0;
+            });
+
+        if (activeContainers.length > 0) {
+            // Sort by z-index descending to find top-most
+            activeContainers.sort((a, b) => {
+                const zA = parseInt(window.getComputedStyle(a).zIndex) || 0;
+                const zB = parseInt(window.getComputedStyle(b).zIndex) || 0;
+                return zB - zA;
+            });
+            
+            const topContainer = activeContainers[0];
+            // If the element being hovered is NOT inside the top-most container, ignore it
+            if (!topContainer.contains(target)) return;
+        }
+
         // Check for overflow
         // scrollWidth > clientWidth for horizontal overflow
         // scrollHeight > clientHeight for vertical overflow
@@ -11104,18 +11125,22 @@ async function loadSuppliers() {
             let notes = s.notes || '';
             let extraData = {};
             
-            if (notes.includes('<<<EXTRA_DATA>>>')) {
-                const parts = notes.split('<<<EXTRA_DATA>>>');
+            const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
+            let foundSep = separators.find(sep => notes.includes(sep));
+            if (foundSep) {
+                const parts = notes.split(foundSep);
                 notes = parts[0]; 
                 try {
                     extraData = JSON.parse(parts[1]);
                 } catch(e) { console.error('Failed to parse extra data', e); }
             }
+            notes = notes.trim();
             
             return {
                 ...s,
                 website: s.website || extraData.website || '',
                 additional_emails: s.additional_emails || extraData.additional_emails || [],
+                extra_contacts: s.extra_contacts || extraData.extra_contacts || [],
                 clean_notes: notes // Use this for display
             };
         });
@@ -11267,8 +11292,9 @@ function openSupplierModal(supplierId = null) {
     document.getElementById('supplier-currency').value = 'ILS';
     document.getElementById('supplier-notes').value = '';
     
-    // Reset additional emails
+    // Reset additional emails & contacts
     document.getElementById('supplier-additional-emails-container').innerHTML = '';
+    document.getElementById('supplier-additional-contacts-container').innerHTML = '';
     
     if (supplierId) {
         document.getElementById('supplier-modal-title').textContent = 'ערוך ספק';
@@ -11288,8 +11314,10 @@ function openSupplierModal(supplierId = null) {
             // Handle Extra Data (Workaround for missing columns)
             let notes = supplier.notes || '';
             let extraData = {};
-            if (notes.includes('<<<EXTRA_DATA>>>')) {
-                const parts = notes.split('<<<EXTRA_DATA>>>');
+            const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
+            let foundSep = separators.find(sep => notes.includes(sep));
+            if (foundSep) {
+                const parts = notes.split(foundSep);
                 notes = parts[0]; // The real notes
                 try {
                     extraData = JSON.parse(parts[1]);
@@ -11298,6 +11326,7 @@ function openSupplierModal(supplierId = null) {
                     }
                 } catch(e) { console.error('Failed to parse extra data', e); }
             }
+            notes = notes.trim();
             
             document.getElementById('supplier-notes').value = notes;
             document.getElementById('supplier-website').value = supplier.website || extraData.website || '';
@@ -11307,6 +11336,14 @@ function openSupplierModal(supplierId = null) {
             if (emailsToLoad && Array.isArray(emailsToLoad)) {
                 emailsToLoad.forEach(emailObj => {
                     addSupplierEmailRow(emailObj.email, emailObj.role);
+                });
+            }
+
+            // Populate additional contacts
+            const contactsToLoad = supplier.extra_contacts || extraData.extra_contacts || [];
+            if (contactsToLoad && Array.isArray(contactsToLoad)) {
+                contactsToLoad.forEach(contact => {
+                    addSupplierContactRow(contact.name, contact.info);
                 });
             }
         }
@@ -11344,6 +11381,22 @@ function addSupplierEmailRow(email = '', role = 'כללי') {
     container.appendChild(div);
 }
 
+function addSupplierContactRow(name = '', info = '') {
+    const container = document.getElementById('supplier-additional-contacts-container');
+    const div = document.createElement('div');
+    div.className = 'contact-row';
+    div.style.display = 'flex';
+    div.style.gap = '0.5rem';
+    div.style.marginBottom = '0.5rem';
+    
+    div.innerHTML = `
+        <input type="text" class="form-input additional-contact-name" value="${name}" placeholder="שם איש קשר" style="flex: 1;">
+        <input type="text" class="form-input additional-contact-info" value="${info}" placeholder="טלפון / אימייל" style="flex: 1;">
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">${APP_ICONS.TRASH}</button>
+    `;
+    container.appendChild(div);
+}
+
 async function saveSupplier(event) {
     event.preventDefault();
     
@@ -11357,6 +11410,16 @@ async function saveSupplier(event) {
         const role = row.querySelector('.additional-email-role').value;
         if (email) {
             additionalEmails.push({ email, role });
+        }
+    });
+
+    // Collect additional contacts
+    const additionalContacts = [];
+    document.querySelectorAll('#supplier-additional-contacts-container .contact-row').forEach(row => {
+        const nameNode = row.querySelector('.additional-contact-name');
+        const infoNode = row.querySelector('.additional-contact-info');
+        if (nameNode && nameNode.value) {
+            additionalContacts.push({ name: nameNode.value, info: infoNode ? infoNode.value : '' });
         }
     });
 
@@ -11374,7 +11437,8 @@ async function saveSupplier(event) {
         ...basicData,
         currency: document.getElementById('supplier-currency').value,
         website: document.getElementById('supplier-website').value,
-        additional_emails: additionalEmails
+        additional_emails: additionalEmails,
+        extra_contacts: additionalContacts
     };
     
     try {
@@ -11394,12 +11458,13 @@ async function saveSupplier(event) {
                  const extraDataPayload = {
                      website: extendedData.website,
                      additional_emails: extendedData.additional_emails,
+                     extra_contacts: extendedData.extra_contacts,
                      currency: extendedData.currency
                  };
                  
                  // Append to notes with delimiter
                  const basicDataWithWorkaround = { ...basicData };
-                 basicDataWithWorkaround.notes = basicData.notes + '<<<EXTRA_DATA>>>' + JSON.stringify(extraDataPayload);
+                 basicDataWithWorkaround.notes = (basicData.notes || '') + '|||METADATA|||' + JSON.stringify(extraDataPayload);
                  
                  if (supplierId) {
                      result = await supabaseClient.from('suppliers').update(basicDataWithWorkaround).eq('supplier_id', supplierId);
@@ -11477,6 +11542,16 @@ async function viewSupplierDetails(id) {
                      <p><strong>איש קשר:</strong> ${s.contact_name || '-'}</p>
                      <p><strong>טלפון:</strong> <span style="direction: ltr; display: inline-block;">${s.phone || '-'}</span></p>
                      <p><strong>אימייל:</strong> ${s.email ? `<a href="mailto:${s.email}">${s.email}</a>` : '-'}</p>
+                     
+                     ${s.extra_contacts && s.extra_contacts.length > 0 ? `
+                        <div style="margin-top: 0.5rem; background: #f0f7ff; padding: 0.5rem; border-radius: 4px; border-right: 3px solid var(--primary-color);">
+                            <strong>אנשי קשר נוספים:</strong>
+                            <ul style="margin: 0.25rem 0 0 1rem; padding: 0; list-style: none;">
+                                ${s.extra_contacts.map(c => `<li>• <strong>${c.name}:</strong> ${c.info}</li>`).join('')}
+                            </ul>
+                        </div>
+                     ` : ''}
+
                      ${s.website ? `<p><strong>אתר:</strong> <a href="${s.website.startsWith('http') ? s.website : 'http://' + s.website}" target="_blank">${s.website}</a></p>` : ''}
                      <p><strong>כתובת:</strong> ${s.address || '-'}</p>
                      
@@ -11489,7 +11564,7 @@ async function viewSupplierDetails(id) {
                         </div>
                      ` : ''}
                      
-                     <div class="deal-card-info" style="margin-top: 1rem; display: block; white-space: pre-wrap;" dir="auto"><strong>הערות:</strong><br>${s.clean_notes || s.notes || '-'}</div>
+                     <div class="deal-card-info" style="margin-top: 1rem; display: block; white-space: pre-wrap;" dir="auto"><strong>הערות:</strong><br>${s.clean_notes || '-'}</div>
                 </div>
                 <div>
                     <h4>הזמנות אחרונות</h4>
@@ -11584,8 +11659,11 @@ async function loadSupplierOrders() {
         const ordersWithRates = await Promise.all(supplierOrders.map(async (o) => {
             let orderNotes = o.notes || '';
             let orderExtraData = {};
-            if (orderNotes.includes('<<<EXTRA_DATA>>>')) {
-                try { orderExtraData = JSON.parse(orderNotes.split('<<<EXTRA_DATA>>>')[1]); } catch(e){}
+            const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
+            let foundOrderSep = separators.find(sep => orderNotes.includes(sep));
+            if (foundOrderSep) {
+                const parts = orderNotes.split(foundOrderSep);
+                try { orderExtraData = JSON.parse(parts[1]); } catch(e){}
             }
 
             const isPaid = o.is_paid || orderExtraData.is_paid || false;
@@ -11602,8 +11680,10 @@ async function loadSupplierOrders() {
                     // Backwards compatibility / Heuristic from notes
                     const notes = s.notes || '';
                     let extraData = {};
-                    if (notes.includes('<<<EXTRA_DATA>>>')) {
-                        try { extraData = JSON.parse(notes.split('<<<EXTRA_DATA>>>')[1]); } catch(e){}
+                    let foundSupSep = separators.find(sep => notes.includes(sep));
+                    if (foundSupSep) {
+                        const parts = notes.split(foundSupSep);
+                        try { extraData = JSON.parse(parts[1]); } catch(e){}
                     }
                     
                     if (extraData.currency && extraData.currency !== 'ILS') {
@@ -11879,13 +11959,16 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             // Handle Extra Data (Workaround for missing columns)
             let rawNotes = order.notes || '';
             let extraData = {};
-            if (rawNotes.includes('<<<EXTRA_DATA>>>')) {
-                const parts = rawNotes.split('<<<EXTRA_DATA>>>');
+            const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
+            let foundSep = separators.find(sep => rawNotes.includes(sep));
+            if (foundSep) {
+                const parts = rawNotes.split(foundSep);
                 rawNotes = parts[0]; 
                 try {
                     extraData = JSON.parse(parts[1]);
                 } catch(e) { console.error('Failed to parse extra data', e); }
             }
+            rawNotes = rawNotes.trim();
 
             const effectiveIsPaid = order.is_paid || extraData.is_paid || false;
             const effectiveCurrency = order.currency || extraData.currency || 'ILS';
@@ -11924,8 +12007,10 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
                     // Backwards compatibility / Heuristic
                     const notes = s.notes || '';
                     let extraData = {};
-                    if (notes.includes('<<<EXTRA_DATA>>>')) {
-                        try { extraData = JSON.parse(notes.split('<<<EXTRA_DATA>>>')[1]); } catch(e){}
+                    const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
+                    let foundSep = separators.find(sep => notes.includes(sep));
+                    if (foundSep) {
+                        try { extraData = JSON.parse(notes.split(foundSep)[1]); } catch(e){}
                     }
                     
                     if (extraData.currency && extraData.currency !== 'ILS') {
@@ -11946,7 +12031,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             await updateOrderExchangeRate();
 
             // Render Notes History
-            renderOrderNotes(order.notes || '');
+            renderOrderNotes(rawNotes);
             
             // Populate View Header (Read Only)
             if (readOnly) {
@@ -12062,8 +12147,10 @@ async function updateOrderExchangeRate() {
                 // Heuristic/ExtraData fallback
                 const notes = s.notes || '';
                 let extraData = {};
-                if (notes.includes('<<<EXTRA_DATA>>>')) {
-                    try { extraData = JSON.parse(notes.split('<<<EXTRA_DATA>>>')[1]); } catch(e){}
+                const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
+                let foundSep = separators.find(sep => notes.includes(sep));
+                if (foundSep) {
+                    try { extraData = JSON.parse(notes.split(foundSep)[1]); } catch(e){}
                 }
                 
                 if (extraData.currency && extraData.currency !== 'ILS') {
@@ -12501,7 +12588,13 @@ function renderOrderNotes(fullText) {
     }
 
     // Split by separator
-    const notes = fullText.split(NOTE_SEPARATOR).map(n => n.trim()).filter(n => n);
+    let visibleText = fullText;
+    const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
+    let foundSep = separators.find(sep => visibleText.includes(sep));
+    if (foundSep) {
+        visibleText = visibleText.split(foundSep)[0];
+    }
+    const notes = visibleText.split(NOTE_SEPARATOR).map(n => n.trim()).filter(n => n);
     
     notes.forEach((noteText, index) => {
         const noteEl = document.createElement('div');
@@ -12751,7 +12844,7 @@ async function saveSupplierOrder(event) {
             delete safeOrderData.is_paid;
             
             // Append to notes for persistence
-            safeOrderData.notes = (orderData.notes || '') + '<<<EXTRA_DATA>>>' + JSON.stringify(extraDataPayload);
+            safeOrderData.notes = (orderData.notes || '') + '|||METADATA|||' + JSON.stringify(extraDataPayload);
             
             result = await performSave(safeOrderData);
         }

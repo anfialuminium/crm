@@ -165,12 +165,22 @@
     /* Modal Adjustments */
     .modal-content {
         width: 98%;
-        padding: var(--spacing-md);
-        border-radius: var(--radius-md);
+        padding: 0; /* Reset internal padding */
+        border-radius: var(--radius-lg);
+    }
+
+    .modal-header {
+        padding: 1.25rem 1rem !important;
+        margin-bottom: 1rem !important;
     }
 
     .modal-header h2 {
-        font-size: 1.25rem;
+        font-size: 1.15rem !important;
+        line-height: 1.2;
+    }
+
+    .modal-content > *:not(.modal-header) {
+        padding: 1rem !important;
     }
 
     .modal-footer {
@@ -278,8 +288,134 @@
     }
 }
 
-/* Default state for toggle button (visible) */
-.filters-toggle {
-    display: flex;
+@media (max-width: 768px) {
+    /* Supplier Orders List - Transform Table to Cards */
+    #supplier-orders-list .table-responsive {
+        border: none;
+        background: transparent;
+    }
+
+    #supplier-orders-list .items-table {
+        min-width: 100% !important;
+        display: block;
+        background: transparent;
+    }
+
+    #supplier-orders-list .items-table thead {
+        display: none; /* Hide headers on mobile */
+    }
+
+    #supplier-orders-list .items-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    #supplier-orders-list .items-table tr {
+        display: grid;
+        grid-template-areas: 
+            "number status"
+            "supplier supplier"
+            "date expected"
+            "amount currency"
+            "actions actions";
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        background: white;
+        padding: 1rem;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        position: relative;
+    }
+
+    #supplier-orders-list .items-table td {
+        display: block;
+        padding: 0.25rem 0 !important;
+        border: none !important;
+        height: auto;
+        min-height: auto;
+    }
+
+    #supplier-orders-list .items-table td:nth-child(1) { grid-area: number; font-size: 0.9rem; }
+    #supplier-orders-list .items-table td:nth-child(2) { grid-area: supplier; font-size: 1.1rem; font-weight: 700; white-space: normal; }
+    #supplier-orders-list .items-table td:nth-child(3) { grid-area: date; font-size: 0.85rem; color: var(--text-secondary); }
+    #supplier-orders-list .items-table td:nth-child(3)::before { content: 'ביצוע: '; }
+    #supplier-orders-list .items-table td:nth-child(4) { grid-area: expected; font-size: 0.85rem; color: var(--text-secondary); text-align: left; }
+    #supplier-orders-list .items-table td:nth-child(4)::before { content: 'צפי: '; }
+    #supplier-orders-list .items-table td:nth-child(5) { grid-area: amount; font-size: 1.2rem; font-weight: 700; color: var(--success-color); }
+    #supplier-orders-list .items-table td:nth-child(6) { grid-area: currency; text-align: left; }
+    #supplier-orders-list .items-table td:nth-child(7) { grid-area: status; display: flex; justify-content: flex-end; }
+    #supplier-orders-list .items-table td:nth-child(8) { 
+        grid-area: actions; 
+        display: flex; 
+        gap: 0.5rem; 
+        margin-top: 0.5rem;
+        padding-top: 0.5rem !important;
+        border-top: 1px solid var(--border-color) !important;
+    }
+    #supplier-orders-list .items-table td:nth-child(8) button {
+        flex: 1;
+        height: 38px;
+    }
+
+    /* Modal Responsiveness Fixes */
+    #supplier-order-edit-header, 
+    #supplier-order-view-header {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+
+    #supplier-order-view-header {
+        text-align: right;
+    }
+
+    #supplier-order-view-header > div {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px dashed var(--border-color);
+        padding-bottom: 0.5rem;
+    }
+
+    #supplier-order-view-header .badge {
+        margin-top: 0 !important;
+    }
+
+    #supplier-order-modal .modal-content {
+        max-width: 95% !important;
+        max-height: 95vh;
+    }
+
+    /* Fix table internal scroll in modal */
+    #supplier-order-modal .table-responsive .items-table {
+        min-width: 800px !important;
+    }
+
+    .deal-items-container {
+        padding: 0.75rem !important;
+    }
+    
+    .deal-items-header h3 {
+        font-size: 1.1rem;
+    }
+    .email-row, .contact-row {
+        flex-direction: column !important;
+        gap: 0.25rem !important;
+        padding: 0.5rem;
+        border: 1px dashed var(--border-color);
+        border-radius: var(--radius-sm);
+        background: var(--bg-secondary);
+    }
+    
+    .email-row input, .email-row select, .contact-row input {
+        width: 100% !important;
+        flex: none !important;
+    }
+    
+    .email-row button, .contact-row button {
+        align-self: flex-end;
+        margin-top: 0.25rem;
+    }
 }
 
