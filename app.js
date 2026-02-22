@@ -11581,14 +11581,8 @@ async function viewSupplierDetails(id) {
                             <thead><tr><th>תאריך</th><th>סכום</th><th>סטטוס</th><th>פעולות</th></tr></thead>
                             <tbody>
                                 ${orders.map(o => {
-                                    let currencySymbol = '₪';
-                                    if (s.address && s.address.toLowerCase().includes('china') || 
-                                       (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
-                                       (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
-                                       (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
-                                       (s.email && s.email.endsWith('.cn'))) {
-                                        currencySymbol = '$';
-                                    }
+                                    const curr = o.currency || 'ILS';
+                                    const currencySymbol = curr === 'USD' ? '$' : (curr === 'EUR' ? '€' : '₪');
                                     return `
                                     <tr>
                                         <td>${new Date(o.created_at).toLocaleDateString('he-IL')}</td>
@@ -11676,11 +11670,11 @@ async function loadSupplierOrders() {
 
             const isPaid = o.is_paid || orderExtraData.is_paid || false;
             let currency = o.currency || orderExtraData.currency || 'ILS';
-            let currencySymbol = '₪';
+            let currencySymbol = (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '₪'));
             let isUSDLegacy = false; // For old heuristic
             const s = o.suppliers;
 
-            if (s) {
+            if (currency === 'ILS' && s) {
                 if (s.currency && s.currency !== 'ILS') {
                     currency = s.currency;
                     currencySymbol = (s.currency === 'USD' ? '$' : '€');
@@ -11762,56 +11756,32 @@ function renderSupplierOrdersList(list) {
                         <th style="width: 20%;">ספק</th>
                         <th style="width: 12%;">תאריך</th>
                         <th style="width: 12%;">צפי הגעה</th>
-                        <th style="width: 15%;">סכום (ש"ח)</th>
-                        <th style="width: 15%;">המרה / מקור</th>
+                        <th style="width: 15%;">סכום</th>
+                        <th style="width: 15%;">המרה (ש״ח)</th>
                         <th style="width: 10%;">סטטוס</th>
                         <th style="width: 120px;">פעולות</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${list.map(o => {
-                        // Format ILS amount
-                        const ilsDisplay = `₪${o.ilsAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                        const amount = (parseFloat(o.total_amount) || 0) - (parseFloat(o.down_payment) || 0);
+                        const primaryDisplay = `${o.currencySymbol}${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                         
-                        // Format Original / Rate info
-                        let rateInfo = '-';
-                         if (o.currency && o.currency !== 'ILS') {
-                            const currencySym = (o.currency === 'USD' ? '$' : '€');
-                            const totalVal = parseFloat(o.total_amount) || 0;
-                            const downPay = parseFloat(o.down_payment) || 0;
-                            const balanceVal = totalVal - downPay;
-                            
-                            rateInfo = `
+                        let secondaryInfo = '-';
+                        if (o.currency && o.currency !== 'ILS') {
+                            const tils = amount * o.rate;
+                            secondaryInfo = `
                                 <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.2;">
-                                    <div title="סה״כ לפני מקדמה">${currencySym}${totalVal.toLocaleString()}</div>
-                                    ${downPay > 0 ? `<div style="color: #ef4444; font-size: 0.75rem;">-${currencySym}${downPay.toLocaleString()}</div>` : ''}
-                                    <div style="font-weight: 700; border-top: 1px dashed #ccc; margin-top: 2px;">${currencySym}${balanceVal.toLocaleString()}</div>
-                                    <div style="font-size: 0.75rem; color: #64748b;">שער (${o.currency}): ${o.rate.toFixed(3)}</div>
+                                    <div style="font-weight: 700; border-bottom: 1px dashed #ccc; padding-bottom: 2px; margin-bottom: 2px;">₪${tils.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
+                                    <div style="font-size: 0.75rem; color: #64748b;">לפי שער: ${o.rate.toFixed(3)}</div>
                                 </div>
                             `;
-                         } else if (o.isUSDLegacy) { // Legacy USD check
-                             const totalVal = parseFloat(o.total_amount) || 0;
-                             const downPay = parseFloat(o.down_payment) || 0;
-                             const balanceVal = totalVal - downPay;
-                             
-                             rateInfo = `
-                                 <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.2;">
-                                     <div title="סה״כ לפני מקדמה">$${totalVal.toLocaleString()}</div>
-                                     ${downPay > 0 ? `<div style="color: #ef4444; font-size: 0.75rem;">-$${downPay.toLocaleString()}</div>` : ''}
-                                     <div style="font-weight: 700; border-top: 1px dashed #ccc; margin-top: 2px;">$${balanceVal.toLocaleString()}</div>
-                                     <div style="font-size: 0.75rem; color: #64748b;">שער: ${o.rate.toFixed(3)}</div>
-                                 </div>
-                             `;
-                         }
- else if (parseFloat(o.down_payment) > 0) {
-                            const totalVal = parseFloat(o.total_amount) || 0;
-                            const downPay = parseFloat(o.down_payment) || 0;
-                            rateInfo = `
-                                <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.2;">
-                                    <div style="text-decoration: line-through; opacity: 0.6;">₪${totalVal.toLocaleString()}</div>
-                                    <div style="color: #ef4444; font-size: 0.75rem;">(מקדמה: ₪${downPay.toLocaleString()})</div>
-                                </div>
-                            `;
+                        }
+
+                        // Status Info
+                        let statusInfo = '';
+                        if (parseFloat(o.down_payment) > 0) {
+                            statusInfo = `<div style="color: #ef4444; font-size: 0.75rem; margin-top: 4px;">(שולמה מקדמה: ${o.currencySymbol}${(parseFloat(o.down_payment)).toLocaleString()})</div>`;
                         }
 
                         return `
@@ -11820,8 +11790,11 @@ function renderSupplierOrdersList(list) {
                             <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${o.suppliers?.supplier_name || ''}" dir="auto">${fixBiDi(o.suppliers?.supplier_name || 'לא ידוע')}</td>
                             <td>${new Date(o.created_at).toLocaleDateString('he-IL')}</td>
                             <td>${o.expected_date ? new Date(o.expected_date).toLocaleDateString('he-IL') : '-'}</td>
-                            <td style="font-weight: 600; color: var(--primary-color);">${ilsDisplay}</td>
-                            <td>${rateInfo}</td>
+                            <td>
+                                <div style="font-weight: 600; color: var(--primary-color);">${primaryDisplay}</div>
+                                ${statusInfo}
+                            </td>
+                            <td>${secondaryInfo}</td>
                             <td>
                                 <div style="display: flex; flex-direction: column; gap: 4px; align-items: start;">
                                     <span class="badge ${getStatusBadgeClass(o.order_status)}">${o.order_status}</span>
@@ -12007,7 +11980,10 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             
             // Calculate Currency Info
             const s = order.suppliers;
-            if (s) {
+            if (order.currency && order.currency !== 'ILS') {
+                modalCurrency = order.currency;
+                modalCurrencySymbol = (order.currency === 'USD' ? '$' : '€');
+            } else if (s) {
                 if (s.currency && s.currency !== 'ILS') {
                     modalCurrency = s.currency;
                     modalCurrencySymbol = (s.currency === 'USD' ? '$' : '€');
@@ -12031,12 +12007,18 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
                              (s.email && s.email.endsWith('.cn'))) {
                         modalCurrency = 'USD';
                         modalCurrencySymbol = '$';
+                    } else {
+                        modalCurrency = 'ILS';
+                        modalCurrencySymbol = '₪';
                     }
                 }
+            } else {
+                modalCurrency = 'ILS';
+                modalCurrencySymbol = '₪';
             }
 
             // Always attempt to fetch the rate initially based on the loaded order date
-            await updateOrderExchangeRate();
+            await updateOrderExchangeRate(true);
 
             // Render Notes History
             renderOrderNotes(rawNotes);
@@ -12137,40 +12119,42 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
     modal.classList.add('active');
 }
 
-async function updateOrderExchangeRate() {
+async function updateOrderExchangeRate(preserveCurrency = false) {
     const supplierId = document.getElementById('order-supplier-select').value;
     const dateVal = document.getElementById('order-creation-date').value;
     
-    // Reset defaults
-    modalCurrency = 'ILS';
-    modalCurrencySymbol = '₪';
-    
-    if (supplierId) {
-        const s = suppliers.find(sup => sup.supplier_id === supplierId);
-        if (s) {
-            if (s.currency && s.currency !== 'ILS') {
-                modalCurrency = s.currency;
-                modalCurrencySymbol = (s.currency === 'USD' ? '$' : '€');
-            } else {
-                // Heuristic/ExtraData fallback
-                const notes = s.notes || '';
-                let extraData = {};
-                const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
-                let foundSep = separators.find(sep => notes.includes(sep));
-                if (foundSep) {
-                    try { extraData = JSON.parse(notes.split(foundSep)[1]); } catch(e){}
-                }
-                
-                if (extraData.currency && extraData.currency !== 'ILS') {
-                    modalCurrency = extraData.currency;
-                    modalCurrencySymbol = (extraData.currency === 'USD' ? '$' : '€');
-                } else if ((s.address && s.address.toLowerCase().includes('china')) || 
-                         (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
-                         (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
-                         (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
-                         (s.email && s.email.endsWith('.cn'))) {
-                    modalCurrency = 'USD';
-                    modalCurrencySymbol = '$';
+    // Reset defaults only if not preserving currency
+    if (!preserveCurrency) {
+        modalCurrency = 'ILS';
+        modalCurrencySymbol = '₪';
+        
+        if (supplierId) {
+            const s = suppliers.find(sup => sup.supplier_id === supplierId);
+            if (s) {
+                if (s.currency && s.currency !== 'ILS') {
+                    modalCurrency = s.currency;
+                    modalCurrencySymbol = (s.currency === 'USD' ? '$' : '€');
+                } else {
+                    // Heuristic/ExtraData fallback
+                    const notes = s.notes || '';
+                    let extraData = {};
+                    const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
+                    let foundSep = separators.find(sep => notes.includes(sep));
+                    if (foundSep) {
+                        try { extraData = JSON.parse(notes.split(foundSep)[1]); } catch(e){}
+                    }
+                    
+                    if (extraData.currency && extraData.currency !== 'ILS') {
+                        modalCurrency = extraData.currency;
+                        modalCurrencySymbol = (extraData.currency === 'USD' ? '$' : '€');
+                    } else if ((s.address && s.address.toLowerCase().includes('china')) || 
+                             (s.supplier_name && /[\u4e00-\u9fa5]/.test(s.supplier_name)) ||
+                             (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
+                             (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
+                             (s.email && s.email.endsWith('.cn'))) {
+                        modalCurrency = 'USD';
+                        modalCurrencySymbol = '$';
+                    }
                 }
             }
         }
@@ -14750,11 +14734,11 @@ function loadCustomLogo() {
         const img = document.createElement('img');
         img.src = logoUrl;
         img.alt = 'Logo';
-        img.style.cssText = 'height: 42px; width: auto; margin-top: 3px;';
+        img.style.cssText = 'height: 42px; width: auto;';
         img.onerror = () => {
             // If custom logo fails, show placeholder
             headerLogoContainer.innerHTML = 'לוגו';
-            headerLogoContainer.style.cssText = 'height: 42px; width: 120px; background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 0.9rem; margin-top: 3px;';
+            headerLogoContainer.style.cssText = 'height: 42px; width: 120px; background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 0.9rem;';
         };
         
         // Replace content

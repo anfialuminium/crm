@@ -1375,7 +1375,7 @@ async function loadSupplierOrders() {
             .from('supplier_orders')
             .select(`
                 *,
-                suppliers (supplier_name)
+                suppliers (*)
             `)
             .order('created_at', { ascending: false })
             .limit(50);
@@ -1400,6 +1400,39 @@ async function loadSupplierOrders() {
             const status = o.order_status || 'חדש';
             const statusColor = status === 'התקבל' ? 'var(--success-color)' : (status === 'בוטל' ? 'var(--error-color)' : 'var(--warning-color)');
             
+            let currency = o.currency || 'ILS';
+            let currSymbol = '₪';
+            const s = o.suppliers;
+
+            if (currency === 'ILS' && s) {
+                if (s.currency && s.currency !== 'ILS') {
+                    currency = s.currency;
+                    currSymbol = (s.currency === 'USD' ? '$' : '€');
+                } else {
+                    const notes = s.notes || '';
+                    let extraData = {};
+                    const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
+                    let foundSep = separators.find(sep => notes.includes(sep));
+                    if (foundSep) {
+                        try { extraData = JSON.parse(notes.split(foundSep)[1]); } catch(e){}
+                    }
+                    
+                    if (extraData.currency && extraData.currency !== 'ILS') {
+                        currency = extraData.currency;
+                        currSymbol = (extraData.currency === 'USD' ? '$' : '€');
+                    } else if ((s.address && s.address.toLowerCase().includes('china')) || 
+                             (s.supplier_name && /[一-龥]/.test(s.supplier_name)) ||
+                             (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
+                             (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
+                             (s.email && s.email.endsWith('.cn'))) {
+                        currency = 'USD';
+                        currSymbol = '$';
+                    }
+                }
+            } else if (currency !== 'ILS') {
+                currSymbol = (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '₪'));
+            }
+            
             return `
                 <div class="deal-card">
                     <div class="deal-info">
@@ -1408,7 +1441,7 @@ async function loadSupplierOrders() {
                     </div>
                     <div class="deal-amount">
                         <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">סה"כ:</span>
-                        <span>₪${(o.total_amount || 0).toLocaleString()}</span>
+                        <span>${currSymbol}${(o.total_amount || 0).toLocaleString()}</span>
                     </div>
                     <button onclick="viewOrderDetails('${o.order_id}')" class="btn-big btn-outline">פרטים</button>
                 </div>
@@ -1432,7 +1465,7 @@ async function viewOrderDetails(orderId) {
 
         const { data: order, error: oError } = await supabaseClient
             .from('supplier_orders')
-            .select('*, suppliers(supplier_name)')
+            .select('*, suppliers(*)')
             .eq('order_id', orderId)
             .single();
         
@@ -1442,6 +1475,39 @@ async function viewOrderDetails(orderId) {
         html += `<p style="margin-top: -15px; margin-bottom: 20px; color: var(--text-secondary);">📅 ${formatAccDate(order.created_at)} | סטטוס: ${order.order_status}</p>`;
         html += '<div style="font-size:1.2rem; margin-top:20px;">';
         
+        let currency = order.currency || 'ILS';
+        let currSymbol = '₪';
+        const s = order.suppliers;
+
+        if (currency === 'ILS' && s) {
+            if (s.currency && s.currency !== 'ILS') {
+                currency = s.currency;
+                currSymbol = (s.currency === 'USD' ? '$' : '€');
+            } else {
+                const notes = s.notes || '';
+                let extraData = {};
+                const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
+                let foundSep = separators.find(sep => notes.includes(sep));
+                if (foundSep) {
+                    try { extraData = JSON.parse(notes.split(foundSep)[1]); } catch(e){}
+                }
+                
+                if (extraData.currency && extraData.currency !== 'ILS') {
+                    currency = extraData.currency;
+                    currSymbol = (extraData.currency === 'USD' ? '$' : '€');
+                } else if ((s.address && s.address.toLowerCase().includes('china')) || 
+                         (s.supplier_name && /[一-龥]/.test(s.supplier_name)) ||
+                         (s.supplier_name && s.supplier_name.toLowerCase().includes('china')) ||
+                         (s.supplier_name && s.supplier_name.toLowerCase().includes('qingdao')) ||
+                         (s.email && s.email.endsWith('.cn'))) {
+                    currency = 'USD';
+                    currSymbol = '$';
+                }
+            }
+        } else if (currency !== 'ILS') {
+            currSymbol = (currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '₪'));
+        }
+
         let subtotal = 0;
         
         items.forEach(item => {
@@ -1451,13 +1517,47 @@ async function viewOrderDetails(orderId) {
             if (item.color && !isWheel) parts.push(`צבע: ${item.color}`);
             const detailsStr = parts.length > 0 ? `<br><span style="color:var(--text-secondary); font-size:1.1rem;">${parts.join(' | ')}</span>` : '';
 
-            const itemTotal = (item.quantity || 0) * (item.unit_price || 0);
+            // DB stores total units in item.quantity, not qty per carton
+            // We need to derive qtyPerCarton from qty_per_carton column, description, or by division
+            const cartons = parseFloat(item.cartons) || 1;
+            let qtyPerCarton;
+            
+            // 1. Check if qty_per_carton column exists
+            if (item.qty_per_carton) {
+                qtyPerCarton = parseFloat(item.qty_per_carton);
+            } else {
+                // 2. Try to extract from description pattern: "Name [399 x 100]"
+                const cartonMatch = (item.description || '').match(/\[(\d+)\s*x\s*([\d.]+)\]/);
+                if (cartonMatch) {
+                    qtyPerCarton = parseFloat(cartonMatch[2]);
+                } else if (cartons > 1 && item.quantity) {
+                    // 3. Derive: quantity in DB is total units, so divide by cartons
+                    qtyPerCarton = parseFloat(item.quantity) / cartons;
+                } else {
+                    // 4. Fallback: quantity IS the total (cartons = 1)
+                    qtyPerCarton = parseFloat(item.quantity) || 0;
+                }
+            }
+            
+            const totalUnits = qtyPerCarton * cartons;
+            const itemTotal = totalUnits * (parseFloat(item.unit_price) || 0);
             subtotal += itemTotal;
+
+            // Optional info string for cartons
+            let cartonInfo = '';
+            // Checking if cartons makes sense to display (if more than 1, or if it's explicitly set but we don't have product DB here easily)
+            // To be safe, we just show it if cartons > 1 or if we know it's a hardware item based on desc.
+            const isHardware = item.description && (item.description.includes('גלגל') || item.description.includes('מחבר'));
+            if (isHardware || cartons > 1) {
+                cartonInfo = `כמות בקרטון: ${qtyPerCarton} | קרטונים: ${cartons} | סה"כ כמות: <b>${totalUnits}</b>`;
+            } else {
+                cartonInfo = `כמות: <b>${totalUnits}</b>`;
+            }
 
             html += `
                 <div style="border-bottom:1px solid #eee; padding:12px 0;">
-                    <strong>${fixBiDi(item.description || 'פריט')}</strong>${detailsStr}<br>
-                    כמות: ${item.quantity || 0} | מחיר: ₪${(item.unit_price || 0).toLocaleString()} | סה"כ: ₪${itemTotal.toLocaleString()}
+                    <strong>${fixBiDi((item.description || 'פריט').replace(/\s*\[\d+\s*x\s*[\d.]+\]\s*$/, ''))}</strong>${detailsStr}<br>
+                    <span style="display:inline-block; margin-top:4px;">${cartonInfo} | מחיר: ${currSymbol}${(parseFloat(item.unit_price) || 0).toLocaleString()} | סה"כ: ${currSymbol}${itemTotal.toLocaleString()}</span>
                 </div>
             `;
         });
@@ -1470,17 +1570,17 @@ async function viewOrderDetails(orderId) {
             <div style="margin-top: 24px; padding-top: 16px; border-top: 2px dashed var(--border-color);">
                 <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 4px;">
                     <span>סה"כ הזמנה:</span>
-                    <span>₪${total.toLocaleString()}</span>
+                    <span>${currSymbol}${total.toLocaleString()}</span>
                 </div>
                 ${downPayment > 0 ? `
                 <div style="display: flex; justify-content: space-between; font-size: 1.1rem; color: #059669; margin-bottom: 4px;">
                     <span>מקדמה ששולמה:</span>
-                    <span>₪${downPayment.toLocaleString()}</span>
+                    <span>${currSymbol}${downPayment.toLocaleString()}</span>
                 </div>
                 ` : ''}
                 <div style="display: flex; justify-content: space-between; font-size: 1.4rem; font-weight: 800; color: var(--primary-color); margin-top: 8px;">
                     <span>יתרה לתשלום:</span>
-                    <span>₪${balance.toLocaleString()}</span>
+                    <span>${currSymbol}${balance.toLocaleString()}</span>
                 </div>
             </div>
             ${(() => {
