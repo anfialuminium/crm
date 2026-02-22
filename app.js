@@ -11564,7 +11564,15 @@ async function viewSupplierDetails(id) {
                         </div>
                      ` : ''}
                      
-                     <div class="deal-card-info" style="margin-top: 1rem; display: block; white-space: pre-wrap;" dir="auto"><strong>הערות:</strong><br>${s.clean_notes || '-'}</div>
+                     <div class="deal-card-info" style="margin-top: 1rem; display: block; white-space: pre-wrap;" dir="auto"><strong>הערות:</strong><br>${(() => {
+                         let n = s.clean_notes;
+                         if (n === undefined) {
+                             const raw = s.notes || '';
+                             const metaRegex = /(?:\|\|\|METADATA\|\|\||<<<EXTRA_DATA>>>|<<>>|&lt;&lt;&gt;&gt;|<<<EXTRA_DATA>>>|<<>>).*$/s;
+                             n = raw.replace(metaRegex, '').trim();
+                         }
+                         return n || '-';
+                     })()}</div>
                 </div>
                 <div>
                     <h4>הזמנות אחרונות</h4>
@@ -12587,13 +12595,10 @@ function renderOrderNotes(fullText) {
         return;
     }
 
-    // Split by separator
-    let visibleText = fullText;
-    const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
-    let foundSep = separators.find(sep => visibleText.includes(sep));
-    if (foundSep) {
-        visibleText = visibleText.split(foundSep)[0];
-    }
+    // Split by metadata separator
+    const metaRegex = /(?:\|\|\|METADATA\|\|\||<<<EXTRA_DATA>>>|<<>>|&lt;&lt;&gt;&gt;|<<<EXTRA_DATA>>>|<<>>).*$/s;
+    let visibleText = fullText.replace(metaRegex, '').trim();
+    
     const notes = visibleText.split(NOTE_SEPARATOR).map(n => n.trim()).filter(n => n);
     
     notes.forEach((noteText, index) => {

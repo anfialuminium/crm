@@ -1483,12 +1483,19 @@ async function viewOrderDetails(orderId) {
                     <span>₪${balance.toLocaleString()}</span>
                 </div>
             </div>
-            ${order.notes ? `
-            <div style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 12px; border-right: 4px solid var(--primary-color);">
-                <strong style="display: block; margin-bottom: 5px;">הערות:</strong>
-                <div style="font-size: 1rem; white-space: pre-wrap;">${order.notes}</div>
-            </div>
-            ` : ''}
+            ${(() => {
+                let cleanNotes = order.notes || '';
+                // Improved regex to catch all metadata patterns including potential legacy variants
+                const metaRegex = /(?:\|\|\|METADATA\|\|\||<<<EXTRA_DATA>>>|<<>>|<<<EXTRA_DATA>>>|<<>>).*$/s;
+                cleanNotes = cleanNotes.replace(metaRegex, '').trim();
+                
+                return cleanNotes ? `
+                    <div style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 12px; border-right: 4px solid var(--primary-color);">
+                        <strong style="display: block; margin-bottom: 5px;">הערות:</strong>
+                        <div style="font-size: 1rem; white-space: pre-wrap;">${cleanNotes}</div>
+                    </div>
+                ` : '';
+            })()}
         </div>`;
 
         const modalBody = document.getElementById('acc-modal-body');
