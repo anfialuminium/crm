@@ -797,7 +797,7 @@ function setupCustomerSearch() {
                 const div = document.createElement('div');
                 div.className = 'search-result-item';
                 div.innerHTML = `
-                    <div style="font-weight: 500;">${c.business_name}</div>
+                    <div style="font-weight: 500;">${fixBiDi(c.business_name)}</div>
                     <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
                         <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CONTACT} ${c.contact_name || 'ללא איש קשר'}</span> 
                         ${c.phone ? `| ${c.phone}` : ''}
@@ -833,7 +833,7 @@ function setupCustomerSearch() {
                 const div = document.createElement('div');
                 div.className = 'search-result-item';
                 div.innerHTML = `
-                    <div style="font-weight: 500;">${c.business_name}</div>
+                    <div style="font-weight: 500;">${fixBiDi(c.business_name)}</div>
                     <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
                         <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CONTACT} ${c.contact_name || 'ללא איש קשר'}</span> 
                         ${c.phone ? `| ${c.phone}` : ''}
@@ -2351,7 +2351,7 @@ function filterCustomers(preservePage = false) {
             card.innerHTML = `
                 <div class="deal-card-header">
                     <div>
-                        <div class="deal-card-title">${customer.business_name} ${customer.active === false ? '<span style="color: var(--error-color); font-size: 0.8rem; font-weight: normal;">(לא פעיל)</span>' : ''}</div>
+                        <div class="deal-card-title">${fixBiDi(customer.business_name)} ${customer.active === false ? '<span style="color: var(--error-color); font-size: 0.8rem; font-weight: normal;">(לא פעיל)</span>' : ''}</div>
                         <div class="deal-card-date">
                             👤 ${
                                 (customer.primary_contact_id || customer.contact_id) && contactName !== 'ללא איש קשר'
@@ -4935,7 +4935,7 @@ function createDealCard(deal) {
             <div>
                 <div class="deal-card-title">
                     <a href="javascript:void(0)" onclick="viewCustomerDetails('${deal.customer_id}')" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
-                        ${deal.customers.business_name}
+                        ${fixBiDi(deal.customers.business_name)}
                     </a>
                 </div>
                 <div class="deal-card-date">${date}</div>
@@ -5081,7 +5081,7 @@ async function viewDealDetails(dealId) {
             <div class="customer-section" style="margin-bottom: 2rem;">
                 <h3 style="margin-bottom: 1rem;">פרטי לקוח</h3>
                 <div class="customer-details">
-                    <p><strong>שם העסק:</strong> ${deal.customers.business_name}</p>
+                    <p><strong>שם העסק:</strong> ${fixBiDi(deal.customers.business_name)}</p>
                     <p><strong>איש קשר:</strong> ${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || '-'}</p>
                     <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; direction: rtl;">
                         <strong>טלפון:</strong> 
@@ -5153,8 +5153,8 @@ async function viewDealDetails(dealId) {
                             ${items.map((item, index) => `
                                 <tr>
                                     <td>${index + 1}</td>
-                                    <td><strong>${item.products.product_name}</strong><br>
-                                        <small style="color: var(--text-tertiary);">${item.products.category || ''}</small>
+                                    <td><strong>${fixBiDi(item.products.product_name)}</strong><br>
+                                        <small style="color: var(--text-tertiary);">${fixBiDi(item.products.category || '')}</small>
                                     </td>
                                     <td>${item.quantity}</td>
                                     <td>₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(למטר)</small>' : ''}</td>
@@ -12353,7 +12353,7 @@ function renderSupplierOrderItems() {
             if (isSupplierOrderReadOnly) {
                 // Read Only View - Plain Text
                 tr.innerHTML = `
-                    <td><span style="font-weight: 500;">${item.description || '-'}</span></td>
+                    <td><span style="font-weight: 500;">${fixBiDi(item.description || '-')}</span></td>
                     ${hasAnyColor ? `<td>${(isWheel || isElectricLock) ? '-' : (item.color || '-')}</td>` : ''}
                     ${hasAnySize ? `<td>${item.size || '-'}</td>` : ''}
                     <td>${item.sku || '-'}</td>
@@ -14809,4 +14809,9 @@ function saveLogoSettings() {
     
     loadCustomLogo();
     showAlert('הלוגו נשמר בהצלחה', 'success');
+}
+
+function fixBiDi(text) {
+    if (!text) return '';
+    return `<bdi>${text.replace(/\[([^\]]+)\]/g, '<span dir="ltr">[$1]</span>')}</bdi>`;
 }

@@ -1186,7 +1186,7 @@ async function viewDealDetails(dealId) {
 
             html += `
                 <div style="border-bottom:1px solid #eee; padding:12px 0;">
-                    <strong>${item.products.product_name}</strong>${detailsStr}<br>
+                    <strong>${fixBiDi(item.products.product_name)}</strong>${detailsStr}<br>
                     כמות: ${item.quantity} | מחיר: ₪${item.unit_price} | סה"כ: ₪${itemTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </div>
             `;
@@ -1438,7 +1438,7 @@ async function viewOrderDetails(orderId) {
         
         if (oError) throw oError;
 
-        let html = `<h2 class="section-title">הזמנה מאת ${order.suppliers?.supplier_name || 'ספק'}</h2>`;
+        let html = `<h2 class="section-title">הזמנה מאת ${fixBiDi(order.suppliers?.supplier_name || 'ספק')}</h2>`;
         html += `<p style="margin-top: -15px; margin-bottom: 20px; color: var(--text-secondary);">📅 ${formatAccDate(order.created_at)} | סטטוס: ${order.order_status}</p>`;
         html += '<div style="font-size:1.2rem; margin-top:20px;">';
         
@@ -1456,7 +1456,7 @@ async function viewOrderDetails(orderId) {
 
             html += `
                 <div style="border-bottom:1px solid #eee; padding:12px 0;">
-                    <strong>${item.description || 'פריט'}</strong>${detailsStr}<br>
+                    <strong>${fixBiDi(item.description || 'פריט')}</strong>${detailsStr}<br>
                     כמות: ${item.quantity || 0} | מחיר: ₪${(item.unit_price || 0).toLocaleString()} | סה"כ: ₪${itemTotal.toLocaleString()}
                 </div>
             `;
@@ -1506,4 +1506,10 @@ async function viewOrderDetails(orderId) {
         console.error('❌ שגיאה בטעינת פרטי הזמנה:', err);
         showAlert('שגיאה בטעינת פרטי ההזמנה', 'error');
     }
+}
+
+function fixBiDi(text) {
+    if (!text) return '';
+    // Force LTR for dimensions in brackets and ensure isolation with bdi
+    return `<bdi>${text.replace(/\[([^\]]+)\]/g, '<span dir="ltr">[$1]</span>')}</bdi>`;
 }

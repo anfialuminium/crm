@@ -228,17 +228,28 @@ input[inputmode="decimal"] {
     .deal-card {
         padding: 16px;
         gap: 12px;
+        flex-direction: column; /* Stack everything vertically for safety */
+        align-items: flex-start;
     }
     
     .deal-info {
-        flex: 1 1 100%; /* Force wrap the amount/button if info is wide */
-        margin-bottom: 8px;
+        flex: 1 1 auto;
+        width: 100%;
+        margin-bottom: 4px;
     }
     
     .deal-amount {
-        flex: 1 1 auto;
+        width: 100%;
         align-items: flex-start;
         text-align: right;
+        border-top: 1px solid var(--border-color);
+        padding-top: 12px;
+        margin-bottom: 8px;
+    }
+
+    .deal-card .btn-big {
+        width: 100%; /* Force button to full width on mobile for better touch target */
+        margin-top: 4px;
     }
 }
 
