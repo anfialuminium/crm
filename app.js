@@ -11622,7 +11622,7 @@ async function loadSupplierOrders() {
         // Build query
         let query = supabaseClient
             .from('supplier_orders')
-            .select('*, suppliers(supplier_name, contact_name, address, email, notes)') // removed currency to avoid error
+            .select('*, suppliers(supplier_name, contact_name, address, email, notes, currency)')
             .order('created_at', { ascending: false });
             
         // Filters
@@ -11635,6 +11635,18 @@ async function loadSupplierOrders() {
         
         let { data, error } = await query;
         
+        // If the query fails because of missing 'currency' column on suppliers, retry without it
+        if (error && (error.code === '42703' || error.message?.includes('currency'))) {
+            console.warn('Supplier currency column not found, retrying without it...');
+            let retryQuery = supabaseClient
+                .from('supplier_orders')
+                .select('*, suppliers(supplier_name, contact_name, address, email, notes)')
+                .order('created_at', { ascending: false });
+            if (statusFilter) retryQuery = retryQuery.eq('order_status', statusFilter);
+            if (supplierFilter) retryQuery = retryQuery.eq('supplier_id', supplierFilter);
+            ({ data, error } = await retryQuery);
+        }
+
         if (error) {
              if (error.code === '42P01') { 
                  container.innerHTML = '<div class="text-center">טבלת הזמנות חסרה (רץ מיגרציה)</div>';
@@ -11929,7 +11941,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             // Fetch order
             const { data: order, error } = await supabaseClient
                 .from('supplier_orders')
-                .select('*, suppliers(supplier_name, address, email, notes)')
+                .select('*, suppliers(supplier_name, address, email, notes, currency)')
                 .eq('order_id', orderId)
                 .single();
                 
@@ -12293,8 +12305,9 @@ function renderSupplierOrderItems() {
                 (prod.product_name && (prod.product_name.includes('גלגל') || prod.product_name.includes('מחבר')))
             );
 
-            // If not hardware, enforce 1 carton
-            if (!requiresCartons) {
+            // If confirmed non-hardware (product found but not in hardware category), enforce 1 carton
+            // Don't overwrite when product lookup fails (prod is null) as it could be hardware
+            if (prod && !requiresCartons) {
                 item.cartons = 1;
             }
             
