@@ -1448,6 +1448,9 @@ async function loadSupplierOrders() {
 
             const paidBadge = isPaid ? '<span style="display: inline-block; background: #059669; color: white; padding: 2px 8px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; margin-right: 6px;">שולם ✓</span>' : '';
             
+            const downPayment = parseFloat(o.down_payment) || 0;
+            const downPaymentHtml = downPayment > 0 ? `<br><span style="font-size: 0.75rem; color: #ef4444; font-weight: normal;">(שולמה מקדמה: ${currSymbol}${downPayment.toLocaleString()})</span>` : '';
+            
             return `
                 <div class="deal-card">
                     <div class="deal-info">
@@ -1456,7 +1459,7 @@ async function loadSupplierOrders() {
                     </div>
                     <div class="deal-amount">
                         <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal;">סה"כ:</span>
-                        <span>${currSymbol}${(o.total_amount || 0).toLocaleString()}</span>
+                        <span>${currSymbol}${(o.total_amount || 0).toLocaleString()}</span>${downPaymentHtml}
                     </div>
                     <button onclick="viewOrderDetails('${o.order_id}')" class="btn-big btn-outline">פרטים</button>
                 </div>
