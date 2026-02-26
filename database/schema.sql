@@ -126,6 +126,7 @@ CREATE TABLE activities (
     activity_type VARCHAR(50) CHECK (activity_type IN ('שיחה', 'פגישה', 'אימייל', 'הערה', 'עדכון_סטטוס')),
     description TEXT,
     created_by VARCHAR(255),
+    assigned_to VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

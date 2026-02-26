@@ -5618,6 +5618,13 @@ async function loadCustomerContactsForActivity(customerId, selectId, preselectId
 
 // Show edit activity modal with all editable fields
 function showEditActivityModal(activity) {
+    // Generate users options
+    const users = systemSettings.system_users || ['שחר', 'עופר', 'רקפת'];
+    let usersOptions = '<option value="">-- בחר משתמש --</option>';
+    users.forEach(u => {
+        usersOptions += `<option value="${u}">${u}</option>`;
+    });
+
     // Create or get modal
     let modal = document.getElementById('edit-activity-modal');
     if (!modal) {
@@ -5689,7 +5696,16 @@ function showEditActivityModal(activity) {
                     
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label class="form-label">שם העורך</label>
-                        <input type="text" id="edit-activity-editor" class="form-input" placeholder="הזן את שמך">
+                        <select id="edit-activity-editor" class="form-select">
+                            ${usersOptions}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">שויך ל</label>
+                        <select id="edit-activity-assigned-to" class="form-select">
+                            ${usersOptions}
+                        </select>
                     </div>
                     
                     <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
@@ -5739,7 +5755,24 @@ function showEditActivityModal(activity) {
     
     // Load saved editor name
     const savedEditor = localStorage.getItem('crm_username') || '';
-    document.getElementById('edit-activity-editor').value = savedEditor;
+
+    // Wait for elements to be present in DOM (they are now selects)
+    const editorSelect = document.getElementById('edit-activity-editor');
+    if (editorSelect) {
+        // Find if user exists in options, if not add it
+        if (!Array.from(editorSelect.options).some(o => o.value === savedEditor) && savedEditor) {
+            editorSelect.insertAdjacentHTML('beforeend', `<option value="${savedEditor}">${savedEditor}</option>`);
+        }
+        editorSelect.value = savedEditor;
+    }
+    const assignedToInput = document.getElementById('edit-activity-assigned-to');
+    if (assignedToInput) {
+        const targetVal = activity.assigned_to || activity.created_by || '';
+        if (!Array.from(assignedToInput.options).some(o => o.value === targetVal) && targetVal) {
+            assignedToInput.insertAdjacentHTML('beforeend', `<option value="${targetVal}">${targetVal}</option>`);
+        }
+        assignedToInput.value = targetVal;
+    }
     
     // Start populating dropdowns (async)
     populateEditActivityDeals(activity.deal_id, activity.customer_id);
@@ -5889,6 +5922,7 @@ async function saveActivityEdit(event) {
     
     const editorInput = document.getElementById('edit-activity-editor').value.trim();
     const editor = editorInput || 'משתמש מערכת';
+    const assignedToInput = document.getElementById('edit-activity-assigned-to').value.trim();
     
     // Save editor name for future use
     if (editorInput) {
@@ -5900,7 +5934,8 @@ async function saveActivityEdit(event) {
         const updateData = {
             activity_type: activityType,
             description: description,
-            completed: completedStatus
+            completed: completedStatus,
+            assigned_to: assignedToInput || null
         };
         
         // Add optional fields only if schema supports them (to avoid 400 errors)
@@ -6056,6 +6091,13 @@ async function saveActivityEdit(event) {
 // ============================================
 
 function openNewActivityModal(prefillData = null) {
+    // Generate users options
+    const users = systemSettings.system_users || ['שחר', 'עופר', 'רקפת'];
+    let usersOptions = '<option value="">-- בחר משתמש --</option>';
+    users.forEach(u => {
+        usersOptions += `<option value="${u}">${u}</option>`;
+    });
+
     // Create or get modal
     let modal = document.getElementById('new-activity-modal');
     if (!modal) {
@@ -6117,7 +6159,16 @@ function openNewActivityModal(prefillData = null) {
 
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label class="form-label">נוצר על ידי</label>
-                        <input type="text" id="new-activity-author" class="form-input" placeholder="הזן את שמך">
+                        <select id="new-activity-author" class="form-select">
+                            ${usersOptions}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">שויך ל</label>
+                        <select id="new-activity-assigned-to" class="form-select">
+                            ${usersOptions}
+                        </select>
                     </div>
                     
                     <div class="modal-footer">
@@ -6148,7 +6199,21 @@ function openNewActivityModal(prefillData = null) {
     
     // Reset form
     document.getElementById('new-activity-form').reset();
-    document.getElementById('new-activity-author').value = savedAuthor;
+    // Ensure user options exist for reset
+    const authorSelect = document.getElementById('new-activity-author');
+    if (authorSelect) {
+        if (!Array.from(authorSelect.options).some(o => o.value === savedAuthor) && savedAuthor) {
+            authorSelect.insertAdjacentHTML('beforeend', `<option value="${savedAuthor}">${savedAuthor}</option>`);
+        }
+        authorSelect.value = savedAuthor;
+    }
+    const assignedToSelect = document.getElementById('new-activity-assigned-to');
+    if (assignedToSelect) {
+        if (!Array.from(assignedToSelect.options).some(o => o.value === savedAuthor) && savedAuthor) {
+            assignedToSelect.insertAdjacentHTML('beforeend', `<option value="${savedAuthor}">${savedAuthor}</option>`);
+        }
+        assignedToSelect.value = savedAuthor;
+    }
     
     // Set default date to now + 2 hours
     const now = new Date();
@@ -6284,6 +6349,8 @@ async function saveNewActivity(event) {
     const contactId = (contactElement && contactElement.value) ? contactElement.value : null;
     const authorInput = document.getElementById('new-activity-author').value.trim();
     const author = authorInput || 'משתמש מערכת';
+    const assignedToInput = document.getElementById('new-activity-assigned-to').value.trim();
+    const assignedTo = assignedToInput || author;
     
     // Save author name for future use
     if (authorInput) {
@@ -6296,6 +6363,7 @@ async function saveNewActivity(event) {
             activity_type: activityType,
             description: description,
             created_by: author,
+            assigned_to: assignedTo,
             activity_date: activityDate ? new Date(activityDate).toISOString() : null,
             completed: false
         };
@@ -6711,7 +6779,7 @@ async function loadThisWeek() {
         
         // Apply creator filter
         if (creatorFilter) {
-            query = query.eq('created_by', creatorFilter);
+            query = query.or(`assigned_to.eq.${creatorFilter},and(assigned_to.is.null,created_by.eq.${creatorFilter})`);
         }
 
         // Apply type filter
@@ -7408,9 +7476,14 @@ async function viewActivityDetails(activityId) {
                         </span>
                     </div>
                     <div class="deal-card-info">
-                        <span class="deal-card-label">נוצר ע"י:</span>
-                        <span class="deal-card-value">${activity.created_by || 'מערכת'}</span>
+                        <span class="deal-card-label">משויך ל:</span>
+                        <span class="deal-card-value">${activity.assigned_to || activity.created_by || 'מערכת'}</span>
                     </div>
+                    ${activity.assigned_to && activity.created_by && activity.assigned_to !== activity.created_by ? `
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">נוצר ע"י:</span>
+                        <span class="deal-card-value">${activity.created_by}</span>
+                    </div>` : ''}
                     
                     <div class="deal-card-info">
                         <span class="deal-card-label">לקוח:</span>
@@ -7594,7 +7667,7 @@ async function loadActivities(preservePage = false) {
         
         // Apply creator filter
         if (creatorFilter) {
-            query = query.eq('created_by', creatorFilter);
+            query = query.or(`assigned_to.eq.${creatorFilter},and(assigned_to.is.null,created_by.eq.${creatorFilter})`);
         }
         
         // Execute query
@@ -7606,7 +7679,7 @@ async function loadActivities(preservePage = false) {
         const creatorSelect = document.getElementById('filter-activity-creator');
         if (creatorSelect && activities) {
             const currentValue = creatorSelect.value;
-            const creators = [...new Set(activities.map(a => a.created_by).filter(Boolean))].sort();
+            const creators = [...new Set(activities.map(a => a.assigned_to || a.created_by).filter(Boolean))].sort();
             creatorSelect.innerHTML = '<option value="">הכל</option>';
             creators.forEach(creator => {
                 const option = document.createElement('option');
@@ -7770,7 +7843,10 @@ async function loadActivities(preservePage = false) {
                                         <div style="font-size: 0.8em; color: var(--text-tertiary);">${contactDisplay}</div>
                                     </td>
                                     <td style="color: var(--primary-color);">${activityDate}</td>
-                                    <td>${activity.created_by || 'מערכת'}</td>
+                                    <td>
+                                        <div>${activity.assigned_to || activity.created_by || 'מערכת'}</div>
+                                        ${activity.assigned_to && activity.created_by && activity.assigned_to !== activity.created_by ? `<div style="font-size: 0.75rem; color: var(--text-tertiary);">נוצר ע"י: ${activity.created_by}</div>` : ''}
+                                    </td>
                                     <td>
                                         <div style="display: flex; gap: 0.25rem; align-items: center; justify-content: flex-start; flex-wrap: nowrap;">
                                             ${canPostpone ? `
@@ -7916,7 +7992,8 @@ async function loadActivities(preservePage = false) {
                                     ${whatsappLink ? `<a href="${whatsappLink}" target="_blank" title="שלח הודעה בווטסאפ"><img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;"></a>` : ''}
                                 </div>
                             ` : ''}
-                            <div><strong>נוצר:</strong> ${activity.created_by || 'מערכת'}</div>
+                            <div><strong>משויך ל:</strong> ${activity.assigned_to || activity.created_by || 'מערכת'}</div>
+                            ${activity.assigned_to && activity.created_by && activity.assigned_to !== activity.created_by ? `<div style="font-size: 0.75rem; color: var(--text-tertiary);">נוצר ע"י: ${activity.created_by}</div>` : ''}
                             ${activity.completed && activity.completed_at ? `<div><strong>בוצע:</strong> <span style="color: var(--success-color); display: flex; align-items: center; gap: 4px;">${APP_ICONS.CALENDAR} ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })} • ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span></div>` : ''}
                         </div>
                         <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.3rem;">נוצר: ${createdDate}</div>
@@ -11716,30 +11793,49 @@ async function loadSupplierOrders() {
             }
 
             if (currency !== 'ILS') {
-                const dateStr = o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-                let rate = (currency === 'USD' ? 3.6 : 3.8); // Default fallback
-                try {
-                     const today = new Date().toISOString().split('T')[0];
-                     const queryDate = dateStr > today ? today : dateStr;
-                     const res = await fetch(`https://api.frankfurter.app/${queryDate}?from=${currency}&to=ILS`);
-                     if (res.ok) {
-                         const json = await res.json();
-                         rate = json.rates.ILS;
-                     } else {
-                         const resLat = await fetch(`https://api.frankfurter.app/latest?from=${currency}&to=ILS`);
-                         if(resLat.ok) {
-                             const jsonLat = await resLat.json();
-                             rate = jsonLat.rates.ILS;
+                const fetchRateInner = async (dStr) => {
+                    let rate = (currency === 'USD' ? 3.6 : 3.8); // Default
+                    try {
+                         const today = new Date().toISOString().split('T')[0];
+                         const queryDate = dStr > today ? today : dStr;
+                         const res = await fetch(`https://api.frankfurter.app/${queryDate}?from=${currency}&to=ILS`);
+                         if (res.ok) {
+                             const json = await res.json();
+                             rate = json.rates.ILS;
+                         } else {
+                             const resLat = await fetch(`https://api.frankfurter.app/latest?from=${currency}&to=ILS`);
+                             if(resLat.ok) {
+                                 const jsonLat = await resLat.json();
+                                 rate = jsonLat.rates.ILS;
+                             }
                          }
-                     }
-                } catch(e) { console.error('Rate fetch failed', e); }
+                    } catch(e) { console.error('Rate fetch failed', e); }
+                    return rate;
+                };
+
+                const dateStr = o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+                const dpDateStr = o.down_payment_date ? new Date(o.down_payment_date).toISOString().split('T')[0] : (orderExtraData.down_payment_date ? orderExtraData.down_payment_date.split('T')[0] : dateStr);
+                const fpDateStr = o.full_payment_date ? new Date(o.full_payment_date).toISOString().split('T')[0] : (orderExtraData.full_payment_date ? orderExtraData.full_payment_date.split('T')[0] : dateStr);
+                const todayStr = new Date().toISOString().split('T')[0];
+
+                const rate = await fetchRateInner(dateStr);
+                const dpRate = await fetchRateInner(dpDateStr);
+                const fpRate = await fetchRateInner(fpDateStr);
+                const todayRate = await fetchRateInner(todayStr);
                 
-                const amount = (parseFloat(o.total_amount) || 0) - (parseFloat(o.down_payment) || 0);
-                return { ...o, is_paid: isPaid, currency, currencySymbol, isUSDLegacy, rate, ilsAmount: amount * rate };
+                const totalAmt = parseFloat(o.total_amount) || 0;
+                const dp = parseFloat(o.down_payment) || 0;
+                const remaining = totalAmt - dp;
+                const remRate = isPaid ? fpRate : todayRate;
+                
+                const ilsAmount = (dp * dpRate) + (remaining * remRate);
+                
+                return { ...o, is_paid: isPaid, currency, currencySymbol, isUSDLegacy, rate, dpRate, remRate, ilsAmount };
             }
             
-            const amount = (parseFloat(o.total_amount) || 0) - (parseFloat(o.down_payment) || 0);
-            return { ...o, is_paid: isPaid, currency, currencySymbol, isUSDLegacy, rate: 1, ilsAmount: amount };
+            const dp = parseFloat(o.down_payment) || 0;
+            const remaining = (parseFloat(o.total_amount) || 0) - dp;
+            return { ...o, is_paid: isPaid, currency, currencySymbol, isUSDLegacy, rate: 1, dpRate: 1, remRate: 1, ilsAmount: parseFloat(o.total_amount) || 0 };
         }));
 
         renderSupplierOrdersList(ordersWithRates);
@@ -11781,19 +11877,33 @@ function renderSupplierOrdersList(list) {
                         
                         let secondaryInfo = '-';
                         if (o.currency && o.currency !== 'ILS') {
-                            const tils = amount * o.rate;
+                            const tils = o.ilsAmount || (o.rate ? amount * o.rate : 0);
+                            const downPayment = parseFloat(o.down_payment) || 0;
+                            let rateDisplay = '';
+                            if (downPayment > 0) {
+                                rateDisplay = `שער מקדמה: ${o.dpRate ? o.dpRate.toFixed(3) : '-'}<br>שער יתרה: ${o.remRate ? o.remRate.toFixed(3) : '-'}`;
+                            } else {
+                                rateDisplay = `לפי שער יציג: ${o.remRate ? o.remRate.toFixed(3) : '-'}`;
+                            }
+                            
                             secondaryInfo = `
                                 <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.2;">
                                     <div style="font-weight: 700; border-bottom: 1px dashed #ccc; padding-bottom: 2px; margin-bottom: 2px;">₪${tils.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
-                                    <div style="font-size: 0.75rem; color: #64748b;">לפי שער: ${o.rate.toFixed(3)}</div>
+                                    <div style="font-size: 0.75rem; color: #64748b; line-height: 1.4;">${rateDisplay}</div>
                                 </div>
                             `;
                         }
 
                         // Status Info
                         let statusInfo = '';
-                        if (parseFloat(o.down_payment) > 0) {
-                            statusInfo = `<div style="color: #ef4444; font-size: 0.75rem; margin-top: 4px;">(שולמה מקדמה: ${o.currencySymbol}${(parseFloat(o.down_payment)).toLocaleString()})</div>`;
+                        const downPayment = parseFloat(o.down_payment) || 0;
+                        if (downPayment > 0) {
+                            const remaining = amount - downPayment;
+                            statusInfo = `<div style="color: #ef4444; font-size: 0.8rem; margin-top: 4px; display: inline-block;">
+                                <span style="border-bottom: 1px dotted #ef4444; cursor: help;" title="מקדמה: ${o.currencySymbol}${downPayment.toLocaleString()} | יתרה: ${o.currencySymbol}${remaining.toLocaleString()}">
+                                    שולמה מקדמה
+                                </span>
+                            </div>`;
                         }
 
                         return `
@@ -11975,6 +12085,11 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             document.getElementById('order-down-payment').value = order.down_payment || 0;
             if (paidCheckbox) paidCheckbox.checked = effectiveIsPaid;
             
+            const dpDate = order.down_payment_date || extraData.down_payment_date || '';
+            const fpDate = order.full_payment_date || extraData.full_payment_date || '';
+            document.getElementById('order-down-payment-date').value = dpDate ? dpDate.split('T')[0] : '';
+            document.getElementById('order-full-payment-date').value = fpDate ? fpDate.split('T')[0] : '';
+            
             // View Mode Payment Status
             const paymentBadge = document.getElementById('view-order-payment-status');
             if (paymentBadge) {
@@ -12109,6 +12224,8 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
         document.getElementById('order-expected-date').value = today;
         document.getElementById('order-creation-date').value = today;
         document.getElementById('order-down-payment').value = 0;
+        document.getElementById('order-down-payment-date').value = '';
+        document.getElementById('order-full-payment-date').value = '';
         
         // Reset/Check supplier if selected for basic currency (won't have date/rate yet usually)
         // or just default
@@ -12180,24 +12297,46 @@ async function updateOrderExchangeRate(preserveCurrency = false) {
 
     const today = new Date().toISOString().split('T')[0];
     const queryDate = dateVal && dateVal <= today ? dateVal : today;
+    
+    const dpDateVal = document.getElementById('order-down-payment-date')?.value;
+    const dpQueryDate = dpDateVal && dpDateVal <= today ? dpDateVal : queryDate;
+    
+    const fpDateVal = document.getElementById('order-full-payment-date')?.value;
+    const fpQueryDate = fpDateVal && fpDateVal <= today ? fpDateVal : queryDate;
 
-    try {
-        const res = await fetch(`https://api.frankfurter.app/${queryDate}?from=${modalCurrency}&to=ILS`);
-        if (res.ok) {
-            const json = await res.json();
-            modalExchangeRate = json.rates.ILS;
-        } else {
-            const fallbackRes = await fetch(`https://api.frankfurter.app/latest?from=${modalCurrency}&to=ILS`);
-            if (fallbackRes.ok) {
-                const fbJson = await fallbackRes.json();
-                modalExchangeRate = fbJson.rates.ILS;
+    // Helper to fetch rate
+    const fetchRate = async (qDate) => {
+        try {
+            const res = await fetch(`https://api.frankfurter.app/${qDate}?from=${modalCurrency}&to=ILS`);
+            if (res.ok) {
+                const json = await res.json();
+                return json.rates.ILS;
             } else {
-                modalExchangeRate = (modalCurrency === 'USD' ? 3.6 : 3.8);
+                const fallbackRes = await fetch(`https://api.frankfurter.app/latest?from=${modalCurrency}&to=ILS`);
+                if (fallbackRes.ok) {
+                    const fbJson = await fallbackRes.json();
+                    return fbJson.rates.ILS;
+                }
             }
+        } catch (e) {
+            console.error('Exchange rate fetch error:', e);
         }
-    } catch (e) {
-        console.error('Exchange rate fetch error:', e);
-        modalExchangeRate = (modalCurrency === 'USD' ? 3.6 : 3.8);
+        return (modalCurrency === 'USD' ? 3.6 : 3.8);
+    };
+
+    modalExchangeRate = await fetchRate(queryDate);
+    window.modalTodayRate = await fetchRate(today);
+    
+    if (dpQueryDate !== queryDate) {
+        window.modalDownPaymentRate = await fetchRate(dpQueryDate);
+    } else {
+        window.modalDownPaymentRate = modalExchangeRate;
+    }
+    
+    if (fpQueryDate !== queryDate) {
+        window.modalFullPaymentRate = await fetchRate(fpQueryDate);
+    } else {
+        window.modalFullPaymentRate = modalExchangeRate;
     }
 
     renderSupplierOrderItems();
@@ -12430,9 +12569,44 @@ function renderSupplierOrderItems() {
         if (downPaymentRow) downPaymentRow.style.opacity = '1';
     }
 
+    // Update visibility of date containers
+    const dpDateContainer = document.getElementById('down-payment-date-container');
+    if (dpDateContainer) {
+        dpDateContainer.style.display = downPayment > 0 ? 'flex' : 'none';
+    }
+    
+    const fpDateContainer = document.getElementById('full-payment-date-container');
+    if (fpDateContainer) {
+        fpDateContainer.style.display = isPaid ? 'flex' : 'none';
+    }
+
     let totalHtml = `<span style="font-size: 1.4rem; display: block;">${currencySymbol}${finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
-    if (modalCurrency !== 'ILS' && modalExchangeRate) {
-        totalHtml += `<div style="font-size: 0.9rem; opacity: 0.8; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.4);">שער: ${modalExchangeRate.toFixed(3)} | סה"כ בשקלים: ₪${(finalTotal * modalExchangeRate).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>`;
+    if (modalCurrency !== 'ILS') {
+        const dpRate = window.modalDownPaymentRate || modalExchangeRate || 1;
+        const fpRate = window.modalFullPaymentRate || modalExchangeRate || 1;
+        const todayRate = window.modalTodayRate || modalExchangeRate || 1;
+        
+        const remainderRate = isPaid ? fpRate : todayRate;
+        
+        const ilsDownPayment = downPayment * dpRate;
+        const displayRemainder = isPaid ? (total - downPayment) : finalTotal;
+        const ilsRem = displayRemainder * remainderRate;
+        const ilsTotal = ilsDownPayment + ilsRem;
+        
+        let details = [];
+        if (downPayment > 0) {
+            details.push(`מקדמה (לפי שער ${dpRate.toFixed(3)}): ₪${ilsDownPayment.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`);
+            if (finalTotal > 0 || (isPaid && total > downPayment)) {
+                details.push(`יתרה (לפי שער ${remainderRate.toFixed(3)}): ₪${ilsRem.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}`);
+            }
+        } else {
+            details.push(`לפי שער יציג: ${remainderRate.toFixed(3)}`);
+        }
+        
+        totalHtml += `<div style="font-size: 0.9rem; opacity: 0.8; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.4); display: flex; flex-direction: column; gap: 2px;">`;
+        details.forEach(d => totalHtml += `<span>${d}</span>`);
+        totalHtml += `<span style="font-weight: bold; margin-top: 2px;">סה"כ בשקלים: ₪${ilsTotal.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>`;
+        totalHtml += `</div>`;
     }
     
     totalEl.innerHTML = totalHtml;
@@ -12815,6 +12989,8 @@ async function saveSupplierOrder(event) {
         notes: finalNotes,
         down_payment: parseFloat(document.getElementById('order-down-payment').value) || 0,
         is_paid: document.getElementById('order-is-paid').checked,
+        down_payment_date: document.getElementById('order-down-payment-date').value ? new Date(document.getElementById('order-down-payment-date').value).toISOString() : null,
+        full_payment_date: document.getElementById('order-full-payment-date').value ? new Date(document.getElementById('order-full-payment-date').value).toISOString() : null,
         total_amount: totalAmount,
         currency: modalCurrency // Store current currency with the order
     };
@@ -12838,12 +13014,16 @@ async function saveSupplierOrder(event) {
             console.warn('Supplier Order save failed with new columns, attempting fallback...', result.error);
             const extraDataPayload = {
                 currency: orderData.currency,
-                is_paid: orderData.is_paid
+                is_paid: orderData.is_paid,
+                down_payment_date: orderData.down_payment_date,
+                full_payment_date: orderData.full_payment_date
             };
             
             const safeOrderData = { ...orderData };
             delete safeOrderData.currency;
             delete safeOrderData.is_paid;
+            delete safeOrderData.down_payment_date;
+            delete safeOrderData.full_payment_date;
             
             // Append to notes for persistence
             safeOrderData.notes = (orderData.notes || '') + '|||METADATA|||' + JSON.stringify(extraDataPayload);
@@ -13056,12 +13236,29 @@ async function exportSupplierOrderHTML() {
        };
     });
 
-    const currencySym = modalIsUSD ? '$' : '₪';
-    let totalUSD = 0;
+    const currencySym = modalCurrencySymbol || '₪';
+    let totalForeign = 0;
     itemsRows.forEach(item => {
-        totalUSD += parseFloat(item.total?.replace(/[^\d.-]/g, '')) || 0;
+        totalForeign += parseFloat(item.total?.replace(/[^\d.-]/g, '')) || 0;
     });
-    const totalILS = modalIsUSD ? (totalUSD * (modalExchangeRate || 1)) : totalUSD;
+    
+    // Exact same logic as renderSupplierOrderItems
+    const dpInput = document.getElementById('order-down-payment');
+    const isPaid = document.getElementById('order-is-paid')?.checked;
+    const downPayment = parseFloat(dpInput?.value) || 0;
+    const finalTotal = isPaid ? 0 : (totalForeign - downPayment);
+    const dpRate = window.modalDownPaymentRate || modalExchangeRate || 1;
+    const fpRate = window.modalFullPaymentRate || modalExchangeRate || 1;
+    const todayRate = window.modalTodayRate || modalExchangeRate || 1;
+    const remRate = isPaid ? fpRate : todayRate;
+    const displayRemainder = isPaid ? (totalForeign - downPayment) : finalTotal;
+    
+    let totalILS = 0;
+    if (modalCurrency !== 'ILS') {
+        totalILS = (downPayment * dpRate) + (displayRemainder * remRate);
+    } else {
+        totalILS = totalForeign;
+    }
 
     // GENERATE HTML
     const htmlContent = `
@@ -13373,15 +13570,17 @@ async function exportSupplierOrderHTML() {
         <div class="total-box">
             <div class="total-row">
                 <span class="total-label">סה"כ לתשלום:</span>
-                <span class="total-value" dir="ltr">${currencySym}${totalUSD.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                <span class="total-value" dir="ltr">${currencySym}${totalForeign.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </div>
-            ${modalIsUSD ? `
+            ${modalCurrency !== 'ILS' ? `
                 <div class="ils-total">
                     <div class="total-row" style="margin-bottom: 2px;">
                         <span style="font-size: 13px;">שווי בשקלים:</span>
                         <span style="font-size: 16px; font-weight: 700;">₪${totalILS.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                     </div>
-                    <div style="font-size: 11px; opacity: 0.8; text-align: left;">שער המרה: ${modalExchangeRate.toFixed(3)}</div>
+                    <div style="font-size: 11px; opacity: 0.8; text-align: left;">
+                        ${downPayment > 0 ? `שער מקדמה: ${dpRate.toFixed(3)} | שער יתרה: ${remRate.toFixed(3)}` : `שער יציג: ${remRate.toFixed(3)}`}
+                    </div>
                 </div>
             ` : ''}
         </div>
