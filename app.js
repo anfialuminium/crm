@@ -2167,7 +2167,7 @@ function filterCustomers(preservePage = false) {
     const typeFilter = document.getElementById('filter-customer-type')?.value || '';
     const sourceFilter = document.getElementById('filter-customer-source')?.value.toLowerCase() || '';
     const cityFilter = document.getElementById('filter-customer-city')?.value.toLowerCase() || '';
-    const statusFilter = document.getElementById('filter-customer-status')?.value || 'active';
+    const statusFilter = document.getElementById('filter-customer-status')?.value || 'all';
     const sortBy = document.getElementById('filter-customer-sort')?.value || 'city';
     
     // Filter customers
