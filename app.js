@@ -3202,6 +3202,17 @@ async function loadCustomerNotes(customerId) {
                 </div>
             `;
         }).join('');
+
+        // Handle scrolling to edit input if applicable
+        if (container.dataset.editingId) {
+            setTimeout(() => {
+                const editInput = document.getElementById(`edit-customer-note-${container.dataset.editingId}`);
+                if (editInput) {
+                    editInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    editInput.focus();
+                }
+            }, 50);
+        }
         
     } catch (error) {
         console.error('❌ Error loading customer notes:', error);
@@ -4290,6 +4301,15 @@ function editContactNote(contactId, index) {
         </div>
     `;
     if (noteActionsDiv) noteActionsDiv.style.display = 'none';
+
+    // Scroll to the edit input and focus
+    setTimeout(() => {
+        const editInput = document.getElementById(`edit-contact-note-input-${index}`);
+        if (editInput) {
+            editInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            editInput.focus();
+        }
+    }, 50);
 }
 
 async function saveContactNoteEdit(contactId, index) {
@@ -5226,7 +5246,7 @@ async function viewDealDetails(dealId) {
             document.getElementById('note-author').value = savedAuthor;
         }
 
-        // Set default activity date to now + 2 hours
+        // Set default activity date and time to now + 2 hours
         const now = new Date();
         now.setHours(now.getHours() + 2);
         const year = now.getFullYear();
@@ -5235,7 +5255,8 @@ async function viewDealDetails(dealId) {
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         
-        document.getElementById('activity-date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        document.getElementById('activity-date').value = `${year}-${month}-${day}`;
+        document.getElementById('activity-time').value = `${hours}:${minutes}`;
         
         setupMentionAutocomplete('new-note-text');
 
@@ -5317,7 +5338,9 @@ async function addDealNote() {
     autoDetectActivityType(noteText, 'activity-type');
     
     const activityType = document.getElementById('activity-type').value;
-    const activityDate = document.getElementById('activity-date').value;
+    const datePart = document.getElementById('activity-date').value;
+    const timePart = document.getElementById('activity-time').value || '00:00';
+    const activityDate = datePart ? `${datePart}T${timePart}` : null;
     const dealId = document.getElementById('deal-modal').dataset.currentDealId;
     const customerId = document.getElementById('deal-modal').dataset.currentCustomerId;
     
@@ -5347,6 +5370,7 @@ async function addDealNote() {
         // Clear input and reload notes
         document.getElementById('new-note-text').value = '';
         document.getElementById('activity-date').value = '';
+        document.getElementById('activity-time').value = '';
         loadDealNotes(dealId);
         
     } catch (error) {
@@ -5405,7 +5429,7 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
             .from('activity_notes')
             .select('*')
             .eq('activity_id', activityId)
-            .order('created_at', { ascending: true });
+            .order('created_at', { ascending: false });
             
         if (error) throw error;
         
@@ -5450,6 +5474,17 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
                 </div>
             </div>
         `}).join('');
+
+        // Handle scrolling to edit input if applicable
+        if (container.dataset.editingId) {
+            setTimeout(() => {
+                const editInput = document.getElementById(`edit-note-input-${container.dataset.editingId}`);
+                if (editInput) {
+                    editInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    editInput.focus();
+                }
+            }, 50);
+        }
         
     } catch (error) {
         console.error('❌ Error loading activity notes:', error);
@@ -5652,8 +5687,17 @@ function showEditActivityModal(activity) {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">תאריך פעילות</label>
-                            <input type="datetime-local" id="edit-activity-date" class="form-input">
+                            <label class="form-label">תאריך וזמן</label>
+                            <div class="datetime-picker-group">
+                                <div class="date-input-wrapper">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    <input type="text" id="edit-activity-date" class="form-input date-input" readonly>
+                                </div>
+                                <div class="time-input-wrapper">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                    <input type="time" id="edit-activity-time" class="form-input time-input">
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">סטטוס</label>
@@ -5744,13 +5788,20 @@ function showEditActivityModal(activity) {
     document.getElementById('edit-activity-status').value = activity.completed ? 'true' : 'false';
     document.getElementById('edit-activity-description').value = activity.description || '';
     
-    // Format date for datetime-local input
+    // Format date for separate date and time inputs
     if (activity.activity_date) {
         const date = new Date(activity.activity_date);
-        const formattedDate = date.toISOString().slice(0, 16);
-        document.getElementById('edit-activity-date').value = formattedDate;
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        const hh = String(date.getHours()).padStart(2, '0');
+        const min = String(date.getMinutes()).padStart(2, '0');
+        
+        document.getElementById('edit-activity-date').value = `${yyyy}-${mm}-${dd}`;
+        document.getElementById('edit-activity-time').value = `${hh}:${min}`;
     } else {
         document.getElementById('edit-activity-date').value = '';
+        document.getElementById('edit-activity-time').value = '';
     }
     
     // Load saved editor name
@@ -5798,6 +5849,12 @@ function showEditActivityModal(activity) {
     setupMentionAutocomplete('edit-activity-description');
 
     modal.classList.add('active');
+    
+    // Focus the description field
+    setTimeout(() => {
+        const descField = document.getElementById('edit-activity-description');
+        if (descField) descField.focus();
+    }, 100);
 }
 
 async function populateEditActivityDeals(currentDealId, filterCustomerId = null) {
@@ -5912,7 +5969,9 @@ async function saveActivityEdit(event) {
     }
 
     const activityType = document.getElementById('edit-activity-type').value;
-    const activityDate = document.getElementById('edit-activity-date').value;
+    const datePart = document.getElementById('edit-activity-date').value;
+    const timePart = document.getElementById('edit-activity-time').value || '00:00';
+    const activityDate = datePart ? `${datePart}T${timePart}` : null;
     const completedStatus = document.getElementById('edit-activity-status').value === 'true';
     const dealId = document.getElementById('edit-activity-deal').value;
     const customerId = document.getElementById('edit-activity-customer').value;
@@ -6122,8 +6181,17 @@ function openNewActivityModal(prefillData = null) {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">תאריך פעילות</label>
-                            <input type="datetime-local" id="new-activity-date-input" class="form-input">
+                            <label class="form-label">תאריך וזמן</label>
+                            <div class="datetime-picker-group">
+                                <div class="date-input-wrapper">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    <input type="text" id="new-activity-date-input" class="form-input date-input" readonly>
+                                </div>
+                                <div class="time-input-wrapper">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                    <input type="time" id="new-activity-time-input" class="form-input time-input">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -6224,7 +6292,8 @@ function openNewActivityModal(prefillData = null) {
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     
-    document.getElementById('new-activity-date-input').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    document.getElementById('new-activity-date-input').value = `${year}-${month}-${day}`;
+    document.getElementById('new-activity-time-input').value = `${hours}:${minutes}`;
 
     // Apply prefill data
     if (prefillData) {
@@ -6342,7 +6411,9 @@ async function saveNewActivity(event) {
     autoDetectActivityType(description.trim(), 'new-activity-type');
     
     const activityType = document.getElementById('new-activity-type').value;
-    const activityDate = document.getElementById('new-activity-date-input').value;
+    const datePart = document.getElementById('new-activity-date-input').value;
+    const timePart = document.getElementById('new-activity-time-input').value || '00:00';
+    const activityDate = datePart ? `${datePart}T${timePart}` : null;
     const dealId = document.getElementById('new-activity-deal').value;
     const customerId = document.getElementById('new-activity-customer').value;
     const contactElement = document.getElementById('new-activity-contact');
@@ -12770,11 +12841,15 @@ function renderOrderNotes(fullText) {
     const metaRegex = /(?:\|\|\|METADATA\|\|\||<<<EXTRA_DATA>>>|<<>>|&lt;&lt;&gt;&gt;|<<<EXTRA_DATA>>>|<<>>).*$/s;
     let visibleText = fullText.replace(metaRegex, '').trim();
     
-    const notes = visibleText.split(NOTE_SEPARATOR).map(n => n.trim()).filter(n => n);
+    const rawNotes = visibleText.split(NOTE_SEPARATOR).map(n => n.trim()).filter(n => n);
+    // Tag each note with its original index before reversing for display (newest first)
+    const notes = rawNotes.map((text, i) => ({ text, originalIndex: i })).reverse();
     
-    notes.forEach((noteText, index) => {
+    notes.forEach((noteObj) => {
+        const noteText = noteObj.text;
+        const origIdx = noteObj.originalIndex;
         const noteEl = document.createElement('div');
-        noteEl.id = `note-block-${index}`;
+        noteEl.id = `note-block-${origIdx}`;
         noteEl.style.cssText = 'background: #fff; border: 1px solid #eee; border-radius: 4px; padding: 2px 4px; margin-bottom: 2px; position: relative;';
         
         // Parse Header and Content
@@ -12802,13 +12877,13 @@ function renderOrderNotes(fullText) {
         contentEl.innerHTML = html;
         noteEl.appendChild(contentEl);
         
-        // Actions
+        // Actions - use original index so edit/delete reference the correct note in storage
         const actionsEl = document.createElement('div');
         actionsEl.style.cssText = 'position: absolute; top: 5px; left: 5px; display: flex; gap: 5px; opacity: 1;'; 
         
         actionsEl.innerHTML = `
-            <button type="button" class="btn btn-sm btn-light" style="padding: 1px 4px; font-size: 0.8rem;" onclick="enableInlineEdit(${index})" title="ערוך">${APP_ICONS.EDIT}</button>
-            <button type="button" class="btn btn-sm btn-light" style="padding: 1px 4px; font-size: 0.8rem; color: #ef4444;" onclick="deleteOrderNote(${index})" title="מחק">${APP_ICONS.TRASH}</button>
+            <button type="button" class="btn btn-sm btn-light" style="padding: 1px 4px; font-size: 0.8rem;" onclick="enableInlineEdit(${origIdx})" title="ערוך">${APP_ICONS.EDIT}</button>
+            <button type="button" class="btn btn-sm btn-light" style="padding: 1px 4px; font-size: 0.8rem; color: #ef4444;" onclick="deleteOrderNote(${origIdx})" title="מחק">${APP_ICONS.TRASH}</button>
         `;
         
         noteEl.appendChild(actionsEl);
@@ -12854,6 +12929,15 @@ function enableInlineEdit(index) {
             <button type="button" class="btn btn-sm btn-secondary" onclick="cancelInlineEdit()" style="padding: 2px 8px;">ביטול</button>
         </div>
     `;
+
+    // Scroll to the edit input and focus
+    setTimeout(() => {
+        const editInput = document.getElementById(`note-edit-area-${index}`);
+        if (editInput) {
+            editInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            editInput.focus();
+        }
+    }, 50);
 }
 
 async function saveInlineNote(index) {
@@ -15007,8 +15091,327 @@ function saveLogoSettings() {
     showAlert('הלוגו נשמר בהצלחה', 'success');
 }
 
+
 function fixBiDi(text) {
     if (!text) return '';
     // Force LTR for dimensions in brackets and use dir="auto" for automatic English/Hebrew alignment
     return `<bdi dir="auto">${text.replace(/\[([^\]]+)\]/g, '<span dir="ltr">[$1]</span>')}</bdi>`;
 }
+
+/**
+ * Custom Premium Date Picker
+ * Provides a high-end calendar selection UI
+ */
+class CustomDatePicker {
+    constructor(inputElement) {
+        this.input = inputElement;
+        this.wrapper = inputElement.closest('.date-input-wrapper');
+        this.currentDate = new Date();
+        this.selectedDate = this.input.value ? new Date(this.input.value) : null;
+        this.viewDate = this.selectedDate || new Date();
+        this.viewMode = 'days'; // 'days', 'months', 'years'
+        
+        this.init();
+    }
+
+    init() {
+        // Prevent native picker if possible
+        this.input.setAttribute('readonly', true);
+        this.input.style.cursor = 'pointer';
+        
+        // Create container
+        this.container = document.createElement('div');
+        this.container.className = 'datepicker-container';
+        this.wrapper.appendChild(this.container);
+        
+        // Event listeners
+        this.input.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggle();
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!this.wrapper.contains(e.target)) {
+                this.close();
+            }
+        });
+        
+        this.render();
+    }
+
+    toggle() {
+        // Close all other datepickers first
+        document.querySelectorAll('.datepicker-container.active').forEach(dp => {
+            if (dp !== this.container) dp.classList.remove('active');
+        });
+        this.container.classList.toggle('active');
+        if (this.container.classList.contains('active')) {
+            this.viewDate = this.selectedDate || new Date();
+            this.viewMode = 'days';
+            this.render();
+        }
+    }
+
+    close() {
+        this.container.classList.remove('active');
+    }
+
+    render() {
+        this.container.innerHTML = '';
+        
+        const header = document.createElement('div');
+        header.className = 'datepicker-header';
+        
+        const prevBtn = document.createElement('button');
+        prevBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+        prevBtn.onclick = (e) => { e.stopPropagation(); this.navigate(-1); };
+        
+        const title = document.createElement('div');
+        title.className = 'datepicker-header-title';
+        title.textContent = this.getHeaderTitle();
+        title.onclick = (e) => { e.stopPropagation(); this.toggleViewMode(); };
+        
+        const nextBtn = document.createElement('button');
+        nextBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+        nextBtn.onclick = (e) => { e.stopPropagation(); this.navigate(1); };
+        
+        header.appendChild(nextBtn); // RTL: Swap next/prev logic or visually
+        header.appendChild(title);
+        header.appendChild(prevBtn);
+        
+        this.container.appendChild(header);
+        
+        const body = document.createElement('div');
+        body.className = 'datepicker-body';
+        
+        if (this.viewMode === 'days') {
+            this.renderCalendar(body);
+        } else if (this.viewMode === 'months') {
+            this.renderMonthSelector(body);
+        } else if (this.viewMode === 'years') {
+            this.renderYearSelector(body);
+        }
+        
+        this.container.appendChild(body);
+        
+        const footer = document.createElement('div');
+        footer.className = 'datepicker-footer';
+        
+        const todayBtn = document.createElement('button');
+        todayBtn.type = 'button';
+        todayBtn.className = 'btn btn-secondary btn-sm';
+        todayBtn.textContent = 'היום';
+        todayBtn.onclick = (e) => { e.stopPropagation(); this.selectToday(); };
+        
+        const clearBtn = document.createElement('button');
+        clearBtn.type = 'button';
+        clearBtn.className = 'btn btn-danger btn-sm';
+        clearBtn.textContent = 'ניקוי';
+        clearBtn.onclick = (e) => { e.stopPropagation(); this.clear(); };
+        
+        footer.appendChild(clearBtn);
+        footer.appendChild(todayBtn);
+        this.container.appendChild(footer);
+    }
+
+    getHeaderTitle() {
+        const months = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+        if (this.viewMode === 'days') {
+            return `${months[this.viewDate.getMonth()]} ${this.viewDate.getFullYear()}`;
+        } else if (this.viewMode === 'months') {
+            return `${this.viewDate.getFullYear()}`;
+        } else {
+            const startYear = Math.floor(this.viewDate.getFullYear() / 12) * 12;
+            return `${startYear} - ${startYear + 11}`;
+        }
+    }
+
+    navigate(direction) {
+        if (this.viewMode === 'days') {
+            this.viewDate.setMonth(this.viewDate.getMonth() + direction);
+        } else if (this.viewMode === 'months') {
+            this.viewDate.setFullYear(this.viewDate.getFullYear() + direction);
+        } else {
+            this.viewDate.setFullYear(this.viewDate.getFullYear() + (direction * 12));
+        }
+        this.render();
+    }
+
+    toggleViewMode() {
+        if (this.viewMode === 'days') this.viewMode = 'months';
+        else if (this.viewMode === 'months') this.viewMode = 'years';
+        else this.viewMode = 'days';
+        this.render();
+    }
+
+    renderCalendar(container) {
+        const grid = document.createElement('div');
+        grid.className = 'datepicker-calendar';
+        
+        const days = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+        days.forEach(day => {
+            const dayName = document.createElement('div');
+            dayName.className = 'datepicker-day-name';
+            dayName.textContent = day;
+            grid.appendChild(dayName);
+        });
+        
+        const year = this.viewDate.getFullYear();
+        const month = this.viewDate.getMonth();
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const prevMonthDays = new Date(year, month, 0).getDate();
+        
+        // Prev month days
+        for (let i = firstDay - 1; i >= 0; i--) {
+            const dayElement = document.createElement('div');
+            dayElement.className = 'datepicker-day not-current-month';
+            dayElement.textContent = prevMonthDays - i;
+            grid.appendChild(dayElement);
+        }
+        
+        // Current month days
+        const today = new Date();
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dayElement = document.createElement('div');
+            dayElement.className = 'datepicker-day';
+            dayElement.textContent = i;
+            
+            if (year === today.getFullYear() && month === today.getMonth() && i === today.getDate()) {
+                dayElement.classList.add('today');
+            }
+            
+            if (this.selectedDate && year === this.selectedDate.getFullYear() && month === this.selectedDate.getMonth() && i === this.selectedDate.getDate()) {
+                dayElement.classList.add('selected');
+            }
+            
+            dayElement.onclick = (e) => {
+                e.stopPropagation();
+                this.selectDate(new Date(year, month, i));
+            };
+            
+            grid.appendChild(dayElement);
+        }
+        
+        // Next month days
+        const totalCells = 42;
+        const remainingCells = totalCells - (firstDay + daysInMonth);
+        for (let i = 1; i <= remainingCells; i++) {
+            const dayElement = document.createElement('div');
+            dayElement.className = 'datepicker-day not-current-month';
+            dayElement.textContent = i;
+            grid.appendChild(dayElement);
+        }
+        
+        container.appendChild(grid);
+    }
+
+    renderMonthSelector(container) {
+        const selector = document.createElement('div');
+        selector.className = 'datepicker-view-selector';
+        const months = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+        
+        months.forEach((month, index) => {
+            const item = document.createElement('div');
+            item.className = 'datepicker-item';
+            if (this.viewDate.getMonth() === index) item.classList.add('selected');
+            item.textContent = month;
+            item.onclick = (e) => {
+                e.stopPropagation();
+                this.viewDate.setMonth(index);
+                this.viewMode = 'days';
+                this.render();
+            };
+            selector.appendChild(item);
+        });
+        container.appendChild(selector);
+    }
+
+    renderYearSelector(container) {
+        const selector = document.createElement('div');
+        selector.className = 'datepicker-view-selector';
+        const startYear = Math.floor(this.viewDate.getFullYear() / 12) * 12;
+        
+        for (let i = 0; i < 12; i++) {
+            const year = startYear + i;
+            const item = document.createElement('div');
+            item.className = 'datepicker-item';
+            if (this.viewDate.getFullYear() === year) item.classList.add('selected');
+            item.textContent = year;
+            item.onclick = (e) => {
+                e.stopPropagation();
+                this.viewDate.setFullYear(year);
+                this.viewMode = 'months';
+                this.render();
+            };
+            selector.appendChild(item);
+        }
+        container.appendChild(selector);
+    }
+
+    selectDate(date) {
+        this.selectedDate = date;
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        this.input.value = `${yyyy}-${mm}-${dd}`;
+        
+        // Trigger change event for Supabase listeners
+        this.input.dispatchEvent(new Event('change'));
+        this.close();
+    }
+
+    selectToday() {
+        this.selectDate(new Date());
+    }
+
+    clear() {
+        this.selectedDate = null;
+        this.input.value = '';
+        this.input.dispatchEvent(new Event('change'));
+        this.close();
+    }
+}
+
+// Global initialization function
+function initCustomDatePickers() {
+    document.querySelectorAll('.date-input:not([data-datepicker-init])').forEach(input => {
+        new CustomDatePicker(input);
+        input.setAttribute('data-datepicker-init', 'true');
+    });
+}
+
+// Intercept window functions to re-init
+(function() {
+    const originalViewDealDetails = window.viewDealDetails;
+    if (originalViewDealDetails) {
+        window.viewDealDetails = async function(dealId) {
+            await originalViewDealDetails(dealId);
+            initCustomDatePickers();
+        };
+    }
+
+    const originalShowEditActivityModal = window.showEditActivityModal;
+    if (originalShowEditActivityModal) {
+        window.showEditActivityModal = function(activity) {
+            originalShowEditActivityModal(activity);
+            initCustomDatePickers();
+        };
+    }
+    
+    const originalShowNewActivityModal = window.showNewActivityModal;
+    if (originalShowNewActivityModal) {
+        window.showNewActivityModal = function(prefill) {
+            originalShowNewActivityModal(prefill);
+            initCustomDatePickers();
+        };
+    }
+})();
+
+// Initial run
+document.addEventListener('DOMContentLoaded', initCustomDatePickers);
+// Also run immediately if DOM already loaded
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initCustomDatePickers();
+}
+

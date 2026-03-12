@@ -1396,7 +1396,17 @@
                                 <option value="מייל">📧 מייל</option>
                                 <option value="משימה">✅ משימה</option>
                             </select>
-                            <input type="datetime-local" id="activity-date" class="form-input" style="flex: 1;">
+                            <div class="datetime-picker-group" style="flex: 1;">
+                                <div class="date-input-wrapper">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    <input type="text" id="activity-date" class="form-input date-input" readonly>
+                                </div>
+                                <div class="time-input-wrapper">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                    <input type="text" id="activity-time" class="form-input time-input" readonly>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 0.5rem; justify-content: space-between; min-width: 120px;">
@@ -1669,11 +1679,19 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">תאריך ביצוע</label>
-                        <input type="date" id="order-creation-date" class="form-input">
+                        <div class="date-input-wrapper">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <input type="date" id="order-creation-date" class="form-input date-input">
+                        </div>
+
                     </div>
                     <div class="form-group">
                         <label class="form-label">צפי הגעה</label>
-                        <input type="date" id="order-expected-date" class="form-input">
+                        <div class="date-input-wrapper">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            <input type="date" id="order-expected-date" class="form-input date-input">
+                        </div>
+
                     </div>
                 </div>
 
@@ -1766,11 +1784,19 @@
                             <div id="payment-dates-row" style="display: flex; gap: 0.5rem; justify-content: space-between; margin-top: 0.5rem;">
                                 <div id="down-payment-date-container" style="display: none; flex-direction: column;">
                                     <label style="color: white; font-size: 0.8rem; margin-bottom: 2px;">תאריך מקדמה</label>
-                                    <input type="date" id="order-down-payment-date" class="form-input" style="height: 30px; padding: 2px 8px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 0.85rem;" onchange="updateOrderExchangeRate(true)">
+                                    <div class="date-input-wrapper">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; right: 6px; color: white; opacity: 1;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <input type="date" id="order-down-payment-date" class="form-input date-input" style="height: 30px; padding: 2px 24px 2px 8px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 0.85rem;" onchange="updateOrderExchangeRate(true)">
+                                    </div>
+
                                 </div>
                                 <div id="full-payment-date-container" style="display: none; flex-direction: column;">
                                     <label style="color: white; font-size: 0.8rem; margin-bottom: 2px;">תאריך תשלום יתרה</label>
-                                    <input type="date" id="order-full-payment-date" class="form-input" style="height: 30px; padding: 2px 8px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 0.85rem;" onchange="updateOrderExchangeRate(true)">
+                                    <div class="date-input-wrapper">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; right: 6px; color: white; opacity: 1;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <input type="date" id="order-full-payment-date" class="form-input date-input" style="height: 30px; padding: 2px 24px 2px 8px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 0.85rem;" onchange="updateOrderExchangeRate(true)">
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
