@@ -3586,8 +3586,8 @@ function filterContacts(preservePage = false) {
                                             ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                                         </div>
                                         <div style="display: flex; gap: 0.5rem;">
-                                            <a href="tel:${cleanNumber}" title="התקשר" style="color: var(--primary-color);">
-                                                טלפון
+                                            <a href="tel:${cleanNumber}" title="התקשר" style="text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                                                <img src="images/call.png" alt="Call" style="width: 20px; height: 20px; vertical-align: middle;">
                                             </a>
                                             ${isMobile ? `
                                             <a href="https://wa.me/${cleanPhone}" target="_blank" title="שלח הודעה בווטסאפ" style="color: #25D366;">
@@ -3661,8 +3661,8 @@ function filterContacts(preservePage = false) {
                                         ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                                     </div>
                                     <div style="display: flex; gap: 0.5rem;">
-                                        <a href="tel:${cleanNumber}" title="התקשר" style="color: var(--primary-color);">
-                                            התקשר
+                                        <a href="tel:${cleanNumber}" title="התקשר" style="text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                                            <img src="images/call.png" alt="Call" style="width: 20px; height: 20px; vertical-align: middle;">
                                         </a>
                                         ${isMobileNumber(phone) ? `
                                         <a href="https://wa.me/${cleanPhone}" target="_blank" title="שלח הודעה בווטסאפ">
