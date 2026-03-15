@@ -27,5 +27,6 @@ INSERT INTO system_settings (setting_key, setting_value) VALUES
 ('supplier_categories', '["אלומיניום", "פרזול", "זכוכית", "אחר"]'::jsonb),
 ('deal_statuses', '["חדש", "ממתין", "זכייה", "הפסד", "טיוטה"]'::jsonb),
 ('lead_sources', '["המלצה", "אתר", "תערוכה", "פרסום", "לקוח חוזר", "אחר"]'::jsonb),
-('product_categories', '["פרופילים", "אביזרים", "רשתות", "גלגלים", "ידיות", "מנעולים", "אחר"]'::jsonb)
+('product_categories', '["פרופילים", "אביזרים", "רשתות", "גלגלים", "ידיות", "מנעולים", "אחר"]'::jsonb),
+('logo_url', '""'::jsonb)
 ON CONFLICT (setting_key) DO NOTHING;

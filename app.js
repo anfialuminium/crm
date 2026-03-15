@@ -14528,6 +14528,7 @@ async function deleteOrderColor(colorId) {
 
 // System Settings Management
 let systemSettings = {
+    logo_url: "",
     customer_types: ["חנות", "קבלן", "מחסן", "מפעל", "אחר"],
     supplier_categories: ["אלומיניום", "פרזול", "זכוכית", "אחר"],
     deal_statuses: ["חדש", "ממתין", "זכייה", "הפסד", "טיוטה"],
@@ -15182,7 +15183,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 // Logo Management Functions
 function loadCustomLogo() {
-    const logoUrl = localStorage.getItem('custom_logo_url');
+    // Priority: 1. DB (systemSettings), 2. localStorage (migration), 3. placeholder
+    let logoUrl = systemSettings.logo_url;
+    
+    if (!logoUrl) {
+        logoUrl = localStorage.getItem('custom_logo_url');
+    }
+    
     const headerLogoContainer = document.getElementById('header-logo');
     
     if (!headerLogoContainer) return;
@@ -15203,6 +15210,10 @@ function loadCustomLogo() {
         headerLogoContainer.innerHTML = '';
         headerLogoContainer.appendChild(img);
         headerLogoContainer.style.cssText = '';
+    } else {
+        // Default placeholder
+        headerLogoContainer.innerHTML = 'לוגו';
+        headerLogoContainer.style.cssText = 'height: 42px; width: 120px; background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 0.9rem;';
     }
     
     // Load into settings if on settings tab
@@ -15237,12 +15248,19 @@ function updateLogoPreview() {
     }
 }
 
-function saveLogoSettings() {
+async function saveLogoSettings() {
     const input = document.getElementById('settings-logo-url');
     if (!input) return;
     
     const url = input.value.trim();
     
+    // Save to local state first
+    systemSettings.logo_url = url;
+    
+    // Save to Supabase DB via the existing system settings function
+    await saveSystemSettings('logo_url');
+    
+    // Also update localStorage for backward compatibility/redundancy if desired
     if (url) {
         localStorage.setItem('custom_logo_url', url);
     } else {
@@ -15250,7 +15268,6 @@ function saveLogoSettings() {
     }
     
     loadCustomLogo();
-    showAlert('הלוגו נשמר בהצלחה', 'success');
 }
 
 
