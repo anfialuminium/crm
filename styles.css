@@ -2290,6 +2290,13 @@ html, body {
     align-items: center;
     direction: rtl;
     gap: 1rem;
+    min-height: 42px;
+}
+
+.audit-change-line-vertical {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem;
 }
 
 .audit-change-label {
@@ -2309,10 +2316,17 @@ html, body {
 
 .audit-change-old {
     color: var(--text-tertiary);
-    max-width: 150px;
+    max-width: 300px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.audit-change-line-vertical .audit-change-old,
+.audit-change-line-vertical .audit-change-new {
+    max-width: none;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .audit-change-arrow {
@@ -2322,7 +2336,7 @@ html, body {
 .audit-change-new {
     color: var(--success-color);
     font-weight: 600;
-    max-width: 150px;
+    max-width: 300px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2725,9 +2739,9 @@ input[type="time"] {
     top: calc(100% + 10px);
     right: 0;
     min-width: 320px;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-xl);
     box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.2), var(--shadow-xl);
     z-index: 10000;
@@ -2737,6 +2751,8 @@ input[type="time"] {
     gap: var(--spacing-sm);
     animation: datepickerFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     transform-origin: top right;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 @keyframes datepickerFadeIn {
@@ -2764,23 +2780,45 @@ input[type="time"] {
     margin-bottom: 0.5rem;
 }
 
-.datepicker-header button {
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all var(--transition-fast);
+.datepicker-nav-btn {
+    background-color: #ffffff !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: 22px !important;
+    border: 1.5px solid #d1d5db !important;
+    border-radius: 8px !important;
+    width: 38px !important;
+    height: 38px !important;
+    display: block !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
 }
 
-.datepicker-header button:hover {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
+/* Left Arrow Icon (<) */
+.datepicker-nav-btn.nav-next {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'/%3E%3C/svg%3E") !important;
+}
+
+/* Right Arrow Icon (>) */
+.datepicker-nav-btn.nav-prev {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E") !important;
+}
+
+.datepicker-nav-btn:hover {
+    background-color: #f3f4f6 !important;
+    border-color: #2563eb !important;
+    transform: scale(1.05);
+}
+
+/* Force hide any browser native artifacts in ANY input if they leak */
+input::-webkit-calendar-picker-indicator,
+input::-webkit-inner-spin-button,
+input::-webkit-clear-button,
+input::-ms-clear {
+    display: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
 }
 
 .datepicker-header-title {
@@ -2884,4 +2922,109 @@ input[type="time"] {
 .datepicker-item.selected {
     background: var(--primary-color);
     color: white;
+}
+
+/* ============================================
+   Custom Premium Time Picker Popup
+   ============================================ */
+
+.timepicker-container {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 220px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.2), var(--shadow-xl);
+    z-index: 10000;
+    padding: var(--spacing-sm);
+    display: none;
+    flex-direction: column;
+    animation: datepickerFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: top right;
+}
+
+.timepicker-container.active {
+    display: flex;
+}
+
+.timepicker-header {
+    text-align: center;
+    padding: 0.5rem;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.timepicker-body {
+    display: flex;
+    height: 250px;
+    direction: ltr; /* Hours on left, Minutes on right */
+}
+
+.timepicker-column {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px;
+}
+
+.timepicker-column::-webkit-scrollbar {
+    width: 4px;
+}
+
+.timepicker-column::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.timepicker-item {
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.timepicker-item:hover {
+    background: var(--primary-light);
+    color: white;
+}
+
+.timepicker-item.selected {
+    background: var(--primary-color);
+    color: white;
+    font-weight: 700;
+}
+
+.timepicker-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    padding: 0 4px;
+    color: var(--text-secondary);
+}
+
+.timepicker-footer {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+}
+
+.timepicker-footer .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
 }

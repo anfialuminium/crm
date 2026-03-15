@@ -10,6 +10,7 @@ const APP_ICONS = {
     CALENDAR: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
     MAIL: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>',
     CHECK_CIRCLE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>',
+    CHECK: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
     NOTE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
     PDF: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="12" y1="9" x2="8" y2="9"></line></svg>',
     UNDO: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>',
@@ -2654,6 +2655,11 @@ async function toggleCustomerActiveStatus(event, customerId, currentlyActive) {
             .eq('customer_id', customerId);
 
         if (error) throw error;
+
+        // Log the action
+        const customer = customers.find(c => c.customer_id === customerId);
+        const customerName = customer ? customer.business_name : 'לקוח';
+        logAction('update', 'customer', customerId, customerName, `שינוי סטטוס לקוח ל${currentlyActive ? 'לא פעיל' : 'פעיל'}`, { active: currentlyActive }, { active: !currentlyActive });
 
         showAlert(` הלקוח סומן כ${currentlyActive ? 'לא פעיל' : 'פעיל'} בהצלחה`, 'success');
         
@@ -5300,14 +5306,20 @@ async function loadDealNotes(dealId) {
             const icon = typeIconsList[note.activity_type] || APP_ICONS.NOTE;
             const editedInfo = note.edited_at ? `<div class="note-edited">עריכה על ידי ${note.edited_by || 'לא ידוע'} ב-${new Date(note.edited_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>` : '';
             
-            const canPostpone = !note.completed && note.activity_type !== 'הערה';
+            const isDone = note.completed;
+            const canPostpone = !isDone && note.activity_type !== 'הערה';
             
             return `
-                <div class="note-item" style="${note.completed ? 'opacity: 0.7; border-right: 4px solid #10b981;' : ''}">
+                <div class="note-item" style="${isDone ? 'opacity: 0.7; border-right: 4px solid #10b981;' : ''}">
                     <div class="note-header">
                         <span class="note-author">${icon} ${note.created_by || 'משתמש מערכת'}</span>
                         <span style="font-size: 0.85rem; color: var(--text-tertiary);">${createdDate}</span>
                         <div style="display: flex; gap: 5px;">
+                            <button class="btn btn-sm ${isDone ? 'btn-success' : 'btn-secondary'} btn-icon" 
+                                onclick="toggleActivityCompletion('${note.activity_id}', ${!isDone}, '${dealId}')" 
+                                title="${isDone ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
+                                ${isDone ? APP_ICONS.CHECK_CIRCLE : APP_ICONS.CHECK}
+                            </button>
                             ${canPostpone ? `
                                 <button class="btn btn-sm btn-icon" style="background: #fbbf24; color: white;" onclick="postponeActivity('${note.activity_id}', 'tomorrow')" title="דחה ליום העסקים הבא">${APP_ICONS.SUN}</button>
                                 <button class="btn btn-sm btn-icon" style="background: #818cf8; color: white;" onclick="postponeActivity('${note.activity_id}', 'next-week')" title="דחה בשבוע">${APP_ICONS.CALENDAR}</button>
@@ -5316,7 +5328,7 @@ async function loadDealNotes(dealId) {
                             <button class="btn btn-sm btn-danger btn-icon" onclick="deleteNote('${note.activity_id}')" title="מחק">${APP_ICONS.TRASH}</button>
                         </div>
                     </div>
-                    <div class="note-content">
+                    <div class="note-content" style="${isDone ? 'text-decoration: line-through; color: var(--text-tertiary);' : ''}">
                         ${activityDate ? `<div style="margin-bottom: 5px; color: var(--primary-color); font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.CALENDAR} תאריך יעד/פעילות: ${activityDate}</div>` : ''}
                         <strong>${note.activity_type}:</strong> ${formatActivityText(note.description)}
                     </div>
@@ -5429,6 +5441,7 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
             .from('activity_notes')
             .select('*')
             .eq('activity_id', activityId)
+            .order('completed', { ascending: true })
             .order('created_at', { ascending: false });
             
         if (error) throw error;
@@ -5460,17 +5473,30 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
                 </div>`;
             }
 
+            const isDone = note.completed;
             return `
-            <div style="background: var(--bg-primary); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid var(--border-color);">
+            <div style="background: var(--bg-primary); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid var(--border-color); ${isDone ? 'opacity: 0.7; border-right: 4px solid #10b981;' : ''}">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                     <div style="font-size: 0.9rem; white-space: pre-wrap;">${formattedContent}</div>
-                     <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="editActivityNote(${note.id}, '${activityId}')" type="button" style="background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1rem; color: var(--text-secondary);" title="ערוך">${APP_ICONS.EDIT}</button>
-                        <button onclick="deleteActivityNote(${note.id}, '${activityId}')" type="button" style="color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1.1em;" title="מחק">×</button>
+                     <div style="font-size: 0.9rem; white-space: pre-wrap; ${isDone ? 'text-decoration: line-through;' : ''}">${formattedContent}</div>
+                     <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button onclick="toggleActivityNoteCompletion(${note.id}, '${activityId}', ${isDone})" type="button" 
+                            style="background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1.1rem; color: ${isDone ? 'var(--success-color)' : 'var(--text-tertiary)'};" 
+                            title="${isDone ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
+                            ${isDone ? APP_ICONS.CHECK_CIRCLE : APP_ICONS.CHECK}
+                        </button>
+                        <button onclick="editActivityNote(${note.id}, '${activityId}')" type="button" 
+                            style="background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1rem; color: var(--text-secondary);" title="ערוך">
+                            ${APP_ICONS.EDIT}
+                        </button>
+                        <button onclick="deleteActivityNote(${note.id}, '${activityId}')" type="button" 
+                            style="color: var(--danger-color); background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1.1em;" title="מחק">
+                            ×
+                        </button>
                      </div>
                 </div>
-                <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem;">
-                    ${note.created_by} • ${new Date(note.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                <div style="font-size: 0.75rem; color: var(--text-tertiary); margin-top: 0.25rem; display: flex; justify-content: space-between;">
+                    <span>${note.created_by} • ${new Date(note.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    ${note.completed_at ? `<span style="color: var(--success-color);">בוצע ב-${new Date(note.completed_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>` : ''}
                 </div>
             </div>
         `}).join('');
@@ -5589,17 +5615,51 @@ async function insertActivityNoteToDb(activityId, content) {
         activity_id: activityId, content, created_by: performedBy
     });
     if (error) throw error;
+
+    // Log the addition of a note to the activity
+    try {
+        const { data: activity } = await supabaseClient
+            .from('activities')
+            .select('*, customers(business_name)')
+            .eq('activity_id', activityId)
+            .single();
+            
+        if (activity) {
+            const customerName = activity.customers?.business_name || 'לא ידוע';
+            const descriptiveName = `${activity.activity_type || 'פעילות'} - ${customerName}`;
+            logAction('update', 'activity', activityId, descriptiveName, `הערה חדשה לפעילות: ${content}`, null, { note_added: content });
+        }
+    } catch (e) {
+        console.warn('Failed to log activity note addition:', e);
+    }
 }
 
 async function deleteActivityNote(noteId, activityId) {
     showConfirmModal('מחיקת הערה', 'האם למחוק את ההערה?', async () => {
         try {
+            // Fetch note before deleting for logging
+            const { data: noteBefore } = await supabaseClient.from('activity_notes').select('*').eq('id', noteId).single();
+
             const { error } = await supabaseClient
                 .from('activity_notes')
                 .delete()
                 .eq('id', noteId);
                 
             if (error) throw error;
+            
+            // Log the deletion
+            if (noteBefore) {
+                 try {
+                     const { data: activity } = await supabaseClient
+                        .from('activities')
+                        .select('*, customers(business_name)')
+                        .eq('activity_id', activityId)
+                        .single();
+                    const customerName = activity?.customers?.business_name || 'לא ידוע';
+                    const descriptiveName = `${activity?.activity_type || 'פעילות'} - ${customerName}`;
+                    logAction('update', 'activity', activityId, descriptiveName, `מחיקת הערה מהפעילות: ${noteBefore.content}`, { note_deleted: noteBefore.content }, null);
+                 } catch (e) { console.warn('Failed to log note deletion', e); }
+            }
             
             // Try reload both containers if they exist
             loadActivityNotes(activityId, 'activity-notes-list');
@@ -6079,13 +6139,15 @@ async function saveActivityEdit(event) {
         }
 
         // Log the action with detailed objects for the improved email notification
+        const customerName = customers.find(c => c.customer_id === (updateData.customer_id || customerId))?.business_name || 'לא ידוע';
         const newValue = {
             ...updateData,
-            customer_name: customers.find(c => c.customer_id === (updateData.customer_id || customerId))?.business_name || 'לא ידוע'
+            customer_name: customerName
         };
         const oldValue = currentActivity; // We'll fetch this at the start of the function
 
-        logAction('update', 'activity', activityId, activityType, `עדכון פעילות: ${description}`, oldValue, newValue);
+        const descriptiveName = `${activityType} - ${customerName}`;
+        logAction('update', 'activity', activityId, descriptiveName, `עדכון פעילות: ${description}`, oldValue, newValue);
 
         closeEditActivityModal();
 
@@ -6317,6 +6379,32 @@ function openNewActivityModal(prefillData = null) {
     modal.classList.add('active');
 }
 
+async function toggleActivityNoteCompletion(noteId, activityId, currentStatus) {
+    try {
+        const newStatus = !currentStatus;
+        const { error } = await supabaseClient
+            .from('activity_notes')
+            .update({ 
+                completed: newStatus,
+                completed_at: newStatus ? new Date().toISOString() : null
+            })
+            .eq('id', noteId);
+            
+        if (error) throw error;
+        
+        showAlert(newStatus ? 'הערה סומנה כבוצעה!' : 'הערה הוחזרה למצב פתוח', 'success');
+        
+        // Refresh notes in the current view
+        const notesList = document.getElementById('view-activity-notes-list');
+        const containerId = notesList ? 'view-activity-notes-list' : 'activity-notes-list';
+        loadActivityNotes(activityId, containerId);
+        
+    } catch (error) {
+        console.error('❌ Error toggling note status:', error);
+        showAlert('שגיאה בעדכון סטטוס ההערה', 'error');
+    }
+}
+
 async function populateNewActivityDeals(filterCustomerId = null) {
     const select = document.getElementById('new-activity-deal');
     if (!select) return;
@@ -6469,7 +6557,9 @@ async function saveNewActivity(event) {
         if (error) throw error;
         
         // Log the action
-        logAction('create', 'activity', newActivity.activity_id, activityData.activity_type, `יצירת פעילות: ${activityData.description || activityData.activity_type}`);
+        const customerName = customers.find(c => c.customer_id === activityData.customer_id)?.business_name || 'לקוח';
+        const descriptiveName = `${activityData.activity_type} - ${customerName}`;
+        logAction('create', 'activity', newActivity.activity_id, descriptiveName, `יצירת פעילות: ${activityData.description || activityData.activity_type}`);
         
         showAlert(' הפעילות נוספה בהצלחה', 'success');
         closeNewActivityModal();
@@ -6678,7 +6768,8 @@ function deleteActivity(activityId) {
             const activityType = oldActivity?.activity_type || 'פעילות';
             const customerName = oldActivity?.customers?.business_name || 'לקוח לא ידוע';
             
-            logAction('delete', 'activity', activityId, activityType, `מחיקת פעילות של ${customerName}`, oldActivity, null);
+            const descriptiveName = `${activityType} - ${customerName}`;
+            logAction('delete', 'activity', activityId, descriptiveName, `מחיקת פעילות של ${customerName}`, oldActivity, null);
             showAlert(' הפעילות נמחקה בהצלחה', 'success');
             
             await refreshAllUI();
@@ -7301,6 +7392,7 @@ function toggleAllPastDays(btn) {
     btn.textContent = isCollapsed ? 'סגור הכל' : 'הרחב הכל';
 }
 
+
 async function markActivityComplete(activityId) {
     try {
         const { data: updatedActivity, error } = await supabaseClient
@@ -7314,6 +7406,12 @@ async function markActivityComplete(activityId) {
             .single();
         
         if (error) throw error;
+        
+        // Log the action
+        const customer = customers.find(c => c.customer_id === updatedActivity.customer_id);
+        const customerName = customer ? customer.business_name : 'לקוח';
+        const descriptiveName = `${updatedActivity.activity_type} - ${customerName}`;
+        logAction('update', 'activity', activityId, descriptiveName, 'סימון פעילות כבוצעה', { completed: false }, { completed: true });
         
         showAlert('הפעילות סומנה כבוצעה!', 'success');
         loadThisWeek();
@@ -7334,7 +7432,7 @@ async function postponeActivity(activityId, type) {
         // Fetch current activity to get the base date and details for logging
         const { data: activity, error: fetchError } = await supabaseClient
             .from('activities')
-            .select('*, customers(business_name)')
+            .select('*, customers(business_name), deals(customers(business_name))')
             .eq('activity_id', activityId)
             .single();
         
@@ -7372,10 +7470,17 @@ async function postponeActivity(activityId, type) {
 
         const dayName = newDate.toLocaleDateString('he-IL', { weekday: 'long' });
         const dateStr = newDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
-        const targetDesc = type === 'tomorrow' ? `יום ${dayName}` : 'שבוע';
+        const targetDesc = type === 'tomorrow' ? dayName : 'שבוע';
         
-        logAction('update', 'activity', activityId, activity.activity_type, 
-            `דחיית פעילות עבור ${activity.customers?.business_name || 'לקוח'} ל${targetDesc} (${dateStr})`, 
+        const customerName = activity.customers?.business_name || activity.deals?.customers?.business_name;
+        const descriptiveName = `${activity.activity_type}${customerName ? ` - ${customerName}` : ''}`;
+        
+        const logContent = customerName 
+            ? `דחיית פעילות עבור הלקוח ${customerName} ל${targetDesc} (${dateStr})`
+            : `דחיית פעילות`;
+
+        logAction('update', 'activity', activityId, descriptiveName, 
+            logContent, 
             activity, { activity_date: newDate.toISOString() });
 
         showAlert(` הפעילות נדחתה ל${targetDesc === 'שבוע' ? 'בעוד שבוע' : targetDesc} (${dateStr})`, 'success');
@@ -7538,10 +7643,14 @@ async function viewActivityDetails(activityId) {
                     <div class="deal-card-info">
                         <span class="deal-card-label">סטטוס:</span>
                         <span class="deal-card-value">
-                            ${activity.completed ? '<span class="badge badge-won">בוצע</span>' : '<span class="badge badge-pending">ממתין</span>'}
+                            <button class="btn btn-sm ${activity.completed ? 'btn-success' : 'btn-secondary'}" 
+                                onclick="toggleActivityCompletionFromDetails('${activity.activity_id}', ${!activity.completed})" 
+                                style="display: flex; align-items: center; gap: 5px;">
+                                ${activity.completed ? APP_ICONS.CHECK_CIRCLE + ' בוצע' : APP_ICONS.CHECK + ' סמן כבוצע'}
+                            </button>
                             ${activity.completed && activity.completed_at ? `
                                 <div style="font-size: 0.8rem; color: var(--success-color); margin-top: 5px;">
-                                    <strong>ביצוע:</strong> <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CALENDAR} ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })} • ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <strong>ביצוע:</strong> <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CALENDAR} ${new Date(activity.completed_at).toLocaleDateString('he-IL')}</span>
                                 </div>
                             ` : ''}
                         </span>
@@ -8090,46 +8199,60 @@ async function loadActivities(preservePage = false) {
 }
 
 // Toggle activity completion status
-async function toggleActivityCompletion(activityId, completed) {
+async function toggleActivityCompletion(activityId, completed, dealId = null) {
     try {
         const updateData = {
-            completed: completed
+            completed: completed,
+            completed_at: completed ? new Date().toISOString() : null
         };
         
-        // If marking as completed, set the timestamp
-        if (completed) {
-            updateData.completed_at = new Date().toISOString();
-        } else {
-            updateData.completed_at = null;
-        }
-        
-        const { data: updatedActivity, error } = await supabaseClient
+        const { error } = await supabaseClient
             .from('activities')
             .update(updateData)
-            .eq('activity_id', activityId)
-            .select()
-            .single();
+            .eq('activity_id', activityId);
         
         if (error) throw error;
         
-        showAlert(completed ? ' הפעילות סומנה כבוצעה' : ' הפעילות סומנה כממתינה', 'success');
-        
-        // Reload activities
-        loadActivities();
-        if (typeof loadThisWeek === 'function') {
-            loadThisWeek();
-        }
+        // Fetch activity for descriptive logging
+        const { data: activity } = await supabaseClient
+            .from('activities')
+            .select('*, customers(business_name)')
+            .eq('activity_id', activityId)
+            .single();
 
-        // Check for follow-up if completed
-        if (completed && updatedActivity) {
-            setTimeout(() => {
-                openNewActivityModal(updatedActivity);
-            }, 500);
+        const customerName = activity?.customers?.business_name || 'לקוח';
+        const activityType = activity?.activity_type || 'פעילות';
+        const descriptiveName = `${activityType} - ${customerName}`;
+        
+        logAction('update', 'activity', activityId, descriptiveName, 
+            completed ? `סימון פעילות כבוצעה: ${activity.description}` : `החזרת פעילות למצב פתוח: ${activity.description}`, 
+            { completed: !completed }, 
+            { completed: completed }
+        );
+        
+        showAlert(completed ? 'הפעילות סומנה כבוצעה!' : 'הפעילות הוחזרה למצב פתוח', 'success');
+        
+        // Refresh appropriate views
+        if (dealId && dealId !== 'undefined') {
+            loadDealNotes(dealId);
         }
+        
+        if (typeof loadActivities === 'function') loadActivities(true);
+        if (typeof loadThisWeek === 'function') loadThisWeek();
         
     } catch (error) {
         console.error('❌ Error toggling activity completion:', error);
-        showAlert('שגיאה בעדכון סטטוס הפעילות: ' + error.message, 'error');
+        showAlert('שגיאה בעדכון הפעילות: ' + error.message, 'error');
+    }
+}
+
+async function toggleActivityCompletionFromDetails(activityId, completed) {
+    try {
+        await toggleActivityCompletion(activityId, completed);
+        // Re-open details to refresh
+        viewActivityDetails(activityId);
+    } catch (error) {
+        console.error('❌ Error toggling activity from details:', error);
     }
 }
 
@@ -9191,6 +9314,14 @@ async function processImportContacts(rows) {
     filterContacts();
 }
 
+function setAuditEntityFilter(value) {
+    const select = document.getElementById('filter-audit-entity');
+    if (select) {
+        select.value = value;
+        loadAuditLog();
+    }
+}
+
 async function loadAuditLog() {
     const container = document.getElementById('auditlog-list');
     container.innerHTML = '<div class="spinner"></div>';
@@ -9216,7 +9347,13 @@ async function loadAuditLog() {
         }
         
         if (entityFilter) {
-            query = query.eq('entity_type', entityFilter);
+            if (entityFilter === 'notes') {
+                // Filter for anything that might be a note: entity_type 'note', 'activity', 
+                // or any log where the description contains note-related keywords
+                query = query.or('entity_type.eq.note,entity_type.eq.activity,description.ilike.%הערה%');
+            } else {
+                query = query.eq('entity_type', entityFilter);
+            }
         }
         
         // Apply performer filter
@@ -9496,16 +9633,25 @@ async function loadAuditLog() {
                                     <span>${APP_ICONS.NOTE}</span> פירוט שינויים
                                 </div>
                                 <div class="audit-changes-list">
-                                    ${changes.map(c => `
-                                        <div class="audit-change-line">
-                                            <div class="audit-change-label" style="min-width: 120px;">${c.label}</div>
-                                            <div class="audit-change-values" style="display: flex; align-items: center; gap: 0.75rem; flex: 1; justify-content: flex-start;">
-                                                <span class="audit-change-old" style="color: var(--text-tertiary);" title="${c.old}">${c.old}</span>
-                                                <span class="audit-change-arrow" style="color: var(--primary-color);">←</span>
-                                                <span class="audit-change-new" style="color: var(--success-color); font-weight: 600;" title="${c.new}">${c.new}</span>
+                                    ${changes.map(c => {
+                                        if (typeof c === 'string') {
+                                            return `<div class="audit-change-line">${formatAuditText(c)}</div>`;
+                                        }
+                                        
+                                        // Special formatting for description or long text
+                                        const isLongText = c.label === 'תיאור' || c.label === 'הערות' || (c.new && c.new.length > 50);
+                                        
+                                        return `
+                                            <div class="audit-change-line ${isLongText ? 'audit-change-line-vertical' : ''}">
+                                                <div class="audit-change-label" style="min-width: 120px;">${c.label}</div>
+                                                <div class="audit-change-values" style="display: flex; align-items: center; gap: 0.75rem; flex: 1; justify-content: flex-start; ${isLongText ? 'flex-direction: column; align-items: flex-start; width: 100%;' : ''}">
+                                                    <span class="audit-change-old" style="color: var(--text-tertiary); ${isLongText ? 'max-width: none; white-space: normal; overflow: visible;' : ''}" title="${c.old}">${c.old}</span>
+                                                    <span class="audit-change-arrow" style="color: var(--primary-color); ${isLongText ? 'transform: rotate(90deg); margin: 0.25rem 0;' : ''}">←</span>
+                                                    <span class="audit-change-new" style="color: var(--success-color); font-weight: 600; ${isLongText ? 'max-width: none; white-space: normal; overflow: visible;' : ''}" title="${c.new}">${c.new}</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    `).join('')}
+                                        `;
+                                    }).join('')}
                                 </div>
                             </div>
                         `;
@@ -9709,8 +9855,9 @@ function setupOverflowTooltips() {
         // scrollWidth > clientWidth for horizontal overflow
         // scrollHeight > clientHeight for vertical overflow
         const isOverflowing = target.clientWidth > 0 && (target.scrollWidth > target.clientWidth + 1 || target.scrollHeight > target.clientHeight + 1);
+        const forceTooltip = target.classList.contains('show-custom-tooltip') || (target.parentElement && target.parentElement.classList.contains('show-custom-tooltip'));
         
-        if (isOverflowing) {
+        if (isOverflowing || forceTooltip) {
             // Avoid re-triggering for the same element
             if (activeTarget === target) return;
             activeTarget = target;
@@ -11971,7 +12118,7 @@ function renderSupplierOrdersList(list) {
                         if (downPayment > 0) {
                             const remaining = amount - downPayment;
                             statusInfo = `<div style="color: #ef4444; font-size: 0.8rem; margin-top: 4px; display: inline-block;">
-                                <span style="border-bottom: 1px dotted #ef4444; cursor: help;" title="מקדמה: ${o.currencySymbol}${downPayment.toLocaleString()} | יתרה: ${o.currencySymbol}${remaining.toLocaleString()}">
+                                <span class="show-custom-tooltip" style="border-bottom: 1px dotted #ef4444; cursor: help;" title="מקדמה: ${o.currencySymbol}${downPayment.toLocaleString()} | יתרה: ${o.currencySymbol}${remaining.toLocaleString()}">
                                     שולמה מקדמה
                                 </span>
                             </div>`;
@@ -12164,12 +12311,22 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
             // View Mode Payment Status
             const paymentBadge = document.getElementById('view-order-payment-status');
             if (paymentBadge) {
+                paymentBadge.classList.remove('show-custom-tooltip');
+                paymentBadge.title = '';
+                
                 if (effectiveIsPaid) {
                     paymentBadge.textContent = 'שולם במלואו';
                     paymentBadge.className = 'badge badge-won'; // Green
                 } else if (order.down_payment > 0) {
+                    const amount = order.total_amount || 0;
+                    const dp = order.down_payment || 0;
+                    const rem = amount - dp;
+                    const sym = getCurrencySymbol(order.currency || 'ILS');
+                    
                     paymentBadge.textContent = 'שולמה מקדמה';
-                    paymentBadge.className = 'badge badge-pending'; // Orange/Blue
+                    paymentBadge.className = 'badge badge-pending show-custom-tooltip'; // Orange/Blue
+                    paymentBadge.title = `מקדמה: ${sym}${dp.toLocaleString()} | יתרה: ${sym}${rem.toLocaleString()}`;
+                    paymentBadge.style.cursor = 'help';
                 } else {
                     paymentBadge.textContent = 'לא שולם';
                     paymentBadge.className = 'badge badge-lost'; // Red
@@ -13117,12 +13274,16 @@ async function saveSupplierOrder(event) {
 
         if (result.error) throw result.error;
 
+        const supplierSelect = document.getElementById('order-supplier-select');
+        const supplierName = supplierSelect ? supplierSelect.options[supplierSelect.selectedIndex]?.text : 'ספק';
+        const descriptiveName = `הזמנת רכש - ${supplierName} (#${savedOrderId.slice(0, 6).toUpperCase()})`;
+
         if (orderId) {
             savedOrderId = orderId;
-            logAction('update', 'supplier_order', orderId, 'הזמנה', `עדכון הזמנה - סטטוס: ${orderData.order_status}`);
+            logAction('update', 'supplier_order', orderId, descriptiveName, `עדכון ${descriptiveName} - סטטוס: ${orderData.order_status}`);
         } else {
             savedOrderId = result.data.order_id;
-            logAction('create', 'supplier_order', savedOrderId, 'הזמנה', `יצירת הזמנה חדשה בסכום ₪${orderData.total_amount.toFixed(0)}`);
+            logAction('create', 'supplier_order', savedOrderId, descriptiveName, `יצירת הזמנה חדשה בסכום ₪${orderData.total_amount.toFixed(0)}`);
         }
 
         await refreshAllUI();
@@ -13250,8 +13411,9 @@ async function deleteSupplierOrder(orderId) {
             const supplierName = order?.suppliers?.name || 'לא ידוע';
             const orderAmount = order?.total_amount ? `₪${order.total_amount.toFixed(0)}` : '';
             const description = `מחיקת הזמנת רכש של ${supplierName} ${orderAmount}`;
+            const descriptiveName = `הזמנת רכש - ${supplierName}`;
             
-            logAction('delete', 'supplier_order', orderId, 'הזמנת רכש', description, order, null);
+            logAction('delete', 'supplier_order', orderId, descriptiveName, description, order, null);
             
             showAlert('ההזמנה נמחקה בהצלחה', 'success');
             await refreshAllUI();
@@ -15162,22 +15324,26 @@ class CustomDatePicker {
         const header = document.createElement('div');
         header.className = 'datepicker-header';
         
-        const prevBtn = document.createElement('button');
-        prevBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>';
-        prevBtn.onclick = (e) => { e.stopPropagation(); this.navigate(-1); };
+        const nextMonthBtn = document.createElement('button');
+        nextMonthBtn.type = 'button';
+        nextMonthBtn.className = 'datepicker-nav-btn nav-next';
+        nextMonthBtn.title = "חודש הבא";
+        nextMonthBtn.onclick = (e) => { e.stopPropagation(); this.navigate(1); };
         
         const title = document.createElement('div');
         title.className = 'datepicker-header-title';
         title.textContent = this.getHeaderTitle();
         title.onclick = (e) => { e.stopPropagation(); this.toggleViewMode(); };
         
-        const nextBtn = document.createElement('button');
-        nextBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
-        nextBtn.onclick = (e) => { e.stopPropagation(); this.navigate(1); };
+        const prevMonthBtn = document.createElement('button');
+        prevMonthBtn.type = 'button';
+        prevMonthBtn.className = 'datepicker-nav-btn nav-prev';
+        prevMonthBtn.title = "חודש קודם";
+        prevMonthBtn.onclick = (e) => { e.stopPropagation(); this.navigate(-1); };
         
-        header.appendChild(nextBtn); // RTL: Swap next/prev logic or visually
+        header.appendChild(prevMonthBtn); // Right side in RTL (Icon >)
         header.appendChild(title);
-        header.appendChild(prevBtn);
+        header.appendChild(nextMonthBtn); // Left side in RTL (Icon <)
         
         this.container.appendChild(header);
         
@@ -15373,11 +15539,165 @@ class CustomDatePicker {
     }
 }
 
+/**
+ * Custom Premium Time Picker
+ * Provides a high-end time selection UI
+ */
+class CustomTimePicker {
+    constructor(inputElement) {
+        this.input = inputElement;
+        this.wrapper = inputElement.closest('.time-input-wrapper');
+        this.init();
+    }
+
+    init() {
+        if (!this.wrapper) return;
+        this.input.setAttribute('readonly', true);
+        this.input.style.cursor = 'pointer';
+        
+        this.container = document.createElement('div');
+        this.container.className = 'timepicker-container';
+        this.wrapper.appendChild(this.container);
+        
+        this.input.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggle();
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!this.wrapper.contains(e.target)) {
+                this.close();
+            }
+        });
+        
+        this.render();
+    }
+
+    toggle() {
+        document.querySelectorAll('.timepicker-container.active, .datepicker-container.active').forEach(dp => {
+            if (dp !== this.container) dp.classList.remove('active');
+        });
+        this.container.classList.toggle('active');
+        if (this.container.classList.contains('active')) {
+            this.render();
+            setTimeout(() => this.scrollToSelected(), 10);
+        }
+    }
+
+    close() {
+        this.container.classList.remove('active');
+    }
+
+    render() {
+        this.container.innerHTML = '';
+        
+        const header = document.createElement('div');
+        header.className = 'timepicker-header';
+        header.textContent = 'בחירת שעה';
+        this.container.appendChild(header);
+        
+        const body = document.createElement('div');
+        body.className = 'timepicker-body';
+        
+        let value = this.input.value || "12:00";
+        if (!value.includes(':')) value = "12:00";
+        const [selHH, selMM] = value.split(':');
+        
+        // Hours Column
+        const hourCol = document.createElement('div');
+        hourCol.className = 'timepicker-column hour-column';
+        for (let i = 0; i < 24; i++) {
+            const hh = String(i).padStart(2, '0');
+            const item = document.createElement('div');
+            item.className = 'timepicker-item' + (hh === selHH ? ' selected' : '');
+            item.textContent = hh;
+            item.onclick = (e) => {
+                e.stopPropagation();
+                this.updateTime(hh, selMM);
+            };
+            hourCol.appendChild(item);
+        }
+        
+        const divider = document.createElement('div');
+        divider.className = 'timepicker-divider';
+        divider.textContent = ':';
+        
+        // Minutes Column
+        const minCol = document.createElement('div');
+        minCol.className = 'timepicker-column minute-column';
+        for (let i = 0; i < 60; i += 5) {
+            const mm = String(i).padStart(2, '0');
+            const item = document.createElement('div');
+            item.className = 'timepicker-item' + (mm === selMM ? ' selected' : '');
+            item.textContent = mm;
+            item.onclick = (e) => {
+                e.stopPropagation();
+                this.updateTime(selHH, mm);
+            };
+            minCol.appendChild(item);
+        }
+        
+        body.appendChild(hourCol);
+        body.appendChild(divider);
+        body.appendChild(minCol);
+        this.container.appendChild(body);
+        
+        const footer = document.createElement('div');
+        footer.className = 'timepicker-footer';
+        
+        const nowBtn = document.createElement('button');
+        nowBtn.type = 'button';
+        nowBtn.className = 'btn btn-secondary btn-sm';
+        nowBtn.textContent = 'עכשיו';
+        nowBtn.onclick = (e) => {
+            e.stopPropagation();
+            const now = new Date();
+            this.updateTime(String(now.getHours()).padStart(2, '0'), String(Math.floor(now.getMinutes()/5)*5).padStart(2, '0'));
+            this.close();
+        };
+        
+        footer.appendChild(nowBtn);
+        this.container.appendChild(footer);
+    }
+
+    updateTime(hh, mm) {
+        const oldValue = this.input.value;
+        this.input.value = `${hh}:${mm}`;
+        if (oldValue !== this.input.value) {
+            this.input.dispatchEvent(new Event('change'));
+        }
+        this.render();
+    }
+
+    scrollToSelected() {
+        const hourCol = this.container.querySelector('.hour-column');
+        const minCol = this.container.querySelector('.minute-column');
+        if (!hourCol || !minCol) return;
+        
+        const selectedHour = hourCol.querySelector('.selected');
+        const selectedMin = minCol.querySelector('.selected');
+        
+        if (selectedHour) {
+            hourCol.scrollTop = selectedHour.offsetTop - hourCol.offsetTop - (hourCol.clientHeight / 2) + (selectedHour.clientHeight / 2);
+        }
+        if (selectedMin) {
+            minCol.scrollTop = selectedMin.offsetTop - minCol.offsetTop - (minCol.clientHeight / 2) + (selectedMin.clientHeight / 2);
+        }
+    }
+}
+
 // Global initialization function
-function initCustomDatePickers() {
+function initCustomPickers() {
+    // Date pickers
     document.querySelectorAll('.date-input:not([data-datepicker-init])').forEach(input => {
         new CustomDatePicker(input);
         input.setAttribute('data-datepicker-init', 'true');
+    });
+    
+    // Time pickers
+    document.querySelectorAll('.time-input:not([data-timepicker-init])').forEach(input => {
+        new CustomTimePicker(input);
+        input.setAttribute('data-timepicker-init', 'true');
     });
 }
 
@@ -15387,7 +15707,7 @@ function initCustomDatePickers() {
     if (originalViewDealDetails) {
         window.viewDealDetails = async function(dealId) {
             await originalViewDealDetails(dealId);
-            initCustomDatePickers();
+            initCustomPickers();
         };
     }
 
@@ -15395,7 +15715,7 @@ function initCustomDatePickers() {
     if (originalShowEditActivityModal) {
         window.showEditActivityModal = function(activity) {
             originalShowEditActivityModal(activity);
-            initCustomDatePickers();
+            initCustomPickers();
         };
     }
     
@@ -15403,15 +15723,15 @@ function initCustomDatePickers() {
     if (originalShowNewActivityModal) {
         window.showNewActivityModal = function(prefill) {
             originalShowNewActivityModal(prefill);
-            initCustomDatePickers();
+            initCustomPickers();
         };
     }
 })();
 
 // Initial run
-document.addEventListener('DOMContentLoaded', initCustomDatePickers);
+document.addEventListener('DOMContentLoaded', initCustomPickers);
 // Also run immediately if DOM already loaded
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    initCustomDatePickers();
+    initCustomPickers();
 }
 
