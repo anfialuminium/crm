@@ -73,7 +73,32 @@ CREATE TABLE product_sizes (
 );
 
 -- ============================================
--- 5. DEALS TABLE
+-- 5. CONTACTS TABLE
+-- ============================================
+CREATE TABLE contacts (
+    contact_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    customer_id UUID REFERENCES customers(customer_id) ON DELETE CASCADE,
+    contact_name VARCHAR(255) NOT NULL,
+    role VARCHAR(100),
+    phone VARCHAR(100),
+    email VARCHAR(255),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index for faster searches
+CREATE INDEX idx_contacts_customer ON contacts(customer_id);
+CREATE INDEX idx_contacts_name ON contacts(contact_name);
+
+-- Apply update trigger
+CREATE TRIGGER update_contacts_updated_at
+    BEFORE UPDATE ON contacts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- 6. DEALS TABLE
 -- ============================================
 CREATE TABLE deals (
     deal_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -84,6 +109,7 @@ CREATE TABLE deals (
     discount_amount DECIMAL(10, 2) DEFAULT 0,
     final_amount DECIMAL(12, 2) DEFAULT 0,
     notes TEXT,
+    contact_id UUID REFERENCES contacts(contact_id), -- Lead contact for this specific deal
     created_by VARCHAR(255), -- User who created the deal
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -96,7 +122,7 @@ CREATE INDEX idx_deals_status ON deals(deal_status);
 CREATE INDEX idx_deals_created_at ON deals(created_at);
 
 -- ============================================
--- 6. DEAL ITEMS TABLE
+-- 7. DEAL ITEMS TABLE
 -- ============================================
 CREATE TABLE deal_items (
     item_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -117,7 +143,7 @@ CREATE INDEX idx_deal_items_deal ON deal_items(deal_id);
 CREATE INDEX idx_deal_items_product ON deal_items(product_id);
 
 -- ============================================
--- 7. ACTIVITIES LOG (Optional - for tracking)
+-- 8. ACTIVITIES LOG (Optional - for tracking)
 -- ============================================
 CREATE TABLE activities (
     activity_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

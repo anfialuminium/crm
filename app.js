@@ -414,6 +414,7 @@ async function initializeApp() {
     await checkSchemaCapabilities();
     setupReportFilters();
     setupOverflowTooltips();
+    setupDealContactSearch();
 
     
     // Load dashboard data (default tab)
@@ -867,6 +868,161 @@ function selectCustomer(customer) {
     
     hiddenInput.value = customer.customer_id;
     searchInput.value = customer.business_name;
+    resultsContainer.classList.add('hidden');
+
+    // Automatically select the customer's primary contact as default for the deal
+    if (customer.primary_contact) {
+        selectDealContact(customer.primary_contact);
+    } else {
+        // Clear previous selection if new customer has no primary contact
+        const dealContactSelect = document.getElementById('deal-contact-select');
+        const dealContactInput = document.getElementById('deal-contact-search-input');
+        if (dealContactSelect) dealContactSelect.value = '';
+        if (dealContactInput) dealContactInput.value = '';
+    }
+
+    // Optionally suggest other contacts for this customer
+    if (customer.customer_id) {
+        suggestCustomerContacts(customer.customer_id);
+    }
+}
+
+function suggestCustomerContacts(customerId) {
+    const contactSearchInput = document.getElementById('deal-contact-search-input');
+    const contactResults = document.getElementById('deal-contact-search-results');
+    
+    if (!contactSearchInput || !contactResults) return;
+
+    // Show top 5 contacts for this customer on focus if empty
+    contactSearchInput.addEventListener('focus', async function onFocusOnce() {
+        if (contactSearchInput.value === '') {
+             try {
+                 const { data: results } = await supabaseClient
+                    .from('contacts')
+                    .select('*')
+                    .eq('customer_id', customerId)
+                    .limit(5);
+                
+                if (results && results.length > 0) {
+                    contactResults.innerHTML = '<div style="padding: 5px 10px; font-size: 0.8rem; color: var(--text-tertiary); border-bottom: 1px solid var(--border-color);">אנשי קשר של הלקוח:</div>';
+                    results.forEach(c => {
+                        const div = document.createElement('div');
+                        div.className = 'search-result-item';
+                        div.innerHTML = `
+                            <div style="font-weight: 500;">${fixBiDi(c.contact_name)}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                ${c.phone ? `${c.phone}` : ''} ${c.role ? `| ${c.role}` : ''}
+                            </div>
+                        `;
+                        div.onclick = () => {
+                            selectDealContact(c);
+                        };
+                        contactResults.appendChild(div);
+                    });
+                    contactResults.classList.remove('hidden');
+                }
+             } catch(e) {}
+        }
+    }, { once: true });
+}
+
+function setupDealContactSearch() {
+    const searchInput = document.getElementById('deal-contact-search-input');
+    const resultsContainer = document.getElementById('deal-contact-search-results');
+    const hiddenInput = document.getElementById('deal-contact-select');
+    
+    if (!searchInput || !resultsContainer || !hiddenInput) return;
+    
+    // Handle input
+    searchInput.addEventListener('input', async (e) => {
+        const query = e.target.value.toLowerCase();
+        
+        if (query.length < 1) {
+            resultsContainer.innerHTML = '';
+            resultsContainer.classList.add('hidden');
+            return;
+        }
+        
+        // Show loading indicator
+        resultsContainer.innerHTML = '<div class="spinner-small" style="padding: 10px; text-align: center;">🔍 מחפש...</div>';
+        resultsContainer.classList.remove('hidden');
+
+        try {
+            // Search in DB - across all contacts
+            // Try with join first
+            let { data: results, error } = await supabaseClient
+                .from('contacts')
+                .select('*, customers(business_name)')
+                .or(`contact_name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
+                .limit(10);
+            
+            // If join fails (e.g. no FK), try simple search
+            if (error) {
+                console.warn('Contact search with join failed, trying simple search:', error);
+                const { data: simpleResults, error: simpleError } = await supabaseClient
+                    .from('contacts')
+                    .select('*')
+                    .or(`contact_name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
+                    .limit(10);
+                
+                if (simpleError) throw simpleError;
+                results = simpleResults;
+            }
+
+            resultsContainer.innerHTML = '';
+            
+            if (!results || results.length === 0) {
+                resultsContainer.innerHTML = '<div class="search-result-empty">לא נמצאו אנשי קשר</div>';
+            } else {
+                results.forEach(c => {
+                    const div = document.createElement('div');
+                    div.className = 'search-result-item';
+                    const businessName = c.customers?.business_name || 'ללא לקוח';
+                    div.innerHTML = `
+                        <div style="font-weight: 500;">${fixBiDi(c.contact_name)}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+                            <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CONTACT} ${businessName}</span> 
+                            ${c.phone ? `| ${c.phone}` : ''}
+                            ${c.role ? `| ${c.role}` : ''}
+                        </div>
+                    `;
+                    div.onclick = () => {
+                        selectDealContact(c);
+                    };
+                    resultsContainer.appendChild(div);
+                });
+            }
+        } catch (error) {
+            console.error('Error searching contacts:', error);
+            const errorMsg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
+            resultsContainer.innerHTML = `<div class="search-result-empty">שגיאה בחיפוש: ${errorMsg.slice(0, 50)}...</div>`;
+        }
+    });
+    
+    // Handle blur
+    searchInput.addEventListener('blur', () => {
+        setTimeout(() => {
+            resultsContainer.classList.add('hidden');
+        }, 200);
+    });
+    
+    // Handle focus
+    searchInput.addEventListener('focus', () => {
+        if (searchInput.value.length >= 1) {
+             searchInput.dispatchEvent(new Event('input'));
+        }
+    });
+}
+
+function selectDealContact(contact) {
+    const searchInput = document.getElementById('deal-contact-search-input');
+    const resultsContainer = document.getElementById('deal-contact-search-results');
+    const hiddenInput = document.getElementById('deal-contact-select');
+    
+    if (!contact) return;
+    
+    hiddenInput.value = contact.contact_id;
+    searchInput.value = contact.contact_name;
     resultsContainer.classList.add('hidden');
 }
 
@@ -1425,6 +1581,23 @@ function createItemRow(item, index, hasAnyColor = true) {
         sizeCell.style.color = 'var(--text-tertiary)';
     }
     
+    // Notes
+    const notesCell = document.createElement('td');
+    const notesInput = document.createElement('textarea');
+    notesInput.className = 'form-input item-notes-input';
+    notesInput.dataset.itemId = item.id;
+    notesInput.style.width = '100%';
+    notesInput.style.minHeight = '40px';
+    notesInput.style.fontSize = '0.85rem';
+    notesInput.style.resize = 'vertical';
+    notesInput.placeholder = 'הערה לפריט...';
+    notesInput.value = item.notes || '';
+    notesInput.addEventListener('input', (e) => {
+        item.notes = e.target.value;
+    });
+    notesCell.appendChild(notesInput);
+
+    
     // Total
     const totalCell = document.createElement('td');
     
@@ -1474,6 +1647,7 @@ function createItemRow(item, index, hasAnyColor = true) {
         tr.appendChild(colorCell);
     }
     tr.appendChild(sizeCell);
+    tr.appendChild(notesCell);
     tr.appendChild(totalCell);
     tr.appendChild(actionsCell);
     
@@ -1622,6 +1796,13 @@ async function saveDeal(status = null) {
         
         const dealStatus = status || document.getElementById('deal-status').value;
         const dealNotes = document.getElementById('deal-notes').value;
+        
+        // Final sync of item notes from DOM just in case
+        document.querySelectorAll('.item-notes-input').forEach(textarea => {
+            const itemId = textarea.dataset.itemId;
+            const item = dealItems.find(i => i.id === itemId);
+            if (item) item.notes = textarea.value;
+        });
         const discountPercentage = parseFloat(document.getElementById('discount-percentage').value) || 0;
         
         console.log('💾 Saving deal:', { editDealId, dealStatus, customerId });
@@ -1652,6 +1833,7 @@ async function saveDeal(status = null) {
                 .from('deals')
                 .update({
                     customer_id: customerId,
+                    contact_id: document.getElementById('deal-contact-select').value || null,
                     deal_status: dealStatus,
                     total_amount: subtotal,
                     discount_percentage: discountPercentage,
@@ -1689,7 +1871,8 @@ async function saveDeal(status = null) {
                 size: item.size || null,
                 is_fin_brush: !!item.is_fin_brush,
                 is_roll: !!item.is_roll,
-                is_carton: !!item.is_carton
+                is_carton: !!item.is_carton,
+                notes: item.notes || null
             }));
             
             const { error: itemsError } = await supabaseClient
@@ -1771,6 +1954,9 @@ async function saveDeal(status = null) {
                     if ((oldItem.size || '') !== (newItem.size || '')) {
                         itemModifications.push(`מידה: ${oldItem.size || '-'} ← ${newItem.size || '-'}`);
                     }
+                    if ((oldItem.notes || '') !== (newItem.notes || '')) {
+                        itemModifications.push(`הערה: ${oldItem.notes || '-'} ← ${newItem.notes || '-'}`);
+                    }
                     
                     if (itemModifications.length > 0) {
                         itemChanges.push(`[עדכון] ${productName}: ${itemModifications.join(', ')}`);
@@ -1811,7 +1997,8 @@ async function saveDeal(status = null) {
                         quantity: i.quantity,
                         price: i.unit_price,
                         color: i.color,
-                        size: i.size
+                        size: i.size,
+                        notes: i.notes
                     };
                 }),
                 itemChanges: itemChanges
@@ -1828,6 +2015,7 @@ async function saveDeal(status = null) {
                 .from('deals')
                 .insert({
                     customer_id: customerId,
+                    contact_id: document.getElementById('deal-contact-select').value || null,
                     deal_status: dealStatus,
                     total_amount: subtotal,
                     discount_percentage: discountPercentage,
@@ -1851,7 +2039,8 @@ async function saveDeal(status = null) {
                 size: item.size || null,
                 is_fin_brush: !!item.is_fin_brush,
                 is_roll: !!item.is_roll,
-                is_carton: !!item.is_carton
+                is_carton: !!item.is_carton,
+                notes: item.notes || null
             }));
             
             const { error: itemsError } = await supabaseClient
@@ -2405,6 +2594,9 @@ function filterCustomers(preservePage = false) {
                 </div>
                 <div class="deal-card-footer">
                     <div class="deal-card-actions" style="margin-right: auto;">
+                        <button type="button" class="btn btn-success btn-icon" onclick="createNewDealForCustomer('${customer.customer_id}')" title="עסקה חדשה">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                        </button>
                         <button type="button" class="btn btn-primary btn-icon" onclick="viewCustomerDetails('${customer.customer_id}')" title="צפה בפרטים והערות">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         </button>
@@ -2584,7 +2776,13 @@ async function loadCustomerNotesHistory(customerId, containerId = 'customer-note
                         <span>
                             ${activityDate && type !== 'הערה' ? `<strong>מועד הפעילות:</strong> ${activityDate}` : ''}
                         </span>
-                        <span>נכתב ע"י: ${activity.created_by || 'מערכת'}</span>
+                        <span>
+                            ${activity.deal_id ? `
+                                <span onclick="viewDealDetails('${activity.deal_id}')" class="deal-link clickable-text" style="color: var(--primary-color); margin-bottom: 2px;">
+                                    ${APP_ICONS.BRIEFCASE} עסקה מקושרת
+                                </span>` : ''}
+                            נכתב ע"י: ${activity.created_by || 'מערכת'}
+                        </span>
                     </div>
                 </div>
             `;
@@ -2783,7 +2981,7 @@ async function viewCustomerDetails(customerId) {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color: #fbbf24;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                             איש קשר מוביל
                          </h4>
-                         <button class="btn btn-sm btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem; display: flex; align-items: center; gap: 5px;" onclick="viewContactDetails('${customer.primary_contact.contact_id}'); closeCustomerDetailsModal();">
+                         <button class="btn btn-sm btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem; display: flex; align-items: center; gap: 5px;" onclick="window.returnToCustomerId = '${customer.customer_id}'; closeCustomerDetailsModal(); viewContactDetails('${customer.primary_contact.contact_id}');">
                             פרטים מלאים 
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
                          </button>
@@ -2958,7 +3156,12 @@ async function viewCustomerDetails(customerId) {
             
             <!-- Deals Section -->
             <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                <h4 style="margin-bottom: 0.5rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.BRIEFCASE} עסקאות</h4>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <h4 style="margin: 0; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.BRIEFCASE} עסקאות</h4>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="createNewDealForCustomer('${customerId}')" style="display: flex; align-items: center; gap: 4px; padding: 0.3rem 0.6rem;">
+                        ${APP_ICONS.PLUS} עסקה חדשה
+                    </button>
+                </div>
                 <div id="view-customer-deals-list" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 1rem; max-height: 200px; overflow-y: auto;">
                     <div class="spinner"></div>
                 </div>
@@ -3011,6 +3214,37 @@ async function viewCustomerDetails(customerId) {
     }
 }
 
+function createNewDealForCustomer(customerId) {
+    const customer = customers.find(c => c.customer_id === customerId);
+    if (!customer) {
+        // Try fetching if not in memory (unlikely but safe)
+        supabaseClient.from('customers').select('*').eq('customer_id', customerId).single()
+            .then(({data}) => {
+                if (data) {
+                    closeCustomerDetailsModal();
+                    selectNavigationItem('deals');
+                    setTimeout(() => {
+                        resetForm();
+                        selectCustomer(data);
+                    }, 100);
+                } else {
+                    showAlert('שגיאה: הלקוח לא נמצא', 'error');
+                }
+            });
+        return;
+    }
+    
+    closeCustomerDetailsModal();
+    selectNavigationItem('deals');
+    
+    // Small delay to ensure the deals tab is ready
+    setTimeout(() => {
+        resetForm(); // Ensure clean slate
+        selectCustomer(customer);
+    }, 100);
+}
+
+
 function closeCustomerDetailsModal() {
     const modal = document.getElementById('customer-details-modal');
     if (modal) {
@@ -3022,6 +3256,14 @@ function closeCustomerDetailsModal() {
         const contactId = window.returnToContactId;
         window.returnToContactId = null;
         viewContactDetails(contactId);
+        return;
+    }
+
+    // Navigate back to deal if history exists
+    if (window.returnToDealId) {
+        const dealId = window.returnToDealId;
+        window.returnToDealId = null;
+        viewDealDetails(dealId);
         return;
     }
 
@@ -3078,7 +3320,7 @@ async function loadCustomerContacts(customerId, primaryContactId) {
                 אנשי קשר משויכים (${customerContacts.length}):
             </p>
             ${customerContacts.map(c => `
-                <div style="display: inline-block; background: var(--bg-secondary); padding: 0.3rem 0.6rem; border-radius: 15px; margin: 0.2rem; font-size: 0.85rem; cursor: pointer;" onclick="viewContactDetails('${c.contact_id}')">
+                <div style="display: inline-block; background: var(--bg-secondary); padding: 0.3rem 0.6rem; border-radius: 15px; margin: 0.2rem; font-size: 0.85rem; cursor: pointer;" onclick="window.returnToCustomerId = '${customerId}'; closeCustomerDetailsModal(); viewContactDetails('${c.contact_id}')">
                     ${APP_ICONS.CONTACT} ${c.contact_name}${c.role ? ` - ${c.role}` : ''}
                     ${c.contact_id === primaryContactId ? `<span style="color: #fbbf24; margin-left: 5px;">${APP_ICONS.STAR_FILL}</span>` : ''}
                 </div>
@@ -4162,6 +4404,14 @@ function closeContactDetailsModal() {
         return;
     }
 
+    // Navigate back to deal if history exists
+    if (window.returnToDealId) {
+        const dealId = window.returnToDealId;
+        window.returnToDealId = null;
+        viewDealDetails(dealId);
+        return;
+    }
+
     // Navigate back to activity if history exists
     if (window.returnToActivityId) {
         const activityId = window.returnToActivityId;
@@ -4779,13 +5029,20 @@ async function loadDealsHistory(preservePage = false) {
             .from('deals')
             .select(`
                 *,
+                contacts (
+                    contact_name,
+                    phone,
+                    email
+                ),
                 customers (
                     business_name,
                     contact_name,
                     phone,
                     primary_contact_id,
                     primary_contact:contacts!customers_primary_contact_id_fkey (
-                        contact_name
+                        contact_name,
+                        phone,
+                        email
                     )
                 )
             `);
@@ -4884,15 +5141,20 @@ async function loadDealsHistory(preservePage = false) {
                                 <td>${date}</td>
                                 <td>
                                     <strong>
-                                        <a href="javascript:void(0)" onclick="viewCustomerDetails('${deal.customer_id}')" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                                        <a href="javascript:void(0)" onclick="viewCustomerDetails('${deal.customer_id}')" class="clickable-text" style="color: inherit; text-decoration: none;">
                                             ${deal.customers.business_name}
                                         </a>
                                     </strong>
                                </td>
                                 <td>
-                                    ${deal.customers.primary_contact_id ? 
-                                        `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500;" onclick="viewContactDetails('${deal.customers.primary_contact_id}')">${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || 'איש קשר'}</span>` 
-                                        : (deal.customers.contact_name || '-')}
+                                    ${(() => {
+                                        const displayContact = deal.contacts || deal.customers?.primary_contact || deal.customers || {};
+                                        const contactName = displayContact.contact_name || deal.customers?.contact_name || '-';
+                                        const contactId = deal.contact_id || deal.customers?.primary_contact_id;
+                                        return contactId ? 
+                                            `<span class="clickable-text" style="color: var(--primary-color); font-weight: 500;" onclick="viewContactDetails('${contactId}')">${contactName}</span>` 
+                                            : contactName;
+                                    })()}
                                 </td>
                                 <td><span class="badge ${statusBadgeClass}">${statusDisplay}</span></td>
                                 <td>₪${(deal.final_amount || 0).toFixed(2)}</td>
@@ -4956,11 +5218,17 @@ function createDealCard(deal) {
         day: 'numeric'
     });
     
+    const displayContact = deal.contacts || deal.customers?.primary_contact || deal.customers || {};
+    const contactName = displayContact.contact_name || deal.customers?.contact_name || '-';
+    const phone = displayContact.phone || deal.customers?.phone || '-';
+    const contactId = deal.contact_id || deal.customers?.primary_contact_id;
+
     card.innerHTML = `
         <div class="deal-card-header">
             <div>
                 <div class="deal-card-title">
-                    <a href="javascript:void(0)" onclick="viewCustomerDetails('${deal.customer_id}')" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                    <a href="javascript:void(0)" onclick="viewCustomerDetails('${deal.customer_id}')" class="clickable-text" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                        <span style="color: var(--primary-color);">${APP_ICONS.BRIEFCASE}</span>
                         ${fixBiDi(deal.customers.business_name)}
                     </a>
                 </div>
@@ -4972,22 +5240,22 @@ function createDealCard(deal) {
             <div class="deal-card-info">
                 <span class="deal-card-label">איש קשר:</span>
                 <span class="deal-card-value">
-                    ${deal.customers.primary_contact_id ? 
-                        `<a href="javascript:void(0)" onclick="viewContactDetails('${deal.customers.primary_contact_id}')" style="font-weight: 500; color: inherit; text-decoration: underline;">${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || '-'}</a>` 
-                        : (deal.customers.contact_name || '-')}
+                    ${contactId ? 
+                        `<a href="javascript:void(0)" onclick="viewContactDetails('${contactId}')" style="font-weight: 500; color: inherit; text-decoration: underline;">${contactName}</a>` 
+                        : contactName}
                 </span>
             </div>
             <div class="deal-card-info">
                 <span class="deal-card-label">טלפון:</span>
                 <span class="deal-card-value">
-                    ${deal.customers.phone ? `
+                    ${phone !== '-' ? `
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span style="color: var(--text-primary);">${deal.customers.phone}</span>
-                            <a href="tel:${deal.customers.phone}" title="התקשר">
+                            <span style="color: var(--text-primary);">${phone}</span>
+                            <a href="tel:${phone}" title="התקשר">
                                 <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                             </a>
-                            ${isMobileNumber(deal.customers.phone) ? `
-                            <a href="https://wa.me/${deal.customers.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
+                            ${isMobileNumber(phone) ? `
+                            <a href="https://wa.me/${phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                 <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
                             </a>` : ''}
                         </div>
@@ -5023,10 +5291,16 @@ function createDealCard(deal) {
 async function viewDealDetails(dealId) {
     try {
         // Fetch deal with all related data
-        const { data: deal, error: dealError } = await supabaseClient
+        let { data: deal, error: dealError } = await supabaseClient
             .from('deals')
             .select(`
                 *,
+                contacts (
+                    contact_name,
+                    phone,
+                    email,
+                    role
+                ),
                 customers (
                     business_name,
                     contact_name,
@@ -5042,7 +5316,33 @@ async function viewDealDetails(dealId) {
             .eq('deal_id', dealId)
             .single();
         
-        if (dealError) throw dealError;
+        // Fallback if contact join fails
+        if (dealError && dealError.message && dealError.message.includes('contacts')) {
+            console.warn('Deal fetch with contact join failed, trying without join:', dealError);
+            const { data: fallbackDeal, error: fallbackError } = await supabaseClient
+                .from('deals')
+                .select(`
+                    *,
+                    customers (
+                        business_name,
+                        contact_name,
+                        phone,
+                        email,
+                        city,
+                        primary_contact_id,
+                        primary_contact:contacts!customers_primary_contact_id_fkey (
+                            contact_name
+                        )
+                    )
+                `)
+                .eq('deal_id', dealId)
+                .single();
+            
+            if (fallbackError) throw fallbackError;
+            deal = fallbackDeal;
+        } else if (dealError) {
+            throw dealError;
+        }
         
         // Fetch deal items
         const { data: items, error: itemsError } = await supabaseClient
@@ -5073,7 +5373,7 @@ async function viewDealDetails(dealId) {
         const dealDay = String(dateObj.getDate()).padStart(2, '0');
         const dealMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
         const dealYear = dateObj.getFullYear();
-        const dealTitle = `הצעת מחיר עבור ${deal.customers.business_name} ${dealDay}.${dealMonth}.${dealYear}`;
+        const dealTitle = `הצעת מחיר עבור ${deal.customers.business_name} ${dealDay}${dealMonth}${dealYear}`;
         
         // Update modal header title directly
         const modalHeaderTitle = modal.querySelector('.modal-header h2');
@@ -5107,30 +5407,45 @@ async function viewDealDetails(dealId) {
             <div class="customer-section" style="margin-bottom: 2rem;">
                 <h3 style="margin-bottom: 1rem;">פרטי לקוח</h3>
                 <div class="customer-details">
-                    <p><strong>שם העסק:</strong> ${fixBiDi(deal.customers.business_name)}</p>
-                    <p><strong>איש קשר:</strong> ${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || '-'}</p>
-                    <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; direction: rtl;">
-                        <strong>טלפון:</strong> 
-                        ${deal.customers.phone ? `
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                <span style="color: var(--text-primary); direction: ltr;">${deal.customers.phone}</span>
-                                <a href="tel:${deal.customers.phone}" title="התקשר">
-                                    <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
-                                </a>
-                                ${isMobileNumber(deal.customers.phone) ? `
-                                <a href="https://wa.me/${deal.customers.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
-                                    <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
-                                </a>` : ''}
-                            </div>
-                        ` : '-'}
-                    </div>
-                    <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <strong>אימייל:</strong> 
-                        ${deal.customers.email ? `
-                            <a href="mailto:${deal.customers.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${deal.customers.email}</a>
-                            <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${deal.customers.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
-                        ` : '-'}
-                    </div>
+                    <p><strong>שם העסק:</strong> <a href="javascript:void(0)" onclick="window.returnToDealId = '${deal.deal_id}'; closeDealModal(); viewCustomerDetails('${deal.customer_id}')" style="color: inherit; text-decoration: underline; font-weight: 500;">${fixBiDi(deal.customers.business_name)}</a></p>
+                    <p><strong>איש קשר (עסקה):</strong> ${deal.contact_id ? `
+                        <a href="javascript:void(0)" onclick="window.returnToDealId = '${deal.deal_id}'; closeDealModal(); viewContactDetails('${deal.contact_id}')" style="color: var(--primary-color); font-weight: 500; text-decoration: underline;">${deal.contacts?.contact_name || 'נבחר אך ללא שם'}</a>
+                    ` : `<span style="color: var(--primary-color); font-weight: 500;">${deal.contacts?.contact_name || 'לא נבחר'}</span>`}</p>
+                    ${(deal.contacts?.contact_name !== (deal.customers.primary_contact?.contact_name || deal.customers.contact_name)) ? `
+                        <p><strong>איש קשר (לקוח):</strong> ${deal.customers.primary_contact_id ? `
+                            <a href="javascript:void(0)" onclick="window.returnToDealId = '${deal.deal_id}'; closeDealModal(); viewContactDetails('${deal.customers.primary_contact_id}')" style="color: inherit; text-decoration: underline;">${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || 'נבחר אך ללא שם'}</a>
+                        ` : (deal.customers.primary_contact?.contact_name || deal.customers.contact_name || '-')}</p>
+                    ` : ''}
+                    ${(() => {
+                        const displayContact = deal.contacts || deal.customers?.primary_contact || deal.customers || {};
+                        const phone = displayContact.phone;
+                        const email = displayContact.email;
+                        
+                        return `
+                        <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; direction: rtl;">
+                            <strong>טלפון:</strong> 
+                            ${phone ? `
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="color: var(--text-primary); direction: ltr;">${phone}</span>
+                                    <a href="tel:${phone}" title="התקשר">
+                                        <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
+                                    </a>
+                                    ${isMobileNumber(phone) ? `
+                                    <a href="https://wa.me/${phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
+                                        <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
+                                    </a>` : ''}
+                                </div>
+                            ` : '-'}
+                        </div>
+                        <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <strong>אימייל:</strong> 
+                            ${email ? `
+                                <a href="mailto:${email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${email}</a>
+                                <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
+                            ` : '-'}
+                        </div>
+                        `;
+                    })()}
                     <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
                         <strong>כתובת:</strong> ${deal.customers.city || '-'} ${deal.customers.city ? renderNavigationIcon(deal.customers.city) : ''}
                     </div>
@@ -5181,6 +5496,7 @@ async function viewDealDetails(dealId) {
                                     <td>${index + 1}</td>
                                     <td><strong>${fixBiDi(item.products.product_name)}</strong><br>
                                         <small style="color: var(--text-tertiary);">${fixBiDi(item.products.category || '')}</small>
+                                        ${item.notes ? `<div style="margin-top: 4px; padding: 4px 8px; background: #f1f5f9; border-radius: 4px; font-size: 0.8rem; color: #475569; border-right: 2px solid #cbd5e1;">${item.notes}</div>` : ''}
                                     </td>
                                     <td>${item.quantity}</td>
                                     <td>₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(למטר)</small>' : ''}</td>
@@ -5751,11 +6067,11 @@ function showEditActivityModal(activity) {
                             <div class="datetime-picker-group">
                                 <div class="date-input-wrapper">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                    <input type="text" id="edit-activity-date" class="form-input date-input" readonly>
+                                    <input type="date" id="edit-activity-date" class="form-input date-input" onclick="this.showPicker()">
                                 </div>
                                 <div class="time-input-wrapper">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                    <input type="time" id="edit-activity-time" class="form-input time-input">
+                                    <input type="time" id="edit-activity-time" class="form-input time-input" onclick="this.showPicker()">
                                 </div>
                             </div>
                         </div>
@@ -6247,11 +6563,11 @@ function openNewActivityModal(prefillData = null) {
                             <div class="datetime-picker-group">
                                 <div class="date-input-wrapper">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                    <input type="text" id="new-activity-date-input" class="form-input date-input" readonly>
+                                    <input type="date" id="new-activity-date-input" class="form-input date-input" onclick="this.showPicker()">
                                 </div>
                                 <div class="time-input-wrapper">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                    <input type="time" id="new-activity-time-input" class="form-input time-input">
+                                    <input type="time" id="new-activity-time-input" class="form-input time-input" onclick="this.showPicker()">
                                 </div>
                             </div>
                         </div>
@@ -6582,6 +6898,29 @@ async function saveNewActivity(event) {
 
 function closeDealModal() {
     document.getElementById('deal-modal').classList.remove('active');
+
+    // Navigate back to customer if history exists
+    if (window.returnToCustomerId) {
+        const customerId = window.returnToCustomerId;
+        window.returnToCustomerId = null;
+        viewCustomerDetails(customerId);
+        return;
+    }
+
+    // Navigate back to contact if history exists
+    if (window.returnToContactId) {
+        const contactId = window.returnToContactId;
+        window.returnToContactId = null;
+        viewContactDetails(contactId);
+        return;
+    }
+
+    // Navigate back to activity if history exists
+    if (window.returnToActivityId) {
+        const activityId = window.returnToActivityId;
+        window.returnToActivityId = null;
+        viewActivityDetails(activityId);
+    }
 }
 
 // Update payment terms for a deal
@@ -6648,10 +6987,11 @@ function deleteDeal(dealId) {
 async function editDeal(dealId) {
     try {
         // Fetch deal with all related data
-        const { data: deal, error: dealError } = await supabaseClient
+        let { data: deal, error: dealError } = await supabaseClient
             .from('deals')
             .select(`
                 *,
+                contacts (contact_name),
                 customers (
                     customer_id,
                     business_name
@@ -6660,7 +7000,25 @@ async function editDeal(dealId) {
             .eq('deal_id', dealId)
             .single();
         
-        if (dealError) throw dealError;
+        // Fallback if contact join fails
+        if (dealError && dealError.message && dealError.message.includes('contacts')) {
+             const { data: fallbackDeal, error: fallbackError } = await supabaseClient
+                .from('deals')
+                .select(`
+                    *,
+                    customers (
+                        customer_id,
+                        business_name
+                    )
+                `)
+                .eq('deal_id', dealId)
+                .single();
+            
+            if (fallbackError) throw fallbackError;
+            deal = fallbackDeal;
+        } else if (dealError) {
+            throw dealError;
+        }
         
         // Fetch deal items
         const { data: items, error: itemsError } = await supabaseClient
@@ -6698,6 +7056,14 @@ async function editDeal(dealId) {
         if (searchInput && deal.customers) {
             searchInput.value = deal.customers.business_name;
         }
+
+        // Populate Lead Contact
+        const contactSelect = document.getElementById('deal-contact-select');
+        const contactSearchInput = document.getElementById('deal-contact-search-input');
+        if (contactSelect && contactSearchInput) {
+            contactSelect.value = deal.contact_id || '';
+            contactSearchInput.value = deal.contacts?.contact_name || '';
+        }
         document.getElementById('deal-status').value = deal.deal_status;
         document.getElementById('deal-notes').value = deal.notes || '';
         document.getElementById('discount-percentage').value = deal.discount_percentage || 0;
@@ -6717,6 +7083,7 @@ async function editDeal(dealId) {
                 is_fin_brush: !!item.is_fin_brush,
                 is_roll: !!item.is_roll,
                 is_carton: !!item.is_carton,
+                notes: item.notes || '',
                 requires_color: item.products.requires_color,
                 requires_size: item.products.requires_size
             };
@@ -6887,6 +7254,12 @@ async function loadThisWeek() {
                     deal_id,
                     deal_status,
                     final_amount,
+                    contact_id,
+                    contacts (
+                        contact_name,
+                        phone,
+                        email
+                    ),
                     customers (
                         customer_id,
                         business_name,
@@ -6896,7 +7269,9 @@ async function loadThisWeek() {
                         city,
                         primary_contact_id,
                         primary_contact:contacts!customers_primary_contact_id_fkey (
-                            contact_name
+                            contact_name,
+                            phone,
+                            email
                         )
                     )
                 ),
@@ -6909,11 +7284,15 @@ async function loadThisWeek() {
                     city,
                     primary_contact_id,
                     primary_contact:contacts!customers_primary_contact_id_fkey (
-                        contact_name
+                        contact_name,
+                        phone,
+                        email
                     )
                 ),
                 contacts (
-                    contact_name
+                    contact_name,
+                    phone,
+                    email
                 )
             `);
             // Note: We keep neq('activity_type', 'הערה') for the main weekly list as these are usually just logs,
@@ -6923,9 +7302,34 @@ async function loadThisWeek() {
             .from('activities')
             .select(`
                 *,
-                deals (deal_id, deal_status, final_amount, customers (customer_id, business_name, contact_name, phone, email, city, primary_contact_id, primary_contact:contacts!customers_primary_contact_id_fkey (contact_name))),
-                customers (customer_id, business_name, contact_name, phone, email, city, primary_contact_id, primary_contact:contacts!customers_primary_contact_id_fkey (contact_name)),
-                contacts (contact_name)
+                deals (
+                    deal_id, 
+                    deal_status, 
+                    final_amount, 
+                    contact_id,
+                    contacts (contact_name, phone, email),
+                    customers (
+                        customer_id, 
+                        business_name, 
+                        contact_name, 
+                        phone, 
+                        email, 
+                        city, 
+                        primary_contact_id, 
+                        primary_contact:contacts!customers_primary_contact_id_fkey (contact_name, phone, email)
+                    )
+                ),
+                customers (
+                    customer_id, 
+                    business_name, 
+                    contact_name, 
+                    phone, 
+                    email, 
+                    city, 
+                    primary_contact_id, 
+                    primary_contact:contacts!customers_primary_contact_id_fkey (contact_name, phone, email)
+                ),
+                contacts (contact_name, phone, email)
             `)
             .or('completed.is.null,completed.eq.false')
             .lt('activity_date', nowForOverdue.toISOString());
@@ -7219,10 +7623,13 @@ function renderThisWeekActivityCard(activity) {
     const customer = activity.deals?.customers || activity.customers;
     const customerName = customer?.business_name || 
                                     activity.customers?.business_name || 'ללא לקוח';
-    const primaryContact = customer?.primary_contact;
-    const contactName = activity.contacts?.contact_name || primaryContact?.contact_name || customer?.contact_name || '';
-    const contactId = activity.contact_id || customer?.primary_contact_id;
-    const phone = customer?.phone || '';
+    
+    // Priority: Activity Contact > Deal Contact > Primary Contact > Customer Record
+    const displayContact = activity.contacts || activity.deals?.contacts || customer?.primary_contact || customer || {};
+    const contactName = displayContact.contact_name || customer?.contact_name || '';
+    const contactId = activity.contact_id || activity.deals?.contact_id || customer?.primary_contact_id;
+    const phone = displayContact.phone || customer?.phone || '';
+    
     const dealId = activity.deal_id;
     const dealAmount = activity.deals?.final_amount;
     
@@ -7301,14 +7708,17 @@ function renderThisWeekActivityCard(activity) {
                             </a>` : ''}
                         </div>
                     ` : ''}
-                    ${customer?.email ? `
+                    ${displayContact.email || customer?.email ? (() => {
+                        const email = displayContact.email || customer?.email;
+                        return `
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             ${APP_ICONS.MAIL} 
-                            <a href="mailto:${customer.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${customer.email}</a>
-                            <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${customer.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
+                            <a href="mailto:${email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${email}</a>
+                            <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                         </div>
-                    ` : ''}
-                    ${dealId ? `<span style="color: var(--primary-color); display: flex; align-items: center; gap: 4px;">${APP_ICONS.BRIEFCASE} עסקה${dealAmount ? ` • ₪${dealAmount.toFixed(0)}` : ''}</span>` : ''}
+                        `;
+                    })() : ''}
+                    ${dealId ? `<span onclick="viewDealDetails('${dealId}')" class="deal-link clickable-text" style="color: var(--primary-color);" title="פתח עסקה">${APP_ICONS.BRIEFCASE} עסקה${dealAmount ? ` • ₪${dealAmount.toFixed(0)}` : ''}</span>` : ''}
                 </div>
                 <div style="display: flex; gap: 0.4rem; align-items: center;">
                     ${!isCompleted ? `
@@ -7342,7 +7752,7 @@ function renderThisWeekActivityCard(activity) {
                     ` : ''}
                     ${dealId ? `
                         <button class="btn btn-primary btn-icon" style="width: 32px; height: 32px;" 
-                                onclick="openDealModal('${dealId}')" title="פתח עסקה">
+                                onclick="viewDealDetails('${dealId}')" title="פתח עסקה">
                             ${APP_ICONS.BRIEFCASE}
                         </button>
                     ` : ''}
@@ -7673,6 +8083,13 @@ async function viewActivityDetails(activityId) {
                         <span class="deal-card-label">איש קשר:</span>
                         <span class="deal-card-value">${contactHtml}</span>
                     </div>
+                    ${activity.deal_id ? `
+                    <div class="deal-card-info">
+                        <span class="deal-card-label">עסקה:</span>
+                        <span class="deal-card-value">
+                            <span class="deal-link clickable-text" style="color: var(--primary-color);" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewDealDetails('${activity.deal_id}')">${APP_ICONS.BRIEFCASE} עסקה מקושרת</span>
+                        </span>
+                    </div>` : ''}
                     <div class="deal-card-info">
                         <span class="deal-card-label">טלפון:</span>
                         <span class="deal-card-value">
@@ -7804,6 +8221,12 @@ async function loadActivities(preservePage = false) {
                 deals (
                     deal_id,
                     deal_status,
+                    contact_id,
+                    contacts (
+                        contact_name,
+                        phone,
+                        email
+                    ),
                     customers (
                         customer_id,
                         business_name,
@@ -7812,7 +8235,9 @@ async function loadActivities(preservePage = false) {
                         email,
                         primary_contact_id,
                         primary_contact:contacts!customers_primary_contact_id_fkey (
-                            contact_name
+                            contact_name,
+                            phone,
+                            email
                         )
                     )
                 ),
@@ -7824,11 +8249,15 @@ async function loadActivities(preservePage = false) {
                     email,
                     primary_contact_id,
                     primary_contact:contacts!customers_primary_contact_id_fkey (
-                        contact_name
+                        contact_name,
+                        phone,
+                        email
                     )
                 ),
                 contacts (
-                    contact_name
+                    contact_name,
+                    phone,
+                    email
                 )
             `)
             .neq('activity_type', 'הערה');
@@ -7982,14 +8411,14 @@ async function loadActivities(preservePage = false) {
                                 const cust = activity.deals.customers;
                                 businessName = cust.business_name || 'לא משויך';
                                 customerId = cust.customer_id;
-                                contactNameRaw = activity.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '-';
-                                primaryContactId = activity.contact_id || cust.primary_contact_id;
+                                contactNameRaw = activity.contacts?.contact_name || activity.deals?.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '-';
+                                primaryContactId = activity.contact_id || activity.deals?.contact_id || cust.primary_contact_id;
                             } else if (activity.customers) {
                                 const cust = activity.customers;
                                 businessName = cust.business_name || 'לא משויך';
                                 customerId = cust.customer_id;
-                                contactNameRaw = activity.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '-';
-                                primaryContactId = activity.contact_id || cust.primary_contact_id;
+                                contactNameRaw = activity.contacts?.contact_name || activity.deals?.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '-';
+                                primaryContactId = activity.contact_id || activity.deals?.contact_id || cust.primary_contact_id;
                             }
                             
                             const contactDisplay = (primaryContactId && contactNameRaw !== '-')
@@ -8021,6 +8450,10 @@ async function loadActivities(preservePage = false) {
                                             : businessName
                                         }
                                         <div style="font-size: 0.8em; color: var(--text-tertiary);">${contactDisplay}</div>
+                                        ${activity.deal_id ? `
+                                            <div class="deal-link clickable-text" style="font-size: 0.8em; color: var(--primary-color);" onclick="viewDealDetails('${activity.deal_id}')">
+                                                ${APP_ICONS.BRIEFCASE} עסקה מקושרת
+                                            </div>` : ''}
                                     </td>
                                     <td style="color: var(--primary-color);">${activityDate}</td>
                                     <td>
@@ -8094,16 +8527,18 @@ async function loadActivities(preservePage = false) {
                 if (activity.deals?.customers) {
                     const cust = activity.deals.customers;
                     businessName = cust.business_name || 'לא משויך';
-                    contactName = activity.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '';
-                    phone = cust.phone || '';
-                    email = cust.email || '';
-                    primaryContactId = activity.contact_id || cust.primary_contact_id;
+                    const displayContact = activity.contacts || activity.deals?.contacts || cust.primary_contact || cust || {};
+                    contactName = displayContact.contact_name || cust.contact_name || '';
+                    phone = displayContact.phone || cust.phone || '';
+                    email = displayContact.email || cust.email || '';
+                    primaryContactId = activity.contact_id || activity.deals?.contact_id || cust.primary_contact_id;
                 } else if (activity.customers) {
                     const cust = activity.customers;
                     businessName = cust.business_name || 'לא משויך';
-                    contactName = activity.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '';
-                    phone = cust.phone || '';
-                    email = cust.email || '';
+                    const displayContact = activity.contacts || cust.primary_contact || cust || {};
+                    contactName = displayContact.contact_name || cust.contact_name || '';
+                    phone = displayContact.phone || cust.phone || '';
+                    email = displayContact.email || cust.email || '';
                     primaryContactId = activity.contact_id || cust.primary_contact_id;
                 }
                 
@@ -8158,6 +8593,7 @@ async function loadActivities(preservePage = false) {
                             ${activityDate ? `<div><strong>תאריך:</strong> <span style="color: var(--primary-color);">${activityDate}</span></div>` : ''}
                             <div><strong>לקוח:</strong> ${businessName}</div>
                             ${contactName ? `<div><strong>איש קשר:</strong> ${contactDisplay}</div>` : ''}
+                            ${activity.deal_id ? `<div><strong>עסקה:</strong> <a href="javascript:void(0)" onclick="viewDealDetails('${activity.deal_id}')" class="deal-link clickable-text" style="color: var(--primary-color); padding: 1px 4px; font-size: 0.75rem;">${APP_ICONS.BRIEFCASE} עסקה מקושרת</a></div>` : ''}
                             ${email ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <strong>מייל:</strong> 
@@ -8276,6 +8712,11 @@ async function generateQuotePDF(specificDealId = null) {
             .from('deals')
             .select(`
                 *,
+                contacts (
+                    contact_name,
+                    phone,
+                    email
+                ),
                 customers (
                     business_name,
                     contact_name,
@@ -8284,7 +8725,9 @@ async function generateQuotePDF(specificDealId = null) {
                     city,
                     primary_contact_id,
                     primary_contact:contacts!customers_primary_contact_id_fkey (
-                        contact_name
+                        contact_name,
+                        phone,
+                        email
                     )
                 )
             `)
@@ -8390,8 +8833,15 @@ async function generateQuotePDF(specificDealId = null) {
                 <h3 style="color: #1e293b; margin-bottom: 1rem; font-size: 1.2rem; font-weight: 600;">פרטי לקוח</h3>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
                     <p style="color: #475569; margin: 0.25rem 0;"><strong style="color: #1e293b;">שם העסק:</strong> ${deal.customers.business_name}</p>
-                    <p style="color: #475569; margin: 0.25rem 0;"><strong style="color: #1e293b;">איש קשר:</strong> ${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || '-'}</p>
-                    <p style="color: #475569; margin: 0.25rem 0;"><strong style="color: #1e293b;">טלפון:</strong> ${deal.customers.phone || '-'}</p>
+                    ${(() => {
+                        const displayContact = deal.contacts || deal.customers?.primary_contact || deal.customers || {};
+                        const contactName = displayContact.contact_name || deal.customers?.contact_name || '-';
+                        const contactPhone = displayContact.phone || deal.customers?.phone || '-';
+                        return `
+                            <p style="color: #475569; margin: 0.25rem 0;"><strong style="color: #1e293b;">איש קשר:</strong> ${contactName}</p>
+                            <p style="color: #475569; margin: 0.25rem 0;"><strong style="color: #1e293b;">טלפון:</strong> ${contactPhone}</p>
+                        `;
+                    })()}
                     <p style="color: #475569; margin: 0.25rem 0;"><strong style="color: #1e293b;">כתובת:</strong> ${deal.customers.city || '-'}</p>
                 </div>
             </div>
@@ -8414,14 +8864,17 @@ async function generateQuotePDF(specificDealId = null) {
                         ${items.map((item, index) => `
                             <tr style="border-bottom: 1px solid #e2e8f0;">
                                 <td style="padding: 1rem;">${index + 1}</td>
-                                <td style="padding: 1rem;"><strong>${item.products.product_name}</strong></td>
+                                <td style="padding: 1rem;">
+                                    <strong>${fixBiDi(item.products.product_name)}</strong>
+                                    ${item.notes ? `<div style="margin-top: 6px; padding: 6px 10px; background: #fffbeb; border-right: 4px solid #facc15; border-radius: 4px; font-size: 0.82rem; color: #4b5563; line-height: 1.5;">${fixBiDi(item.notes)}</div>` : ''}
+                                </td>
                                 <td style="padding: 1rem;">${item.quantity}</td>
                                 <td style="padding: 1rem;">₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(למטר)</small>' : ''}</td>
-                                <td style="padding: 1rem;">${item.color || '-'}</td>
+                                <td style="padding: 1rem;">${fixBiDi(item.color) || '-'}</td>
                                 <td style="padding: 1rem;">
                                     ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : ''}
                                     ${item.is_carton ? `${(item.quantity * getBrushCartonMultiplier(item.products, item.size, item.is_fin_brush)).toFixed(0)} מ' (קרטון)` : ''}
-                                    ${(!item.is_roll && !item.is_carton) ? (item.size || '-') : ''}
+                                    ${(!item.is_roll && !item.is_carton) ? (fixBiDi(item.size) || '-') : ''}
                                     ${item.is_fin_brush ? '<br><span style="color: #059669; font-size: 0.8rem; font-weight: 600;">מברשת סנפיר</span>' : ''}
                                     ${item.is_roll ? '<br><span style="color: #2563eb; font-size: 0.8rem; font-weight: 600;">גליל רשת (30 מ\')</span>' : ''}
                                     ${item.is_carton ? '<br><span style="color: #d97706; font-size: 0.8rem; font-weight: 600;">קרטון מברשות</span>' : ''}
@@ -8462,13 +8915,20 @@ async function generateQuotePDF(specificDealId = null) {
             <!-- Terms and Conditions -->
             <div class="quote-terms" style="margin-top: 3rem; padding-top: 2rem; border-top: 2px solid #e2e8f0;">
                 <h3 style="color: #1e293b; margin-bottom: 1rem; font-weight: 600;">תנאים והערות</h3>
-                <ul style="list-style-position: inside; color: #475569; line-height: 1.8;">
+                <ul style="list-style-position: inside; color: #475569; line-height: 1.8; margin-bottom: 1.5rem;">
                     <li>המחירים אינם כוללים מע"מ</li>
                     <li>תוקף ההצעה: 30 יום מתאריך ההנפקה</li>
                     <li>תנאי תשלום: ${paymentTerms}</li>
                     <li>משלוח: עד 7 ימי עסקים</li>
                     ${items.some(item => (item.products.category && item.products.category.includes('מברשות')) || item.products.product_name.includes('מברשת')) ? '<li>עבור מברשות המחיר הינו למטר אחד</li>' : ''}
                 </ul>
+                
+                ${deal.notes ? `
+                <div style="background: #f1f5f9; padding: 1rem; border-radius: 6px; border-right: 4px solid #64748b; color: #334155; font-size: 0.95rem;">
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">הערות נוספות:</div>
+                    <div dir="auto" style="white-space: pre-wrap;">${fixBiDi(deal.notes)}</div>
+                </div>
+                ` : ''}
             </div>
             
             <!-- Footer -->
@@ -8501,28 +8961,16 @@ async function generateQuotePDF(specificDealId = null) {
         pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
         
         // Save the PDF
-        const now = new Date();
-        const d = String(now.getDate()).padStart(2, '0');
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const y = now.getFullYear();
-        const cleanDate = `${d}${m}${y}`;
+        const dateObj = new Date(deal.created_at);
+        const dealDay = String(dateObj.getDate()).padStart(2, '0');
+        const dealMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dealYear = dateObj.getFullYear();
+        const cleanDate = `${dealDay}${dealMonth}${dealYear}`;
         
         const fileName = `הצעת מחיר עבור ${deal.customers.business_name} ${cleanDate}.pdf`;
         
-        // Open PDF in new window
-        const blob = pdf.output('blob');
-        const blobUrl = URL.createObjectURL(blob);
-        const newWindow = window.open(blobUrl, '_blank');
-        
-        if (!newWindow) {
-            // Fallback if popup blocked
-            pdf.save(fileName);
-            showAlert('החלון החוסם מנע את פתיחת ה-PDF. הקובץ הורד למחשב.', 'warning');
-        } else {
-             // Optional: Revoke URL after some time to free memory, but might be too early if user hasn't loaded it?
-             // Usually browsers handle it fine or we keep it until unload.
-             setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-        }
+        // Save the file
+        pdf.save(fileName);
         
         // Clean up
         document.body.removeChild(quoteContainer);
@@ -8546,14 +8994,19 @@ async function sendDealWhatsApp(specificDealId = null, btnElement = null) {
         // Fetch deal and items
         const { data: deal, error: dealError } = await supabaseClient
             .from('deals')
-            .select(`*, customers(business_name, contact_name, phone)`)
+            .select(`
+                *, 
+                customers(business_name, contact_name, phone),
+                contacts(phone)
+            `)
             .eq('deal_id', dealId)
             .single();
 
         if (dealError) throw dealError;
 
         // Encode and Open
-        const phone = deal.customers.phone ? deal.customers.phone.replace(/\D/g, '').replace(/^0/, '972') : '';
+        const rawPhone = (deal.contacts && deal.contacts.phone) ? deal.contacts.phone : (deal.customers ? deal.customers.phone : '');
+        const phone = rawPhone ? rawPhone.replace(/\D/g, '').replace(/^0/, '972') : '';
         
         if (!phone) {
             if (btnElement) {
@@ -8606,6 +9059,9 @@ function resetForm() {
     const searchInput = document.getElementById('customer-search-input');
     if (searchInput) searchInput.value = '';
     document.getElementById('deal-status').value = 'זכייה';
+    document.getElementById('deal-contact-select').value = '';
+    const contactSearchInput = document.getElementById('deal-contact-search-input');
+    if (contactSearchInput) contactSearchInput.value = '';
     document.getElementById('deal-notes').value = '';
     document.getElementById('discount-percentage').value = '0';
     
@@ -10755,7 +11211,7 @@ async function loadCustomerDeals(customerId, containerId = 'view-customer-deals-
             const dealDay = String(dateObj.getDate()).padStart(2, '0');
             const dealMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
             const dealYear = dateObj.getFullYear();
-            const dealTitle = `הצעת מחיר עבור ${deal.customers?.business_name || 'לקוח'} ${dealDay}.${dealMonth}.${dealYear}`;
+            const dealTitle = `הצעת מחיר עבור ${deal.customers?.business_name || 'לקוח'} ${dealDay}${dealMonth}${dealYear}`;
 
             const statusBadgeClass = {
                 'טיוטה': 'badge-pending',
@@ -10770,8 +11226,8 @@ async function loadCustomerDeals(customerId, containerId = 'view-customer-deals-
             return `
                 <div style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
                     <div style="flex: 1;">
-                        <div style="font-weight: 600; margin-bottom: 0.25rem;">
-                            ${dealTitle}
+                        <div style="font-weight: 600; margin-bottom: 0.25rem;" class="deal-link clickable-text" onclick="window.returnToCustomerId = '${customerId}'; closeCustomerDetailsModal(); viewDealDetails('${deal.deal_id}');">
+                            ${APP_ICONS.BRIEFCASE} ${dealTitle}
                         </div>
                         <div style="font-size: 0.85rem; color: var(--text-tertiary);">
                             ${formattedDate} • ₪${(deal.final_amount || 0).toLocaleString()}
@@ -10779,7 +11235,7 @@ async function loadCustomerDeals(customerId, containerId = 'view-customer-deals-
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span class="badge ${statusBadgeClass}" style="font-size: 0.75rem;">${statusDisplay}</span>
-                        <button class="btn btn-sm btn-primary" onclick="viewDealDetails('${deal.deal_id}'); closeCustomerDetailsModal();" title="צפה בפרטים">${APP_ICONS.EYE}</button>
+                        <button class="btn btn-sm btn-primary" onclick="window.returnToCustomerId = '${customerId}'; closeCustomerDetailsModal(); viewDealDetails('${deal.deal_id}');" title="צפה בפרטים">${APP_ICONS.EYE}</button>
                     </div>
                 </div>
             `;
@@ -14084,9 +14540,12 @@ function renderMentionSuggestions(deals, orders, contacts, query) {
     let html = '';
     
     deals.forEach(deal => {
-        const date = deal.created_at ? new Date(deal.created_at).toLocaleDateString('he-IL') : '';
+        const dateObj = new Date(deal.created_at);
+        const dealDay = String(dateObj.getDate()).padStart(2, '0');
+        const dealMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dealYear = dateObj.getFullYear();
         const businessName = deal.customers?.business_name || 'לקוח';
-        const dealDisplayName = `הצעת מחיר עבור ${businessName} ${date}`;
+        const dealDisplayName = `הצעת מחיר עבור ${businessName} ${dealDay}${dealMonth}${dealYear}`;
         
         html += `
             <div class="mention-item" onclick="insertMention('Deal', '${deal.deal_id}', '${dealDisplayName}')">

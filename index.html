@@ -247,8 +247,8 @@
                     <h2 class="section-title"><svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> עסקה חדשה</h2>
                     
                     <!-- Customer Selection -->
-                    <div class="customer-selector">
-                        <div class="form-group" style="flex: 2;">
+                    <div class="customer-selector" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 2; min-width: 250px;">
                             <label class="form-label required">בחר לקוח</label>
                             <div class="searchable-select" id="customer-search-container">
                                 <input type="text" id="customer-search-input" class="form-input" placeholder="חפש לקוח (שם העסק)" autocomplete="off">
@@ -256,10 +256,19 @@
                                 <input type="hidden" id="customer-select">
                             </div>
                         </div>
-                        <button type="button" class="btn btn-secondary" onclick="prepareNewCustomer()">
+                        <div class="form-group" style="flex: 1; min-width: 200px;">
+                            <label class="form-label">איש קשר מוביל</label>
+                            <div class="searchable-select" id="deal-contact-search-container">
+                                <input type="text" id="deal-contact-search-input" class="form-input" placeholder="חפש איש קשר..." autocomplete="off">
+                                <div id="deal-contact-search-results" class="search-results hidden"></div>
+                                <input type="hidden" id="deal-contact-select">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary" style="align-self: flex-end; margin-bottom: 0;" onclick="prepareNewCustomer()">
                             לקוח חדש
                         </button>
                     </div>
+
 
                     <!-- Deal Status -->
                     <div class="form-grid">
@@ -293,9 +302,10 @@
                         <colgroup>
                             <col style="width: 25%;"> <!-- Product -->
                             <col style="width: 10%;"> <!-- Qty -->
-                            <col style="width: 15%;"> <!-- Price -->
-                            <col id="deal-color-col" style="width: 15%;"> <!-- Color -->
-                            <col style="width: 15%;"> <!-- Size -->
+                            <col style="width: 10%;"> <!-- Price -->
+                            <col id="deal-color-col" style="width: 10%;"> <!-- Color -->
+                            <col style="width: 10%;"> <!-- Size -->
+                            <col style="width: 15%;"> <!-- Notes -->
                             <col style="width: 10%;"> <!-- Total -->
                             <col style="width: 10%;"> <!-- Actions -->
                         </colgroup>
@@ -306,6 +316,7 @@
                                 <th>מחיר יחידה</th>
                                 <th id="deal-color-head">צבע</th>
                                 <th>מידה</th>
+                                <th>הערות</th>
                                 <th>סה"כ</th>
                                 <th>פעולות</th>
                             </tr>
@@ -1686,7 +1697,7 @@
                         <label class="form-label">תאריך ביצוע</label>
                         <div class="date-input-wrapper">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                            <input type="date" id="order-creation-date" class="form-input date-input">
+                            <input type="date" id="order-creation-date" class="form-input date-input" onclick="this.showPicker()">
                         </div>
 
                     </div>
@@ -1694,7 +1705,7 @@
                         <label class="form-label">צפי הגעה</label>
                         <div class="date-input-wrapper">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                            <input type="date" id="order-expected-date" class="form-input date-input">
+                            <input type="date" id="order-expected-date" class="form-input date-input" onclick="this.showPicker()">
                         </div>
 
                     </div>
@@ -1791,7 +1802,7 @@
                                     <label style="color: white; font-size: 0.8rem; margin-bottom: 2px;">תאריך מקדמה</label>
                                     <div class="date-input-wrapper">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; right: 6px; color: white; opacity: 1;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                        <input type="date" id="order-down-payment-date" class="form-input date-input" style="height: 30px; padding: 2px 24px 2px 8px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 0.85rem;" onchange="updateOrderExchangeRate(true)">
+                                        <input type="date" id="order-down-payment-date" class="form-input date-input" style="height: 30px; padding: 2px 24px 2px 8px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 0.85rem;" onchange="updateOrderExchangeRate(true)" onclick="this.showPicker()">
                                     </div>
 
                                 </div>
@@ -1799,7 +1810,7 @@
                                     <label style="color: white; font-size: 0.8rem; margin-bottom: 2px;">תאריך תשלום יתרה</label>
                                     <div class="date-input-wrapper">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; right: 6px; color: white; opacity: 1;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                        <input type="date" id="order-full-payment-date" class="form-input date-input" style="height: 30px; padding: 2px 24px 2px 8px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 0.85rem;" onchange="updateOrderExchangeRate(true)">
+                                        <input type="date" id="order-full-payment-date" class="form-input date-input" style="height: 30px; padding: 2px 24px 2px 8px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 0.85rem;" onchange="updateOrderExchangeRate(true)" onclick="this.showPicker()">
                                     </div>
 
                                 </div>

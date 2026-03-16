@@ -356,6 +356,11 @@
             </ul>
         </div>
         
+        <div id="deal-notes-section" class="terms" style="margin-top: 1rem; display: none;">
+            <h3>הערות נוספות</h3>
+            <p id="quote-general-notes" style="color: #475569; line-height: 1.6; white-space: pre-wrap;"></p>
+        </div>
+        
         <!-- Footer -->
         <div class="footer">
             <p>תודה על פנייתך! נשמח לעמוד לשירותך בכל שאלה.</p>
@@ -409,6 +414,48 @@
         }
 
 
+        
+        function getBrushCartonMultiplier(products, size, is_fin_brush) {
+            if (!products) return 1;
+            const name = products.product_name || '';
+            const isFin = !!is_fin_brush;
+            
+            if (isFin) {
+                if (name.includes('צר נמוך')) return 2000;
+                if (name.includes('רחב נמוך')) return 1800;
+                if (name.includes('צר גבוה')) return 1600;
+                if (name.includes('רחב גבוה')) return 1400;
+                return 1500;
+            }
+            
+            if (name.includes('צר נמוך')) return 1500;
+            if (name.includes('רחב נמוך')) return 1500;
+            if (name.includes('צר גבוה')) {
+                if (size === '12') return 1000;
+                if (size === '15') return 800;
+                if (size === '20') return 600;
+                return 1000;
+            }
+            if (name.includes('רחב גבוה')) {
+                if (size === '12') return 800;
+                if (size === '15') return 600;
+                if (size === '20') return 400;
+                return 800;
+            }
+            if (name.includes('אינסרט')) return 300;
+            if (name.includes('הדבקה')) {
+                if (size === '200 מטר') return 800;
+                return 100;
+            }
+            return 1;
+        }
+
+        function fixBiDi(text) {
+            if (!text) return '';
+            // Force RTL for bracketed content and numbers
+            return `<bdi dir="auto">${text.toString().replace(/\[([^\]]+)\]/g, '<span dir="ltr">[$1]</span>')}</bdi>`;
+        }
+
         // Set current date
         document.getElementById('quote-date').textContent = new Date().toLocaleDateString('he-IL');
         
@@ -416,8 +463,8 @@
         function populateQuote(dealData) {
             // Update customer info
             document.getElementById('customer-business').textContent = dealData.customer.business_name;
-            document.getElementById('customer-contact').textContent = dealData.customer.contact_name;
-            document.getElementById('customer-phone').textContent = dealData.customer.phone;
+            document.getElementById('customer-contact').textContent = dealData.lead_contact?.contact_name || dealData.customer.contact_name;
+            document.getElementById('customer-phone').textContent = dealData.lead_contact?.phone || dealData.customer.phone;
             document.getElementById('customer-city').textContent = dealData.customer.city;
             
             // Update items
@@ -428,11 +475,19 @@
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${index + 1}</td>
-                    <td><strong>${item.product_name}</strong></td>
+                    <td>
+                        <div style="font-weight: 600;">${fixBiDi(item.product_name)}</div>
+                        <small style="color: #64748b; font-size: 0.75rem;">${fixBiDi(item.category || '')}</small>
+                        ${item.notes ? `<div class="item-note-box" style="font-size: 0.82rem; color: #4b5563; margin-top: 6px; padding: 6px 10px; background: #fffbeb; border-right: 4px solid #facc15; border-radius: 4px; line-height: 1.5; box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.1);">${fixBiDi(item.notes)}</div>` : ''}
+                    </td>
                     <td>${item.quantity}</td>
                     <td>₪${item.unit_price.toFixed(2)}</td>
-                    <td>${item.color || '-'}</td>
-                    <td>${item.size || '-'}</td>
+                    <td>${fixBiDi(item.color) || '-'}</td>
+                    <td>
+                        ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : ''}
+                        ${item.is_carton ? `${(item.quantity * getBrushCartonMultiplier(item.products_raw, item.size, item.is_fin_brush)).toFixed(0)} מ' (קרטון)` : ''}
+                        ${(!item.is_roll && !item.is_carton) ? (fixBiDi(item.size) || '-') : ''}
+                    </td>
                     <td>₪${item.total_price.toFixed(2)}</td>
                 `;
                 tbody.appendChild(row);
@@ -448,6 +503,16 @@
             
             document.getElementById('vat').textContent = `₪${vat.toFixed(2)}`;
             document.getElementById('total').textContent = `₪${total.toFixed(2)}`;
+            
+            // General notes
+            const notesSection = document.getElementById('deal-notes-section');
+            const notesText = document.getElementById('quote-general-notes');
+            if (dealData.notes) {
+                notesSection.style.display = 'block';
+                notesText.textContent = dealData.notes;
+            } else {
+                notesSection.style.display = 'none';
+            }
         }
 
         async function loadDealData(dealId) {
@@ -455,6 +520,10 @@
                 .from('deals')
                 .select(`
                     *,
+                    contacts (
+                        contact_name,
+                        phone
+                    ),
                     customers (
                         business_name,
                         contact_name,
@@ -475,9 +544,20 @@
             const { data: items, error: itemsError } = await supabase
                 .from('deal_items')
                 .select(`
-                    *,
+                    item_id,
+                    deal_id,
+                    product_id,
+                    quantity,
+                    unit_price,
+                    color,
+                    size,
+                    is_fin_brush,
+                    is_roll,
+                    is_carton,
+                    notes,
                     products (
-                        product_name
+                        product_name,
+                        category
                     )
                 `)
                 .eq('deal_id', dealId);
@@ -495,12 +575,22 @@
                     phone: deal.customers.phone || '-',
                     city: deal.customers.city || '-'
                 },
+                lead_contact: deal.contacts ? {
+                    contact_name: deal.contacts.contact_name,
+                    phone: deal.contacts.phone
+                } : null,
                 items: items.map(item => ({
                     product_name: item.products.product_name,
+                    category: item.products.category,
                     quantity: item.quantity,
                     unit_price: item.unit_price,
                     color: item.color,
                     size: item.size,
+                    notes: item.notes,
+                    is_roll: item.is_roll,
+                    is_carton: item.is_carton,
+                    is_fin_brush: item.is_fin_brush,
+                    products_raw: item.products,
                     total_price: item.quantity * item.unit_price
                 })),
                 total_amount: deal.total_amount, // Uses total_amount or final_amount?
@@ -517,7 +607,8 @@
                 // So yes, total_amount IS subtotal.
                 
                 final_amount: deal.final_amount,
-                discount_percentage: deal.discount_percentage
+                discount_percentage: deal.discount_percentage,
+                notes: deal.notes
             };
             
             populateQuote(formattedData);
@@ -526,7 +617,10 @@
         // Load from URL parameters
         const dealId = new URLSearchParams(window.location.search).get('dealId');
         if (dealId) {
-            loadDealData(dealId);
+            // Small delay to ensure DB commit is visible if this was just saved
+            setTimeout(() => {
+                loadDealData(dealId);
+            }, 500);
         }
     </script>
 </body>

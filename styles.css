@@ -1475,6 +1475,31 @@ input[inputmode="decimal"] {
     gap: var(--spacing-sm);
 }
 
+.clickable-text {
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.clickable-text:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+    color: var(--primary-dark) !important;
+}
+
+.deal-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: rgba(37, 99, 235, 0.05);
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.deal-link:hover {
+    background: rgba(37, 99, 235, 0.1);
+}
+
 /* ============================================
    Notes Section
    ============================================ */
@@ -2722,6 +2747,7 @@ input[type="time"] {
     border: 2px solid var(--border-color);
     background-color: var(--bg-primary);
     font-weight: 500;
+    cursor: pointer;
 }
 
 .form-input.date-input:focus,
