@@ -9921,13 +9921,24 @@ function setupOverflowTooltips() {
         
         tooltip.style.visibility = 'visible';
 
-        let top = rect.top - tooltipHeight - spacing;
-        let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+        const preferBottom = target.classList.contains('tooltip-bottom') || (target.parentElement && target.parentElement.classList.contains('tooltip-bottom'));
 
-        // Flip to bottom if not enough space on top
-        if (top < spacing) {
+        let top;
+        if (preferBottom) {
             top = rect.bottom + spacing;
+            // Ensure space at bottom, otherwise flip back up
+            if (top + tooltipHeight > window.innerHeight - spacing) {
+                top = rect.top - tooltipHeight - spacing;
+            }
+        } else {
+            top = rect.top - tooltipHeight - spacing;
+            // Flip to bottom if not enough space on top
+            if (top < spacing) {
+                top = rect.bottom + spacing;
+            }
         }
+
+        let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
 
         // Keep horizontal within bounds
         if (left < spacing) left = spacing;
@@ -12118,7 +12129,7 @@ function renderSupplierOrdersList(list) {
                         if (downPayment > 0) {
                             const remaining = amount - downPayment;
                             statusInfo = `<div style="color: #ef4444; font-size: 0.8rem; margin-top: 4px; display: inline-block;">
-                                <span class="show-custom-tooltip" style="border-bottom: 1px dotted #ef4444; cursor: help;" title="מקדמה: ${o.currencySymbol}${downPayment.toLocaleString()} | יתרה: ${o.currencySymbol}${remaining.toLocaleString()}">
+                                <span class="show-custom-tooltip tooltip-bottom" style="border-bottom: 1px dotted #ef4444; cursor: help;" title="מקדמה: ${o.currencySymbol}${downPayment.toLocaleString()} | יתרה: ${o.currencySymbol}${remaining.toLocaleString()}">
                                     שולמה מקדמה
                                 </span>
                             </div>`;
@@ -12324,7 +12335,7 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
                     const sym = getCurrencySymbol(order.currency || 'ILS');
                     
                     paymentBadge.textContent = 'שולמה מקדמה';
-                    paymentBadge.className = 'badge badge-pending show-custom-tooltip'; // Orange/Blue
+                    paymentBadge.className = 'badge badge-pending show-custom-tooltip tooltip-bottom'; // Orange/Blue
                     paymentBadge.title = `מקדמה: ${sym}${dp.toLocaleString()} | יתרה: ${sym}${rem.toLocaleString()}`;
                     paymentBadge.style.cursor = 'help';
                 } else {
