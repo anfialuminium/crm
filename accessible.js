@@ -1160,7 +1160,7 @@ async function viewDealDetails(dealId) {
             .from('deal_items')
             .select(`
                 *,
-                products (product_name)
+                products (product_name, image_url)
             `)
             .eq('deal_id', dealId);
 
@@ -1185,9 +1185,15 @@ async function viewDealDetails(dealId) {
             subtotal += itemTotal;
 
             html += `
-                <div style="border-bottom:1px solid #eee; padding:12px 0;">
-                    <strong>${fixBiDi(item.products.product_name)}</strong>${detailsStr}<br>
-                    כמות: ${item.quantity} | מחיר: ₪${item.unit_price} | סה"כ: ₪${itemTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                <div style="border-bottom:1px solid #eee; padding:12px 0; display: flex; align-items: center; gap: 15px;">
+                    ${item.products?.image_url ? 
+                        `<img src="${item.products.image_url}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-color); flex-shrink: 0;">` : 
+                        '<div style="width: 70px; height: 70px; background: var(--bg-secondary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 1.8rem; flex-shrink: 0;">📦</div>'
+                    }
+                    <div style="flex: 1;">
+                        <strong>${fixBiDi(item.products.product_name)}</strong>${detailsStr}<br>
+                        כמות: ${item.quantity} | מחיר: ₪${item.unit_price} | סה"כ: ₪${itemTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </div>
                 </div>
             `;
         });
@@ -1271,10 +1277,11 @@ function setupOverflowTooltips() {
             if (!topContainer.contains(target)) return;
         }
 
-        // Check for overflow
+        // Check for overflow or force tooltip class
         const isOverflowing = target.clientWidth > 0 && (target.scrollWidth > target.clientWidth + 1 || target.scrollHeight > target.clientHeight + 1);
+        const forceTooltip = target.classList.contains('show-custom-tooltip') || (target.parentElement && target.parentElement.classList.contains('show-custom-tooltip'));
         
-        if (isOverflowing) {
+        if (isOverflowing || forceTooltip) {
             // Avoid re-triggering for the same element
             if (activeTarget === target) return;
             activeTarget = target;
@@ -1338,13 +1345,24 @@ function setupOverflowTooltips() {
         
         tooltip.style.visibility = 'visible';
 
-        let top = rect.top - tooltipHeight - spacing;
-        let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+        const preferBottom = target.classList.contains('tooltip-bottom') || (target.parentElement && target.parentElement.classList.contains('tooltip-bottom'));
 
-        // Flip to bottom if not enough space on top
-        if (top < spacing) {
+        let top;
+        if (preferBottom) {
             top = rect.bottom + spacing;
+            // Ensure space at bottom, otherwise flip back up
+            if (top + tooltipHeight > window.innerHeight - spacing) {
+                top = rect.top - tooltipHeight - spacing;
+            }
+        } else {
+            top = rect.top - tooltipHeight - spacing;
+            // Flip to bottom if not enough space on top
+            if (top < spacing) {
+                top = rect.bottom + spacing;
+            }
         }
+        
+        let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
 
         // Keep horizontal within bounds
         if (left < spacing) left = spacing;
@@ -1450,7 +1468,7 @@ async function loadSupplierOrders() {
             
             const downPayment = parseFloat(o.down_payment) || 0;
             const remaining = (parseFloat(o.total_amount) || 0) - downPayment;
-            const downPaymentHtml = downPayment > 0 ? `<br><span style="font-size: 0.8rem; color: #ef4444; border-bottom: 1px dotted #ef4444; cursor: help;" title="מקדמה: ${currSymbol}${downPayment.toLocaleString()} | יתרה: ${currSymbol}${remaining.toLocaleString()}">שולמה מקדמה</span>` : '';
+            const downPaymentHtml = downPayment > 0 ? `<br><span class="show-custom-tooltip tooltip-bottom" style="font-size: 0.8rem; color: #ef4444; border-bottom: 1px dotted #ef4444; cursor: help;" title="מקדמה: ${currSymbol}${downPayment.toLocaleString()} | יתרה: ${currSymbol}${remaining.toLocaleString()}">שולמה מקדמה</span>` : '';
             
             return `
                 <div class="deal-card">
@@ -1585,9 +1603,18 @@ async function viewOrderDetails(orderId) {
             }
 
             html += `
-                <div style="border-bottom:1px solid #eee; padding:12px 0;">
-                    <strong>${fixBiDi((item.description || 'פריט').replace(/\s*\[\d+\s*x\s*[\d.]+\]\s*$/, ''))}</strong>${detailsStr}<br>
-                    <span style="display:inline-block; margin-top:4px;">${cartonInfo} | מחיר: ${currSymbol}${(parseFloat(item.unit_price) || 0).toLocaleString()} | סה"כ: ${currSymbol}${itemTotal.toLocaleString()}</span>
+                <div style="border-bottom:1px solid #eee; padding:12px 0; display: flex; align-items: center; gap: 15px;">
+                    ${(() => {
+                        const product = products.find(p => p.sku === item.sku);
+                        if (product && product.image_url) {
+                            return `<img src="${product.image_url}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-color); flex-shrink: 0;">`;
+                        }
+                        return '<div style="width: 70px; height: 70px; background: var(--bg-secondary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 1.8rem; flex-shrink: 0;">📦</div>';
+                    })()}
+                    <div style="flex: 1;">
+                        <strong>${fixBiDi((item.description || 'פריט').replace(/\s*\[\d+\s*x\s*[\d.]+\]\s*$/, ''))}</strong>${detailsStr}<br>
+                        <span style="display:inline-block; margin-top:4px;">${cartonInfo} | מחיר: ${currSymbol}${(parseFloat(item.unit_price) || 0).toLocaleString()} | סה"כ: ${currSymbol}${itemTotal.toLocaleString()}</span>
+                    </div>
                 </div>
             `;
         });
