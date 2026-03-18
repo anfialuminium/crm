@@ -306,10 +306,13 @@ function addAccItem() {
                 </div>
                 <div id="roll-container-${id}" class="hidden roll-field" style="padding: 16px; background: #fdf2f8; border-radius: 12px; border: 2px solid #fbcfe8;"></div>
                 <div>
-                    <label id="price-label-${id}" style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">מחיר (₪):</label>
+                    <label id="price-label-${id}" style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">מחיר יחידה (₪):</label>
                     <div class="stepper-container">
                         <button type="button" class="stepper-btn" onclick="accStepPrice('${id}', -1)">-</button>
-                        <input type="text" class="stepper-input" value="" inputmode="decimal" dir="ltr" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר">
+                        <div style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <span style="font-size: 24px; font-weight: 800; color: var(--text-primary); margin-left: -5px;">₪</span>
+                            <input type="text" class="stepper-input" value="" inputmode="decimal" dir="ltr" oninput="updateItemPrice('${id}', this.value)" id="price-${id}" placeholder="מחיר" style="width: 80px; flex: none;">
+                        </div>
                         <button type="button" class="stepper-btn" onclick="accStepPrice('${id}', 1)">+</button>
                     </div>
                 </div>
@@ -579,7 +582,7 @@ function updateItemProduct(id, productId, btn) {
     // Update price label if brush
     const priceLabel = document.getElementById(`price-label-${id}`);
     if (priceLabel) {
-        priceLabel.textContent = isBrush ? 'מחיר למטר (₪):' : 'מחיר (₪):';
+        priceLabel.textContent = isBrush ? 'מחיר יחידה למטר (₪):' : 'מחיר יחידה (₪):';
     }
 
     // Update price input

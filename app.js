@@ -1383,7 +1383,14 @@ function createItemRow(item, index, hasAnyColor = true) {
         calculateTotal();
     });
     
+    const shekelIcon = document.createElement('span');
+    shekelIcon.textContent = '₪';
+    shekelIcon.style.fontWeight = '700';
+    shekelIcon.style.marginRight = '5px';
+    shekelIcon.style.fontSize = '1.1rem';
+
     priceStepper.appendChild(priceMinus);
+    priceStepper.appendChild(shekelIcon);
     priceStepper.appendChild(priceInput);
     priceStepper.appendChild(pricePlus);
     priceCell.appendChild(priceStepper);
@@ -8854,7 +8861,7 @@ async function generateQuotePDF(specificDealId = null) {
                             <th style="padding: 1rem; text-align: right; font-weight: 600;">#</th>
                             <th style="padding: 1rem; text-align: right; font-weight: 600;">תיאור המוצר</th>
                             <th style="padding: 1rem; text-align: right; font-weight: 600;">כמות</th>
-                            <th style="padding: 1rem; text-align: right; font-weight: 600;">מחיר יחידה</th>
+                            <th style="padding: 1rem; text-align: right; font-weight: 600;">מחיר יחידה (₪)</th>
                             <th style="padding: 1rem; text-align: right; font-weight: 600;">צבע</th>
                             <th style="padding: 1rem; text-align: right; font-weight: 600;">מידה</th>
                             <th style="padding: 1rem; text-align: right; font-weight: 600;">סה"כ</th>
@@ -13193,7 +13200,7 @@ function renderSupplierOrderItems() {
                     <td style="text-align: center;">${requiresCartons ? cartons : ''}</td>
                     <td style="text-align: center; font-weight: bold;">${totalUnits}</td>
                     ` : ''}
-                    <td style="text-align: center;">${item.unit_price || 0}</td>
+                    <td style="text-align: center;">${currencySymbol}${item.unit_price || 0}</td>
                     <td style="vertical-align: middle; font-weight: bold; color: var(--primary-dark); text-align: center;">${currencySymbol}${itemTotal.toLocaleString()}</td>
                     <td></td>
                 `;
@@ -13235,7 +13242,12 @@ function renderSupplierOrderItems() {
                     </td>
                     <td style="text-align: center; font-weight: bold; vertical-align: middle;">${totalUnits}</td>
                     ` : ''}
-                    <td style="text-align: center;"><input type="text" class="form-input table-input" value="${item.unit_price || 0}" inputmode="decimal" dir="ltr" onchange="updateOrderItem(${index}, 'unit_price', this.value)" style="width: 90px; text-align: center;"></td>
+                    <td style="text-align: center;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                            <span style="font-weight: 500;">${currencySymbol}</span>
+                            <input type="text" class="form-input table-input" value="${item.unit_price || 0}" inputmode="decimal" dir="ltr" onchange="updateOrderItem(${index}, 'unit_price', this.value)" style="width: 80px; text-align: center;">
+                        </div>
+                    </td>
                     <td style="vertical-align: middle; font-weight: bold; color: var(--primary-dark); text-align: center;">${currencySymbol}${itemTotal.toLocaleString()}</td>
                     <td style="text-align: center;"><button type="button" class="btn btn-sm btn-danger btn-icon" onclick="removeSupplierOrderItem(${index})" title="הסר">${APP_ICONS.TRASH}</button></td>
                 `;
@@ -14261,7 +14273,7 @@ async function exportSupplierOrderHTML() {
                         <th style="text-align: center; width: 12%">צבע</th>
                         <th style="text-align: center; width: 15%">מק"ט</th>
                         <th style="text-align: center; width: 8%">כמות</th>
-                        <th style="text-align: center; width: 12%">מחיר יחידה</th>
+                        <th style="text-align: center; width: 12%">מחיר יחידה (₪)</th>
                         <th style="text-align: center; width: 13%">סה"כ</th>
                     </tr>
                 </thead>
