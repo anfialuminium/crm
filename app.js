@@ -530,6 +530,9 @@ function setupTabs() {
     
     navSelect.addEventListener('change', (e) => {
         handleNavigation(e.target.value);
+        if (typeof syncCustomNavigation === 'function') {
+            syncCustomNavigation();
+        }
     });
     
     // Trigger initially for the default value
@@ -547,14 +550,10 @@ function navigateSection(direction) {
     // Bounds check
     if (newIndex < 0) newIndex = 0;
     if (newIndex >= totalOptions) newIndex = totalOptions - 1;
-    
     if (newIndex !== currentIndex) {
         navSelect.selectedIndex = newIndex;
-        // Manually trigger change event
-        const event = new Event('change');
-        navSelect.dispatchEvent(event);
-        // Sync custom navigation
-        syncCustomNavigation();
+        // Trigger change event to update UI
+        navSelect.dispatchEvent(new Event('change'));
     }
 }
 
@@ -607,7 +606,6 @@ function selectNavigationItem(value) {
     if (hiddenSelect) {
         hiddenSelect.value = value;
         hiddenSelect.dispatchEvent(new Event('change'));
-        syncCustomNavigation();
     }
 }
 
