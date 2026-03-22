@@ -10337,6 +10337,10 @@ function setupOverflowTooltips() {
         // Skip some elements
         if (!target || target.tagName === 'BODY' || target.tagName === 'HTML' || target.classList.contains('custom-tooltip')) return;
 
+        // Skip scrollable containers - tooltips are for non-scrollable overflowing content (like ellipsis)
+        const style = window.getComputedStyle(target);
+        if (style.overflowX === 'auto' || style.overflowX === 'scroll' || style.overflowY === 'auto' || style.overflowY === 'scroll') return;
+
         // Ensure tooltip only shows for elements within the top-most active modal/window
         // This prevents tooltips from lower-level modals (behind the current one) from showing up
         const activeContainers = Array.from(document.querySelectorAll('.modal.active, .details-modal.active, [class*="-modal"].active'))
