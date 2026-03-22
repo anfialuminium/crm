@@ -1775,49 +1775,61 @@
                     </div>
                 </div>
 
-                <div class="summary-card" style="margin-right: auto; margin-left: 0; max-width: 400px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);">
-                     <div class="summary-row" style="border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 8px;">
-                        <span class="summary-label" style="font-size: 0.9rem; opacity: 0.9;">סה"כ הזמנה:</span>
-                        <span class="summary-value" id="supplier-order-subtotal" style="font-size: 1rem;">₪0.00</span>
+                <div class="summary-card" style="margin-right: auto; margin-left: 0; max-width: 420px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 1.5rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+                     <!-- Total Order Header -->
+                     <div class="summary-row" style="border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 12px; margin-bottom: 12px;">
+                        <span class="summary-label" style="font-size: 1rem; opacity: 0.95; font-weight: 600;">סה"כ הזמנה:</span>
+                        <span class="summary-value" id="supplier-order-subtotal" style="font-size: 1.25rem; font-weight: 700;">₪0.00</span>
                     </div>
-                    <div class="summary-row" id="down-payment-input-row" style="border-bottom: 1px dashed rgba(255,255,255,0.3); padding: 10px 0;">
-                        <span class="summary-label" style="font-size: 0.9rem; opacity: 0.9;">מקדמה ששולמה:</span>
-                        <div style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%;">
-                            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 1rem;">
+
+                    <!-- Payment Details Section -->
+                    <div id="down-payment-input-row" style="border-bottom: 1px dashed rgba(255,255,255,0.3); padding-bottom: 15px; margin-bottom: 15px;">
+                        <!-- Input Row: Label, Amount, Paid Checkbox -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 1rem;">
+                            <span class="summary-label" style="font-size: 0.9rem; opacity: 0.9; white-space: nowrap;">מקדמה ששולמה:</span>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; justify-content: flex-end;">
                                 <input type="text" id="order-down-payment" class="form-input" 
-                                       style="width: 130px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 4px 8px; border-radius: 6px; text-align: left; font-weight: 600; unicode-bidi: bidi-override;"
-                                       value="" inputmode="decimal" dir="ltr" onchange="updateOrderExchangeRate(true)" placeholder="מקדמה...">
-                                <label style="display: flex; align-items: center; gap: 0.5rem; color: white; font-size: 0.9rem; cursor: pointer; user-select: none;">
-                                    <input type="checkbox" id="order-is-paid" onchange="updateOrderExchangeRate(true)" style="width: 16px; height: 16px; cursor: pointer;">
+                                       style="width: 110px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 6px 10px; border-radius: 8px; text-align: left; font-weight: 600; font-size: 1rem;"
+                                       value="" inputmode="decimal" dir="ltr" onchange="updateOrderExchangeRate(true)" placeholder="0.00">
+                                <label style="display: flex; align-items: center; gap: 6px; color: white; font-size: 0.9rem; cursor: pointer; user-select: none; white-space: nowrap;">
+                                    <input type="checkbox" id="order-is-paid" onchange="updateOrderExchangeRate(true)" style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981;">
                                     שולם במלואו
                                 </label>
                             </div>
-                            <!-- Dates row, visible dynamically -->
-                            <div id="payment-dates-row" style="display: flex; gap: 0.5rem; justify-content: space-between; margin-top: 0.5rem;">
-                                <div id="down-payment-date-container" style="display: none; flex-direction: column;">
-                                    <label style="color: white; font-size: 0.8rem; margin-bottom: 2px;">תאריך מקדמה</label>
-                                    <div class="date-input-wrapper">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; right: 6px; color: white; opacity: 1;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                        <input type="date" id="order-down-payment-date" class="form-input date-input" style="height: 30px; padding: 2px 24px 2px 8px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 0.85rem;" onchange="updateOrderExchangeRate(true)" onclick="this.showPicker()">
-                                    </div>
+                        </div>
 
+                        <!-- Dates Row: Two Side-by-Side Containers -->
+                        <div id="payment-dates-row" style="display: flex; gap: 12px; margin-top: 5px;">
+                            <!-- Full Payment Date (Visible if Paid is checked) -->
+                            <div id="full-payment-date-container" style="display: none; flex: 1; flex-direction: column; gap: 4px;">
+                                <label style="color: rgba(255,255,255,0.9); font-size: 0.8rem; font-weight: 500;">תאריך תשלום יתרה</label>
+                                <div class="date-input-wrapper" style="flex: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; right: 8px; color: white; opacity: 0.9;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    <input type="date" id="order-full-payment-date" class="form-input date-input" 
+                                           style="height: 38px; padding: 2px 28px 2px 8px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; font-size: 0.9rem; width: 100%;" 
+                                           onchange="updateOrderExchangeRate(true)" onclick="this.showPicker()">
                                 </div>
-                                <div id="full-payment-date-container" style="display: none; flex-direction: column;">
-                                    <label style="color: white; font-size: 0.8rem; margin-bottom: 2px;">תאריך תשלום יתרה</label>
-                                    <div class="date-input-wrapper">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; right: 6px; color: white; opacity: 1;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                        <input type="date" id="order-full-payment-date" class="form-input date-input" style="height: 30px; padding: 2px 24px 2px 8px; background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); font-size: 0.85rem;" onchange="updateOrderExchangeRate(true)" onclick="this.showPicker()">
-                                    </div>
-
+                            </div>
+                            <!-- Down Payment Date (Visible if DP > 0) -->
+                            <div id="down-payment-date-container" style="display: none; flex: 1; flex-direction: column; gap: 4px;">
+                                <label style="color: rgba(255,255,255,0.9); font-size: 0.8rem; font-weight: 500;">תאריך מקדמה</label>
+                                <div class="date-input-wrapper" style="flex: none;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; right: 8px; color: white; opacity: 0.9;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    <input type="date" id="order-down-payment-date" class="form-input date-input" 
+                                           style="height: 38px; padding: 2px 28px 2px 8px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; font-size: 0.9rem; width: 100%;" 
+                                           onchange="updateOrderExchangeRate(true)" onclick="this.showPicker()">
                                 </div>
                             </div>
                         </div>
                     </div>
-                     <div class="summary-row" style="border-top: none; padding-top: 10px;">
-                        <span class="summary-label" style="font-weight: 700; font-size: 1.1rem;">יתרה לתשלום:</span>
-                        <div style="display: flex; flex-direction: column; text-align: left;">
-                            <span class="summary-value" id="supplier-order-total" style="font-size: 1.4rem; font-weight: 800;">₪0.00</span>
-                            <span id="supplier-order-exchange-info" style="font-size: 0.75rem; color: rgba(255,255,255,0.8); margin-top: 2px; line-height: 1.2;"></span>
+
+                    <!-- Bottom Section: Results & Conversions -->
+                    <div class="summary-row" style="border-top: none; padding-top: 0; align-items: flex-start;">
+                        <span class="summary-label" style="font-weight: 700; font-size: 1.15rem; margin-top: 5px;">יתרה לתשלום:</span>
+                        <div style="display: flex; flex-direction: column; text-align: left; flex: 1;">
+                            <span class="summary-value" id="supplier-order-total" style="font-size: 2rem; font-weight: 800; line-height: 1.1;">₪0.00</span>
+                            <!-- Exchange info populated by JS -->
+                            <div id="supplier-order-exchange-info" style="margin-top: 8px; width: 100%;"></div>
                         </div>
                     </div>
                 </div>

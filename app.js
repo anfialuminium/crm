@@ -5651,7 +5651,7 @@ async function loadDealNotes(dealId) {
                     </div>
                     <div class="note-content" style="${isDone ? 'text-decoration: line-through; color: var(--text-tertiary);' : ''}">
                         ${activityDate ? `<div style="margin-bottom: 5px; color: var(--primary-color); font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">${APP_ICONS.CALENDAR} תאריך יעד/פעילות: ${activityDate}</div>` : ''}
-                        <strong>${note.activity_type}:</strong> ${formatActivityText(note.description)}
+                        <div style="white-space: pre-wrap;"><strong>${note.activity_type}:</strong> ${formatActivityText(note.description)}</div>
                     </div>
                     ${editedInfo}
                 </div>`;
@@ -7694,9 +7694,7 @@ function renderThisWeekActivityCard(activity) {
             </div>
             
             ${activity.description ? `
-                <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9rem; overflow-wrap: break-word; word-break: break-word;">
-                    ${formatActivityText(activity.description)}
-                </div>
+                <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9rem; overflow-wrap: break-word; word-break: break-word; white-space: pre-wrap;">${formatActivityText(activity.description)}</div>
             ` : ''}
             
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
@@ -8445,9 +8443,7 @@ async function loadActivities(preservePage = false) {
                                             : '<span class="badge badge-pending" style="font-size: 0.7rem;">ממתין</span>'}
                                     </td>
                                     <td style="${textStyle}">
-                                        <div style="max-width: 50ch; overflow-x: auto; white-space: nowrap; direction: rtl;">
-                                            ${formatActivityText(activity.description || '-')}
-                                        </div>
+                                        <div style="max-width: 50ch; overflow-x: auto; white-space: pre-wrap; direction: rtl;">${formatActivityText(activity.description || '-')}</div>
                                     </td>
                                     <td>
                                         ${customerId 
@@ -8591,9 +8587,7 @@ async function loadActivities(preservePage = false) {
                         </div>
                     </div>
                     <div class="deal-card-body" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">
-                        <div style="margin-bottom: 0.4rem; ${activity.completed ? 'text-decoration: line-through; opacity: 0.7;' : ''}">
-                            <strong>תיאור:</strong> ${formatActivityText(activity.description || '-')}
-                        </div>
+                        <div style="margin-bottom: 0.4rem; white-space: pre-wrap; ${activity.completed ? 'text-decoration: line-through; opacity: 0.7;' : ''}"><strong>תיאור:</strong> ${formatActivityText(activity.description || '-')}</div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 1rem; font-size: 0.8rem; color: var(--text-secondary);">
                             ${activityDate ? `<div><strong>תאריך:</strong> <span style="color: var(--primary-color);">${activityDate}</span></div>` : ''}
                             <div><strong>לקוח:</strong> ${businessName}</div>
@@ -11647,21 +11641,6 @@ async function performGlobalSearch() {
        promises.push(prodPromise);
     }
 
-    // 3. Search Deals (Server - DB ILIKE with Inner Join)
-    // Searches for deals where deal_status matches OR customer business_name matches
-    if (includeDeals) {
-        const dealPromise = supabaseClient
-            .from('deals')
-            .select('deal_id, deal_status, created_at, final_amount, customer_id, customers!inner(business_name)')
-            .or(`deal_status.ilike.%${query}%,customers.business_name.ilike.%${query}%`)
-            .order('created_at', { ascending: false })
-            .limit(20)
-            .then(({data}) => {
-                if (data) results.deals = data;
-            });
-         promises.push(dealPromise);
-    }
-
     // 4. Search Activities (Server - DB ILIKE)
     // Searches description (notes) and type
     if (includeActivities) {
@@ -11808,9 +11787,7 @@ function renderGlobalSearchResults(results, query) {
                 <td>${date}</td>
                 <td>${client}</td>
                                  <td>
-                                     <div style="max-width: 50ch; overflow-x: auto; white-space: nowrap; direction: rtl;">
-                                         ${highlight(formatActivityText(a.description || '-'), query)}
-                                     </div>
+                                     <div style="max-width: 50ch; overflow-x: auto; white-space: pre-wrap; direction: rtl;">${highlight(formatActivityText(a.description || '-'), query)}</div>
                                  </td>
                 <td>
                     <div style="display: flex; gap: 0.5rem;">
@@ -11888,29 +11865,7 @@ async function loadSuppliers() {
         }
         
         // Parse extra data (workaround) for all suppliers
-        suppliers = (data || []).map(s => {
-            let notes = s.notes || '';
-            let extraData = {};
-            
-            const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
-            let foundSep = separators.find(sep => notes.includes(sep));
-            if (foundSep) {
-                const parts = notes.split(foundSep);
-                notes = parts[0]; 
-                try {
-                    extraData = JSON.parse(parts[1]);
-                } catch(e) { console.error('Failed to parse extra data', e); }
-            }
-            notes = notes.trim();
-            
-            return {
-                ...s,
-                website: s.website || extraData.website || '',
-                additional_emails: s.additional_emails || extraData.additional_emails || [],
-                extra_contacts: s.extra_contacts || extraData.extra_contacts || [],
-                clean_notes: notes // Use this for display
-            };
-        });
+        suppliers = (data || []).map(s => parseSupplier(s));
         
         // Populate filters if needed
         populateSupplierFilters();
@@ -11919,6 +11874,41 @@ async function loadSuppliers() {
         console.error('Error loading suppliers:', error);
         showAlert('שגיאה בטעינת ספקים', 'error');
     }
+}
+
+function parseSupplier(s) {
+    if (!s) return s;
+    let notes = s.notes || '';
+    let extraData = {};
+    
+    // Try different separators
+    const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>', '&lt;&lt;&gt;&gt;'];
+    let foundSep = null;
+    
+    for (const sep of separators) {
+        if (notes.includes(sep)) {
+            foundSep = sep;
+            break;
+        }
+    }
+    
+    if (foundSep) {
+        const parts = notes.split(foundSep);
+        notes = parts[0]; // The real notes
+        try {
+            extraData = JSON.parse(parts[1]);
+        } catch(e) { console.error('Failed to parse extra data', e); }
+    }
+    notes = notes.trim();
+    
+    return {
+        ...s,
+        website: s.website || extraData.website || '',
+        additional_emails: s.additional_emails || extraData.additional_emails || [],
+        extra_contacts: s.extra_contacts || extraData.extra_contacts || [],
+        currency: s.currency || extraData.currency || 'ILS',
+        clean_notes: notes // Use this for display
+    };
 }
 
 function populateSupplierFilters() {
@@ -12065,60 +12055,83 @@ function openSupplierModal(supplierId = null) {
     
     if (supplierId) {
         document.getElementById('supplier-modal-title').textContent = 'ערוך ספק';
-        const supplier = suppliers.find(s => s.supplier_id === supplierId);
-        if (supplier) {
-            document.getElementById('edit-supplier-id').value = supplier.supplier_id;
-            document.getElementById('supplier-name').value = supplier.supplier_name;
-            document.getElementById('supplier-category').value = supplier.category || '';
-            document.getElementById('supplier-contact-name').value = supplier.contact_name || '';
-            document.getElementById('supplier-phone').value = supplier.phone || '';
-            document.getElementById('supplier-email').value = supplier.email || '';
-            document.getElementById('supplier-website').value = supplier.website || '';
-            document.getElementById('supplier-address').value = supplier.address || '';
-            document.getElementById('supplier-currency').value = supplier.currency || 'ILS';
-            document.getElementById('supplier-address').value = supplier.address || '';
-            
-            // Handle Extra Data (Workaround for missing columns)
-            let notes = supplier.notes || '';
-            let extraData = {};
-            const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
-            let foundSep = separators.find(sep => notes.includes(sep));
-            if (foundSep) {
-                const parts = notes.split(foundSep);
-                notes = parts[0]; // The real notes
+        let supplier = suppliers.find(s => s.supplier_id === supplierId);
+        
+        // If not in cache, fetch and populate async
+        if (!supplier) {
+            (async () => {
                 try {
-                    extraData = JSON.parse(parts[1]);
-                    if (extraData.currency && !supplier.currency) {
-                        document.getElementById('supplier-currency').value = extraData.currency;
-                    }
-                } catch(e) { console.error('Failed to parse extra data', e); }
-            }
-            notes = notes.trim();
-            
-            document.getElementById('supplier-notes').value = notes;
-            document.getElementById('supplier-website').value = supplier.website || extraData.website || '';
-            
-            // Populate additional emails
-            const emailsToLoad = supplier.additional_emails || extraData.additional_emails || [];
-            if (emailsToLoad && Array.isArray(emailsToLoad)) {
-                emailsToLoad.forEach(emailObj => {
-                    addSupplierEmailRow(emailObj.email, emailObj.role);
-                });
-            }
-
-            // Populate additional contacts
-            const contactsToLoad = supplier.extra_contacts || extraData.extra_contacts || [];
-            if (contactsToLoad && Array.isArray(contactsToLoad)) {
-                contactsToLoad.forEach(contact => {
-                    addSupplierContactRow(contact.name, contact.info);
-                });
-            }
+                    const { data, error } = await supabaseClient
+                        .from('suppliers')
+                        .select('*')
+                        .eq('supplier_id', supplierId)
+                        .single();
+                    if (error) throw error;
+                    openSupplierModalWithData(parseSupplier(data));
+                } catch (e) {
+                    console.error('Error fetching supplier for modal:', e);
+                    showAlert('שגיאה בטעינת פרטי ספק', 'error');
+                }
+            })();
+            return;
         }
+        openSupplierModalWithData(supplier);
     } else {
         document.getElementById('supplier-modal-title').textContent = 'ספק חדש';
     }
     
     modal.classList.add('active');
+}
+
+function openSupplierModalWithData(supplier) {
+    if (!supplier) return;
+    document.getElementById('edit-supplier-id').value = supplier.supplier_id;
+    document.getElementById('supplier-name').value = supplier.supplier_name;
+    document.getElementById('supplier-category').value = supplier.category || '';
+    document.getElementById('supplier-contact-name').value = supplier.contact_name || '';
+    document.getElementById('supplier-phone').value = supplier.phone || '';
+    document.getElementById('supplier-email').value = supplier.email || '';
+    document.getElementById('supplier-website').value = supplier.website || '';
+    document.getElementById('supplier-address').value = supplier.address || '';
+    document.getElementById('supplier-currency').value = supplier.currency || 'ILS';
+    
+    // Handle Extra Data (Workaround for missing columns)
+    let notes = supplier.notes || '';
+    let extraData = {};
+    const separators = ['|||METADATA|||', '<<<EXTRA_DATA>>>', '<<>>'];
+    let foundSep = separators.find(sep => notes.includes(sep));
+    if (foundSep) {
+        const parts = notes.split(foundSep);
+        notes = parts[0]; // The real notes
+        try {
+            extraData = JSON.parse(parts[1]);
+            if (extraData.currency && !supplier.currency) {
+                document.getElementById('supplier-currency').value = extraData.currency;
+            }
+        } catch(e) { console.error('Failed to parse extra data', e); }
+    }
+    notes = notes.trim();
+    
+    document.getElementById('supplier-notes').value = notes;
+    document.getElementById('supplier-website').value = supplier.website || extraData.website || '';
+    
+    // Populate additional emails
+    const emailsToLoad = supplier.additional_emails || extraData.additional_emails || [];
+    if (emailsToLoad && Array.isArray(emailsToLoad)) {
+        emailsToLoad.forEach(emailObj => {
+            addSupplierEmailRow(emailObj.email, emailObj.role);
+        });
+    }
+
+    // Populate additional contacts
+    const contactsToLoad = supplier.extra_contacts || extraData.extra_contacts || [];
+    if (contactsToLoad && Array.isArray(contactsToLoad)) {
+        contactsToLoad.forEach(contact => {
+            addSupplierContactRow(contact.name, contact.info);
+        });
+    }
+    
+    document.getElementById('supplier-modal').classList.add('active');
 }
 
 function closeSupplierModal() {
@@ -12289,8 +12302,7 @@ async function viewSupplierDetails(id) {
             .eq('supplier_id', id)
             .single();
             if (error) throw error;
-            s = data; // Note: Won't have parsed fields if we just fetch raw, but fallback below handles it basically or we assume loadSuppliers is correct.
-            // Actually, let's just parse it lightly here if needed, or rely on render to filter it.
+            s = parseSupplier(data); 
         }
 
         // Fetch recent orders
@@ -12304,7 +12316,12 @@ async function viewSupplierDetails(id) {
         content.innerHTML = `
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                 <div>
-                     <h3>${fixBiDi(s.supplier_name)}</h3>
+                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+                         <h3 style="margin: 0;">${fixBiDi(s.supplier_name)}</h3>
+                         <button class="btn btn-primary btn-sm" onclick="closeSupplierDetailsModal(); openSupplierOrderModal(null, false, '${s.supplier_id}')">
+                            ${APP_ICONS.PLUS} הזמנת רכש חדשה
+                         </button>
+                     </div>
                      <p><strong>קטגוריה:</strong> ${s.category || '-'}</p>
                      <p><strong>איש קשר:</strong> ${s.contact_name || '-'}</p>
                      <p><strong>טלפון:</strong> <span style="direction: ltr; display: inline-block;">${s.phone || '-'}</span></p>
@@ -12651,7 +12668,7 @@ let modalCurrencySymbol = '₪';
 let modalExchangeRate = 1;
 let modalCurrency = 'ILS'; // New state to hold current order currency
 
-async function openSupplierOrderModal(orderId = null, readOnly = false) {
+async function openSupplierOrderModal(orderId = null, readOnly = false, targetSupplierId = null) {
     const modal = document.getElementById('supplier-order-modal');
     isSupplierOrderReadOnly = readOnly;
     currentOrderItems = [];
@@ -12735,6 +12752,16 @@ async function openSupplierOrderModal(orderId = null, readOnly = false) {
 
     // Ensure suppliers loaded for dropdown
     if (suppliers.length === 0) await loadSuppliers();
+    
+    if (targetSupplierId && !orderId) {
+        const orderSupplierSelector = document.getElementById('order-supplier-select');
+        if (orderSupplierSelector) {
+            orderSupplierSelector.value = targetSupplierId;
+            // Trigger change to update currency etc if needed
+            const event = new Event('change');
+            orderSupplierSelector.dispatchEvent(event);
+        }
+    }
     
     if (orderId) {
         try {
@@ -13285,7 +13312,9 @@ function renderSupplierOrderItems() {
         fpDateContainer.style.display = isPaid ? 'flex' : 'none';
     }
 
-    let totalHtml = `<span style="font-size: 1.4rem; display: block;">${currencySymbol}${finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>`;
+    let totalHtml = `${currencySymbol}${finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    let exchangeHtml = '';
+    
     if (modalCurrency !== 'ILS') {
         const dpRate = window.modalDownPaymentRate || modalExchangeRate || 1;
         const fpRate = window.modalFullPaymentRate || modalExchangeRate || 1;
@@ -13308,13 +13337,15 @@ function renderSupplierOrderItems() {
             details.push(`לפי שער יציג: ${remainderRate.toFixed(3)}`);
         }
         
-        totalHtml += `<div style="font-size: 0.9rem; opacity: 0.8; margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.4); display: flex; flex-direction: column; gap: 2px;">`;
-        details.forEach(d => totalHtml += `<span>${d}</span>`);
-        totalHtml += `<span style="font-weight: bold; margin-top: 2px;">סה"כ בשקלים: ₪${ilsTotal.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>`;
-        totalHtml += `</div>`;
+        exchangeHtml = `<div style="font-size: 0.9rem; opacity: 0.85; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.35); display: flex; flex-direction: column; gap: 4px;">`;
+        details.forEach(d => exchangeHtml += `<span>${d}</span>`);
+        exchangeHtml += `<span style="font-weight: 700; margin-top: 4px; font-size: 1rem;">סה"כ בשקלים: ₪${ilsTotal.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>`;
+        exchangeHtml += `</div>`;
     }
     
-    totalEl.innerHTML = totalHtml;
+    if (totalEl) totalEl.textContent = totalHtml;
+    const exchangeEl = document.getElementById('supplier-order-exchange-info');
+    if (exchangeEl) exchangeEl.innerHTML = exchangeHtml;
 
     // Handle visibility of down payment input based on read-only mode (though usually handled by class, forcing here for clarity)
     if (isSupplierOrderReadOnly && downPaymentRow) {
@@ -14415,140 +14446,75 @@ async function searchMentions(query) {
     
     // Fetch Data
     try {
-        // Search Deals
-        const dealsPromise = supabaseClient
-            .from('deals')
-            .select('deal_id, deal_status, customers(business_name)')
-            .or(`deal_id.textSearch.${query},deal_status.ilike.%${query}%`) // Basic search, might be limited
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-        // Search Supplier Orders
-        const ordersPromise = supabaseClient
-            .from('supplier_orders')
-            .select('order_id, order_number, suppliers(supplier_name)')
-             .or(`order_number.ilike.%${query}%`)
-            .order('created_at', { ascending: false })
-            .limit(5);
-            
-        // Note: For richer search (search business name via relation) Supabase postgrest is trickier.
-        // We will do a broader search if query is empty or short, or do client side filtering if we have cache?
-        // Let's do a tailored query.
+        const qLower = query.toLowerCase();
         
-        let deals = [];
-        let orders = [];
-        let contacts = [];
-        
-        // Fetch recent deals/orders if query is empty/short to show suggestions
-        // Better: Search Deals join customers
+        // 1. Search Deals (matching either Deal ID or Customer Name)
         const { data: dealsData } = await supabaseClient
             .from('deals')
-            .select('deal_id, customers!inner(business_name)')
-            .ilike('customers.business_name', `%${query}%`)
+            .select('deal_id, deal_status, created_at, customers!inner(business_name)')
+            .or(`deal_id.ilike.%${query}%,customers.business_name.ilike.%${query}%`)
+            .order('created_at', { ascending: false })
             .limit(5);
             
-        // Also search by Deal ID directly?
-        // Merging results is complex in one query.
-        
-        // Simulating search for both Deal Name (Customer) and Order (Supplier)
-        // This is a bit heavy, let's optimize:
-        // Load recent active deals and recent active orders (limit 50) and filter in JS
-        
-        const { data: allDeals } = await supabaseClient
-            .from('deals')
-            .select('deal_id, deal_status, created_at, customers(business_name)')
-            .order('created_at', { ascending: false })
-            .limit(20);
-            
-        const { data: allOrders } = await supabaseClient
+        // 2. Search Supplier Orders (matching order number or supplier name)
+        const { data: ordersData } = await supabaseClient
             .from('supplier_orders')
-            .select('order_id, order_number, created_at, suppliers(supplier_name)')
+            .select('order_id, order_number, created_at, suppliers!inner(supplier_name)')
+            .or(`order_number.ilike.%${query}%,suppliers.supplier_name.ilike.%${query}%`)
             .order('created_at', { ascending: false })
-            .limit(20);
+            .limit(5);
 
-        let allContacts = [];
+        // 3. Search Suppliers directly
+        const { data: suppliersData } = await supabaseClient
+            .from('suppliers')
+            .select('supplier_id, supplier_name, category')
+            .ilike('supplier_name', `%${query}%`)
+            .order('supplier_name')
+            .limit(5);
+
+        // 4. Search Contacts
+        let contactsData = [];
         try {
             const { data, error } = await supabaseClient
                 .from('contacts')
                 .select('contact_id, contact_name, role, customer_id, customers(business_name)')
                 .ilike('contact_name', `%${query}%`)
                 .limit(5);
-            if (error) throw error;
-            allContacts = data;
+            if (!error) contactsData = data;
         } catch (contactError) {
             console.error('Error searching contacts:', contactError);
-            // Fallback: Try without relation if relation failed
-            try {
-                 const { data, error } = await supabaseClient
-                    .from('contacts')
-                    .select('contact_id, contact_name, role, customer_id')
-                    .ilike('contact_name', `%${query}%`)
-                    .limit(5);
-                 if (!error) allContacts = data;
-            } catch(e) {}
         }
 
-        // Post-processing: Ensure customer names are present
-        // This handles cases where the join failed or we used the fallback
-        const contactsMissingCustomer = allContacts.filter(c => !c.customers?.business_name && c.customer_id);
-        if (contactsMissingCustomer.length > 0) {
-            try {
-                const custIds = [...new Set(contactsMissingCustomer.map(c => c.customer_id))];
-                const { data: customersData } = await supabaseClient
-                    .from('customers')
-                    .select('customer_id, business_name')
-                    .in('customer_id', custIds);
-                
-                if (customersData) {
-                    const custMap = {};
-                    customersData.forEach(c => custMap[c.customer_id] = c.business_name);
-                    
-                    allContacts.forEach(c => {
-                        if ((!c.customers || !c.customers.business_name) && c.customer_id && custMap[c.customer_id]) {
-                            c.customers = { business_name: custMap[c.customer_id] };
-                        }
-                    });
-                }
-            } catch (err) {
-                console.error('Error fetching missing customer names:', err);
-            }
-        }
-            
-        const qLower = query.toLowerCase();
-        
-        deals = (allDeals || []).filter(d => 
-            (d.customers?.business_name || '').toLowerCase().includes(qLower) || 
-            String(d.deal_id).includes(qLower)
-        ).slice(0, 5);
-        
-        orders = (allOrders || []).filter(o => 
-            (o.suppliers?.supplier_name || '').toLowerCase().includes(qLower) || 
-            String(o.order_number || o.order_id).toLowerCase().includes(qLower)
-        ).slice(0, 5);
-
-        contacts = (allContacts || []);
-        
-        renderMentionSuggestions(deals, orders, contacts, query);
+        renderMentionSuggestions(dealsData || [], ordersData || [], suppliersData || [], contactsData || [], query);
         
     } catch (e) {
         console.error('Mention search error:', e);
     }
 }
 
-function renderMentionSuggestions(deals, orders, contacts, query) {
+function renderMentionSuggestions(deals, orders, suppliers, contacts, query) {
     if (!mentionSuggestionsContainer) return;
     
-    // Check if contacts is array (it might be undefined if called from old code, but we updated caller)
-    // Safe check
     const contactsList = Array.isArray(contacts) ? contacts : [];
+    const suppliersList = Array.isArray(suppliers) ? suppliers : [];
 
-    if (deals.length === 0 && orders.length === 0 && contactsList.length === 0) {
+    if (deals.length === 0 && orders.length === 0 && suppliersList.length === 0 && contactsList.length === 0) {
         hideMentionSuggestions();
         return;
     }
     
     let html = '';
     
+    // Suppliers Section (High Priority based on User Feedback)
+    suppliersList.forEach(s => {
+        html += `
+            <div class="mention-item" onclick="insertMention('Supplier', '${s.supplier_id}', '${s.supplier_name}')">
+                <div class="mention-main">${fixBiDi(s.supplier_name)} <span class="mention-type" style="background: #fdf2f8; color: #9d174d;">ספק</span></div>
+                <div class="mention-sub">${s.category || 'ספק רשום'}</div>
+            </div>
+        `;
+    });
+
     deals.forEach(deal => {
         const dateObj = new Date(deal.created_at);
         const dealDay = String(dateObj.getDate()).padStart(2, '0');
@@ -14581,7 +14547,7 @@ function renderMentionSuggestions(deals, orders, contacts, query) {
             if (Array.isArray(contact.customers) && contact.customers.length > 0) {
                  customerName = contact.customers[0].business_name;
             } else if (contact.customers.business_name) {
-                 customerName = contact.customers.business_name;
+                  customerName = contact.customers.business_name;
             }
         }
         const role = contact.role ? `(${contact.role})` : '';
@@ -14709,8 +14675,8 @@ function formatActivityText(text) {
     const combinedRegex = new RegExp(
         '(<(?:a|span|mark)\\b[^>]*>.*?<\\/(?:a|span|mark)>)|' +
         '(?:\\[([^\\]]+)\\]\\s*\\(\\s*' + mdUrlPattern + '\\s*\\))|' +
-        '(?:@\\[(Deal|Order|Contact):([^\\|]+)\\|([^\\]]+)\\])|' +
-        '(?:\\[([^\\|]+)\\|(Deal|Order|Contact):([^@]+)@\\])|' +
+        '(?:@\\[(Deal|Order|Contact|Supplier):([^\\|]+)\\|([^\\]]+)\\])|' +
+        '(?:\\[([^\\|]+)\\|(Deal|Order|Contact|Supplier):([^@]+)@\\])|' +
         '(https?:\\/\\/[^\\s<"\']+\\b)',
         'gi'
     );
@@ -14739,6 +14705,9 @@ function formatActivityText(text) {
             } else if (type === 'Contact') {
                 onclick = `viewContactDetails('${id}')`;
                 color = '#065f46';
+            } else if (type === 'Supplier') {
+                onclick = `viewSupplier('${id}')`;
+                color = '#9d174d';
             }
             return `<a href="javascript:void(0)" onclick="${onclick}" style="color: ${color}; font-weight: 500; text-decoration: underline; background: #f1f5f9; padding: 0 4px; border-radius: 4px;">${label}</a>`;
         };
@@ -14777,6 +14746,14 @@ function viewSupplierOrder(orderId) {
         openSupplierOrderModal(orderId, true);
     } else {
         console.error('openSupplierOrderModal not found');
+    }
+}
+
+function viewSupplier(supplierId) {
+    if (typeof viewSupplierDetails === 'function') {
+        viewSupplierDetails(supplierId);
+    } else {
+        console.error('viewSupplierDetails not found');
     }
 }
 
