@@ -5994,25 +5994,33 @@ async function deleteActivityNote(noteId, activityId) {
 }
 
 // Helper to load contacts for activity dropdown
-async function loadCustomerContactsForActivity(customerId, selectId, preselectId = null) {
+async function loadCustomerContactsForActivity(customerId, selectId, preselectId = null, searchTerm = '') {
     const select = document.getElementById(selectId);
     if (!select) return;
     
     select.innerHTML = '<option value="">-- ראשי (ברירת מחדל) --</option>';
     
-    if (!customerId) {
-        select.disabled = true;
-        return;
-    }
-    
-    select.disabled = false;
+    // If no customerId, we allow loading ALL contacts if no searchTerm is provided?
+    // User wants "Add option to associate activities with contacts". 
+    // They might mean being able to find the contact directly.
     
     try {
-        const { data: contacts, error } = await supabaseClient
+        let query = supabaseClient
             .from('contacts')
             .select('*')
-            .eq('customer_id', customerId)
             .order('contact_name');
+            
+        if (customerId) {
+            query = query.eq('customer_id', customerId);
+        } else if (searchTerm) {
+            query = query.ilike('contact_name', `%${searchTerm}%`);
+        } else {
+            // If neither, and it's a huge list, maybe limit or just disable if needed.
+            // But let's allow it for now.
+            query = query.limit(50);
+        }
+            
+        const { data: contacts, error } = await query;
             
         if (error) throw error;
         
@@ -6020,16 +6028,30 @@ async function loadCustomerContactsForActivity(customerId, selectId, preselectId
             contacts.forEach(contact => {
                 const option = document.createElement('option');
                 option.value = contact.contact_id;
-                option.textContent = `${contact.contact_name} ${contact.role ? `(${contact.role})` : ''}`;
+                // Add business name in parenthesis if available and no customerId provided
+                let display = contact.contact_name;
+                if (!customerId && contact.customer_id) {
+                    const cust = customers.find(c => c.customer_id === contact.customer_id);
+                    if (cust) display += ` [${cust.business_name}]`;
+                }
+                if (contact.role) display += ` (${contact.role})`;
+                
+                option.textContent = display;
                 if (preselectId && contact.contact_id === preselectId) {
                     option.selected = true;
                 }
                 select.appendChild(option);
             });
         }
+        
+        select.disabled = false;
     } catch (err) {
         console.error('Error loading contacts:', err);
     }
+}
+
+function filterActivityContacts(searchTerm, customerId, selectId) {
+    loadCustomerContactsForActivity(customerId, selectId, null, searchTerm);
 }
 
 // Show edit activity modal with all editable fields
@@ -6107,14 +6129,15 @@ function showEditActivityModal(activity) {
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label class="form-label">קשר ללקוח</label>
                         <input type="text" id="edit-activity-customer-search" class="form-input" placeholder="חפש לקוח..." style="margin-bottom: 0.5rem;" onkeyup="filterEditActivityCustomers(this.value)">
-                        <select id="edit-activity-customer" class="form-select" size="5" onchange="loadCustomerContactsForActivity(this.value, 'edit-activity-contact'); populateEditActivityDeals(null, this.value);">
+                        <select id="edit-activity-customer" class="form-select" size="5" onchange="document.getElementById('edit-activity-contact-search').value = ''; loadCustomerContactsForActivity(this.value, 'edit-activity-contact'); populateEditActivityDeals(null, this.value);">
                             <option value="">-- ללא לקוח --</option>
                         </select>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label class="form-label">איש קשר</label>
-                        <select id="edit-activity-contact" class="form-select">
+                        <input type="text" id="edit-activity-contact-search" class="form-input" placeholder="חפש איש קשר..." style="margin-bottom: 0.5rem;" onkeyup="filterActivityContacts(this.value, document.getElementById('edit-activity-customer').value, 'edit-activity-contact')">
+                        <select id="edit-activity-contact" class="form-select" size="5">
                             <option value="">-- ראשי (ברירת מחדל) --</option>
                         </select>
                     </div>
@@ -6220,7 +6243,7 @@ function showEditActivityModal(activity) {
             loadCustomerDeals(activity.customer_id, 'edit-activity-deals-list');
         }
         // Load contacts logic added here
-        loadCustomerContactsForActivity(activity.customer_id, 'edit-activity-contact', activity.contact_id);
+        loadCustomerContactsForActivity(activity.customer_id, 'edit-activity-contact', activity.contact_id, '');
     } else {
         const dealsList = document.getElementById('edit-activity-deals-list');
         if (dealsList) dealsList.innerHTML = '<p style="text-align:center; color: var(--text-tertiary); padding: 1rem;">אין לקוח מקושר לפעילות זו</p>';
@@ -6589,14 +6612,15 @@ function openNewActivityModal(prefillData = null) {
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label class="form-label">קשר ללקוח</label>
                         <input type="text" id="new-activity-customer-search" class="form-input" placeholder="חפש לקוח..." style="margin-bottom: 0.5rem;" onkeyup="filterNewActivityCustomers(this.value)">
-                        <select id="new-activity-customer" class="form-select" size="5" onchange="loadCustomerContactsForActivity(this.value, 'new-activity-contact'); populateNewActivityDeals(this.value)">
+                        <select id="new-activity-customer" class="form-select" size="5" onchange="document.getElementById('new-activity-contact-search').value = ''; loadCustomerContactsForActivity(this.value, 'new-activity-contact'); populateNewActivityDeals(this.value)">
                             <option value="">-- ללא לקוח --</option>
                         </select>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 1rem;">
                         <label class="form-label">איש קשר</label>
-                        <select id="new-activity-contact" class="form-select">
+                        <input type="text" id="new-activity-contact-search" class="form-input" placeholder="חפש איש קשר..." style="margin-bottom: 0.5rem;" onkeyup="filterActivityContacts(this.value, document.getElementById('new-activity-customer').value, 'new-activity-contact')">
+                        <select id="new-activity-contact" class="form-select" size="5">
                             <option value="">-- ראשי (ברירת מחדל) --</option>
                         </select>
                     </div>
@@ -6641,6 +6665,8 @@ function openNewActivityModal(prefillData = null) {
     // Reset search and contact
     const searchInput = document.getElementById('new-activity-customer-search');
     if (searchInput) searchInput.value = '';
+    const contactSearchInput = document.getElementById('new-activity-contact-search');
+    if (contactSearchInput) contactSearchInput.value = '';
     const contactSelect = document.getElementById('new-activity-contact');
     if (contactSelect) contactSelect.innerHTML = '<option value="">-- ראשי (ברירת מחדל) --</option>';
 
@@ -6689,7 +6715,7 @@ function openNewActivityModal(prefillData = null) {
              if (customerSelect) {
                  customerSelect.value = prefillData.customer_id;
                  // Trigger load contacts
-                 loadCustomerContactsForActivity(prefillData.customer_id, 'new-activity-contact', prefillData.contact_id);
+                 loadCustomerContactsForActivity(prefillData.customer_id, 'new-activity-contact', prefillData.contact_id, '');
              }
         }
     }
@@ -8032,6 +8058,10 @@ async function viewActivityDetails(activityId) {
             } else {
                 contactHtml = customer.contact_name || '-';
             }
+        } else if (linkedContact) {
+            // No customer, but has a linked contact
+            contactHtml = `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500; text-decoration: underline;" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewContactDetails('${linkedContact.contact_id}')">${linkedContact.contact_name} ${linkedContact.role ? `(${linkedContact.role})` : ''}</span>`;
+            customerHtml = '-'; // Explicitly no customer
         }
         
         modal.innerHTML = `
@@ -8096,14 +8126,14 @@ async function viewActivityDetails(activityId) {
                     <div class="deal-card-info">
                         <span class="deal-card-label">טלפון:</span>
                         <span class="deal-card-value">
-                            ${customer?.phone ? `
+                            ${customer?.phone || linkedContact?.phone ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span style="color: var(--text-primary);">${customer.phone}</span>
-                                    <a href="tel:${customer.phone}" title="התקשר">
+                                    <span style="color: var(--text-primary);">${customer?.phone || linkedContact?.phone}</span>
+                                    <a href="tel:${customer?.phone || linkedContact?.phone}" title="התקשר">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
-                                    ${isMobileNumber(customer.phone) ? `
-                                    <a href="https://wa.me/${customer.phone.replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
+                                    ${isMobileNumber(customer?.phone || linkedContact?.phone) ? `
+                                    <a href="https://wa.me/${(customer?.phone || linkedContact?.phone).replace(/\D/g, '').replace(/^0/, '972')}" target="_blank" title="שלח הודעה בווטסאפ">
                                         <img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;">
                                     </a>` : ''}
                                 </div>
@@ -8402,8 +8432,8 @@ async function loadActivities(preservePage = false) {
                                 ? new Date(activity.activity_date).toLocaleDateString('he-IL')
                                 : '-';
                             
-                            let businessName = 'לא משויך';
-                            let customerId = null;
+                             let rowBusinessName = 'לא משויך';
+                            let rowCustomerId = null;
                             let contactNameRaw = '-';
                             let primaryContactId = null;
 
@@ -8412,16 +8442,21 @@ async function loadActivities(preservePage = false) {
 
                             if (activity.deals?.customers) {
                                 const cust = activity.deals.customers;
-                                businessName = cust.business_name || 'לא משויך';
-                                customerId = cust.customer_id;
+                                rowBusinessName = cust.business_name || 'לא משויך';
+                                rowCustomerId = cust.customer_id;
                                 contactNameRaw = activity.contacts?.contact_name || activity.deals?.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '-';
                                 primaryContactId = activity.contact_id || activity.deals?.contact_id || cust.primary_contact_id;
                             } else if (activity.customers) {
                                 const cust = activity.customers;
-                                businessName = cust.business_name || 'לא משויך';
-                                customerId = cust.customer_id;
+                                rowBusinessName = cust.business_name || 'לא משויך';
+                                rowCustomerId = cust.customer_id;
                                 contactNameRaw = activity.contacts?.contact_name || activity.deals?.contacts?.contact_name || cust.primary_contact?.contact_name || cust.contact_name || '-';
-                                primaryContactId = activity.contact_id || activity.deals?.contact_id || cust.primary_contact_id;
+                                primaryContactId = activity.contact_id || cust.primary_contact_id;
+                            } else if (activity.contacts) {
+                                // No customer, but has contact
+                                contactNameRaw = activity.contacts.contact_name;
+                                primaryContactId = activity.contact_id;
+                                rowBusinessName = contactNameRaw; // Show contact in business name column as requested
                             }
                             
                             const contactDisplay = (primaryContactId && contactNameRaw !== '-')
@@ -8446,9 +8481,11 @@ async function loadActivities(preservePage = false) {
                                         <div style="max-width: 50ch; overflow-x: auto; white-space: pre-wrap; direction: rtl;">${formatActivityText(activity.description || '-')}</div>
                                     </td>
                                     <td>
-                                        ${customerId 
-                                            ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customerId}')" style="font-weight: 500;">${businessName}</a>`
-                                            : businessName
+                                        ${rowCustomerId 
+                                            ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${rowCustomerId}')" style="font-weight: 500;">${rowBusinessName}</a>`
+                                            : (primaryContactId && rowBusinessName === contactNameRaw 
+                                                ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500;">${rowBusinessName}</a>`
+                                                : rowBusinessName)
                                         }
                                         <div style="font-size: 0.8em; color: var(--text-tertiary);">${contactDisplay}</div>
                                         ${activity.deal_id ? `
@@ -8519,7 +8556,8 @@ async function loadActivities(preservePage = false) {
                     : null;
                 
                 // Get customer info
-                let businessName = 'לא משויך';
+                let rowBusinessName = 'לא משויך';
+                let rowCustomerId = null;
                 let contactName = '';
                 let phone = '';
                 let email = '';
@@ -8527,7 +8565,8 @@ async function loadActivities(preservePage = false) {
                 
                 if (activity.deals?.customers) {
                     const cust = activity.deals.customers;
-                    businessName = cust.business_name || 'לא משויך';
+                    rowBusinessName = cust.business_name || 'לא משויך';
+                    rowCustomerId = cust.customer_id;
                     const displayContact = activity.contacts || activity.deals?.contacts || cust.primary_contact || cust || {};
                     contactName = displayContact.contact_name || cust.contact_name || '';
                     phone = displayContact.phone || cust.phone || '';
@@ -8535,12 +8574,20 @@ async function loadActivities(preservePage = false) {
                     primaryContactId = activity.contact_id || activity.deals?.contact_id || cust.primary_contact_id;
                 } else if (activity.customers) {
                     const cust = activity.customers;
-                    businessName = cust.business_name || 'לא משויך';
+                    rowBusinessName = cust.business_name || 'לא משויך';
+                    rowCustomerId = cust.customer_id;
                     const displayContact = activity.contacts || cust.primary_contact || cust || {};
                     contactName = displayContact.contact_name || cust.contact_name || '';
                     phone = displayContact.phone || cust.phone || '';
                     email = displayContact.email || cust.email || '';
                     primaryContactId = activity.contact_id || cust.primary_contact_id;
+                } else if (activity.contacts) {
+                    // No customer, but has contact
+                    contactName = activity.contacts.contact_name;
+                    phone = activity.contacts.phone || '';
+                    email = activity.contacts.email || '';
+                    primaryContactId = activity.contact_id;
+                    rowBusinessName = contactName; // Priority
                 }
                 
                 const contactDisplay = (primaryContactId && contactName)
@@ -8590,8 +8637,12 @@ async function loadActivities(preservePage = false) {
                         <div style="margin-bottom: 0.4rem; white-space: pre-wrap; ${activity.completed ? 'text-decoration: line-through; opacity: 0.7;' : ''}"><strong>תיאור:</strong> ${formatActivityText(activity.description || '-')}</div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 1rem; font-size: 0.8rem; color: var(--text-secondary);">
                             ${activityDate ? `<div><strong>תאריך:</strong> <span style="color: var(--primary-color);">${activityDate}</span></div>` : ''}
-                            <div><strong>לקוח:</strong> ${businessName}</div>
-                            ${contactName ? `<div><strong>איש קשר:</strong> ${contactDisplay}</div>` : ''}
+                            <div><strong>לקוח:</strong> ${rowCustomerId 
+                                ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${rowCustomerId}')" style="color: inherit; text-decoration: underline;">${rowBusinessName}</a>`
+                                : (primaryContactId && rowBusinessName === contactName
+                                    ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="color: inherit; text-decoration: underline;">${rowBusinessName}</a>`
+                                    : rowBusinessName)}</div>
+                            ${contactName && rowBusinessName !== contactName ? `<div><strong>איש קשר:</strong> ${contactDisplay}</div>` : ''}
                             ${activity.deal_id ? `<div><strong>עסקה:</strong> <a href="javascript:void(0)" onclick="viewDealDetails('${activity.deal_id}')" class="deal-link clickable-text" style="color: var(--primary-color); padding: 1px 4px; font-size: 0.75rem;">${APP_ICONS.BRIEFCASE} עסקה מקושרת</a></div>` : ''}
                             ${email ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
