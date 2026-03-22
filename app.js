@@ -7261,10 +7261,13 @@ async function loadThisWeek() {
                     creatorSelect.appendChild(option);
                 });
                 
-                // Removed: set default to current user
+                // Set default to current user if exists in list
+                const currentUser = localStorage.getItem('crm_username');
+                if (currentUser && creators.includes(currentUser)) {
+                    creatorSelect.value = currentUser;
+                }
             }
         }
-
 
         // Get filter values
         const creatorFilter = document.getElementById('filter-thisweek-creator')?.value || '';
