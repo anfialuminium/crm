@@ -3096,7 +3096,7 @@ async function viewCustomerDetails(customerId) {
                             output += `
                                 <div class="deal-card-info" style="grid-column: 1 / -1;">
                                     <span class="deal-card-label">הערות כלליות:</span>
-                                    <span class="deal-card-value">${text}</span>
+                                    <span class="deal-card-value" style="white-space: pre-wrap;">${formatActivityText(text)}</span>
                                 </div>
                             `;
                         }
@@ -4374,7 +4374,7 @@ async function viewContactDetails(contactId) {
                                         <button class="btn btn-sm btn-danger" onclick="deleteContactNote('${contact.contact_id}', ${index})" title="מחק" style="padding: 2px 6px; font-size: 0.8rem;">${APP_ICONS.TRASH}</button>
                                     </div>
                                 </div>
-                                <div id="contact-note-content-${index}" style="white-space: pre-wrap; font-size: 0.95rem; color: var(--text-primary);">${note.content}</div>
+                                <div id="contact-note-content-${index}" style="white-space: pre-wrap; font-size: 0.95rem; color: var(--text-primary);">${formatActivityText(note.content)}</div>
                             </div>
                         `).join('');
                     })()}
@@ -5270,7 +5270,7 @@ function createDealCard(deal) {
             ${deal.notes ? `
                 <div class="deal-card-info">
                     <span class="deal-card-label">הערות:</span>
-                    <span class="deal-card-value">${deal.notes}</span>
+                    <span class="deal-card-value" style="white-space: pre-wrap;">${formatActivityText(deal.notes)}</span>
                 </div>
             ` : ''}
         </div>
@@ -5476,7 +5476,7 @@ async function viewDealDetails(dealId) {
             ${deal.notes ? `
                 <div style="margin-bottom: 2rem;">
                     <h3 style="margin-bottom: 0.5rem;">הערות כלליות</h3>
-                    <p style="color: var(--text-secondary);">${deal.notes}</p>
+                    <div style="color: var(--text-secondary); white-space: pre-wrap;">${formatActivityText(deal.notes)}</div>
                 </div>
             ` : ''}
             
@@ -5501,7 +5501,7 @@ async function viewDealDetails(dealId) {
                                     <td>${index + 1}</td>
                                     <td><strong>${fixBiDi(item.products.product_name)}</strong><br>
                                         <small style="color: var(--text-tertiary);">${fixBiDi(item.products.category || '')}</small>
-                                        ${item.notes ? `<div style="margin-top: 4px; padding: 4px 8px; background: #f1f5f9; border-radius: 4px; font-size: 0.8rem; color: #475569; border-right: 2px solid #cbd5e1;">${item.notes}</div>` : ''}
+                                        ${item.notes ? `<div style="margin-top: 4px; padding: 4px 8px; background: #f1f5f9; border-radius: 4px; font-size: 0.8rem; color: #475569; border-right: 2px solid #cbd5e1; white-space: pre-wrap;">${formatActivityText(item.notes)}</div>` : ''}
                                     </td>
                                     <td>${item.quantity}</td>
                                     <td>₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(למטר)</small>' : ''}</td>
@@ -9898,9 +9898,10 @@ async function loadAuditLog() {
         // Helper to map technical status names to user-friendly ones
         const formatAuditText = (text) => {
             if (!text || typeof text !== 'string') return text;
-            return text
+            const formatted = text
                 .replace(/זכייה|נסגר/g, '<span class="status-text-won">נסגר</span>')
                 .replace(/הפסד|בוטל/g, '<span class="status-text-lost">בוטל</span>');
+            return formatActivityText(formatted);
         };
 
         // Build HTML
@@ -12355,7 +12356,7 @@ async function viewSupplierDetails(id) {
                              const metaRegex = /(?:\|\|\|METADATA\|\|\||<<<EXTRA_DATA>>>|<<>>|&lt;&lt;&gt;&gt;|<<<EXTRA_DATA>>>|<<>>).*$/s;
                              n = raw.replace(metaRegex, '').trim();
                          }
-                         return n || '-';
+                         return n ? formatActivityText(n) : '-';
                      })()}</div>
                 </div>
                 <div>
@@ -14667,21 +14668,20 @@ function formatActivityText(text) {
     // 4,5,6: Mentions @[Type:ID|Label]
     // 7,8,9: New Mentions [Label|Type:ID@]
     // 10: Raw URLs https://...
+    // 11: Phone numbers (Israeli & General)
     
-    // Markdown link URL regex explanation: 
-    // [^\s)]+ -> matches till space or closing paren
-    // (?:\([^\s)]*\)[^\s)]*)* -> allows balanced parentheses once
     const mdUrlPattern = '(https?:\\/\\/[^\\s)]+(?:\\([^\\s)]*\\)[^\\s)]*)*)';
     const combinedRegex = new RegExp(
         '(<(?:a|span|mark)\\b[^>]*>.*?<\\/(?:a|span|mark)>)|' +
         '(?:\\[([^\\]]+)\\]\\s*\\(\\s*' + mdUrlPattern + '\\s*\\))|' +
         '(?:@\\[(Deal|Order|Contact|Supplier):([^\\|]+)\\|([^\\]]+)\\])|' +
         '(?:\\[([^\\|]+)\\|(Deal|Order|Contact|Supplier):([^@]+)@\\])|' +
-        '(https?:\\/\\/[^\\s<"\']+\\b)',
+        '(https?:\\/\\/[^\\s<"\']+\\b)|' +
+        '(\\b(?:\\+972|0)(?:[23489]|5\\d|7[1-9])(?:[-\\s.]?\\d){7,8}\\b)',
         'gi'
     );
 
-    return text.replace(combinedRegex, (match, anchor, mdLabel, mdUrl, m1Type, m1Id, m1Label, m2Label, m2Type, m2Id, rawUrl) => {
+    return text.replace(combinedRegex, (match, anchor, mdLabel, mdUrl, m1Type, m1Id, m1Label, m2Label, m2Type, m2Id, rawUrl, phone) => {
         // If it's an existing anchor tag or highlighted span, return it as is
         if (anchor) return anchor;
 
@@ -14733,6 +14733,12 @@ function formatActivityText(text) {
                 cleanUrl = cleanUrl.substring(0, cleanUrl.length - trailing.length);
             }
             return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); text-decoration: underline;">${cleanUrl}</a>${trailing}`;
+        }
+
+        // If it's a Phone Number
+        if (phone) {
+            const cleanPhone = phone.replace(/[^\d+]/g, '');
+            return `<a href="tel:${cleanPhone}" style="color: var(--primary-color); text-decoration: underline; font-weight: 500;">${phone}</a>`;
         }
 
         return match;
