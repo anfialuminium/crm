@@ -1353,6 +1353,16 @@ function createItemRow(item, index, hasAnyColor = true) {
     priceInput.inputMode = 'decimal';
     priceInput.className = 'stepper-input';
     priceInput.value = item.unit_price;
+    
+    // Auto-Verify Price for Pull Handles (Fail-Safe)
+    if (product && (product.product_name || '').includes('ידית משיכה')) {
+        const autoPrice = getPullHandlePrice(product.product_name, item.size, item.color);
+        if (autoPrice !== null) {
+            item.unit_price = autoPrice;
+            priceInput.value = autoPrice;
+        }
+    }
+    
     priceInput.min = '0';
     priceInput.step = '0.01';
     priceInput.dir = 'ltr';
@@ -1729,7 +1739,16 @@ function getBrushCartonMultiplier(product, size, isFin) {
 
 function calculateTotal() {
     const subtotal = dealItems.reduce((sum, item) => {
-        const product = products.find(p => p.product_id === item.product_id);
+        const product = products.find(p => p.product_id == item.product_id);
+        
+        // Auto-Verify Price for Pull Handles (Fail-Safe)
+        if (product && (product.product_name || '').includes('ידית משיכה')) {
+            const autoPrice = getPullHandlePrice(product.product_name, item.size, item.color);
+            if (autoPrice !== null) {
+                item.unit_price = autoPrice;
+            }
+        }
+
         let quantityMultiplier = 1;
         
         if (product && isMeshProduct(product)) {
@@ -13215,10 +13234,19 @@ function renderSupplierOrderItems() {
             const qtyPerCarton = parseFloat(item.quantity) || 0;
             const cartons = parseFloat(item.cartons || 1);
             const totalUnits = qtyPerCarton * cartons;
+            
+            const prod = products.find(p => (item.product_id && p.product_id == item.product_id) || (!item.product_id && p.product_name === item.description));
+            
+            // Auto-Verify Price for Pull Handles every render
+            if (prod && (prod.product_name || '').includes('ידית משיכה')) {
+                const newPrice = getPullHandlePrice(prod.product_name, item.size, item.color);
+                if (newPrice !== null) {
+                    item.unit_price = newPrice;
+                }
+            }
+
             const itemTotal = totalUnits * (parseFloat(item.unit_price) || 0);
             total += itemTotal;
-            
-            const prod = products.find(p => (item.product_id && p.product_id === item.product_id) || (!item.product_id && p.product_name === item.description));
             const isWheel = prod && (prod.category === 'גלגלים' || prod.product_name.includes('גלגל'));
             const isElectricLock = prod && prod.product_name && prod.product_name.includes('מנעול חשמלי');
             const requiresCartons = prod && (
@@ -13745,17 +13773,65 @@ async function saveNoteChange(content, action, index = null) {
     }
 }
 
+function getPullHandlePrice(productName, size, color) {
+    if (!productName) return null;
+    const name = productName.toString();
+    const isPullHandle = name.includes('ידית') && (name.includes('משיכה') || name.includes('משיכה'));
+    if (!isPullHandle) return null;
+    
+    // Prices are now the same for Stainless Steel (נירוסטה) and Black (שחור)
+    const isDouble = name.includes('כפול') || name.includes('כפולה');
+    const s = (size || '').toString().replace(/[-\s]/g, '/').trim();
+    
+    // Detailed mapping for robustness
+    if (!isDouble) {
+        if (s.includes('35/50') || s.includes('35/50')) return 70;
+        if (s.includes('50/70') || s.includes('50/70')) return 83;
+        if (s.includes('70/100') || s.includes('70/100')) return 105;
+        if (s.includes('90/120') || s.includes('90/120')) return 120;
+        
+        // Number-only fallbacks
+        if (s.startsWith('35') || s.endsWith('50')) return 70;
+        if (s.startsWith('50') || s.endsWith('70')) return 83;
+        if (s.startsWith('70') || s.endsWith('100')) return 105;
+        if (s.startsWith('90') || s.endsWith('120')) return 120;
+    } else {
+        if (s.includes('35/50') || s.includes('35/50')) return 121;
+        if (s.includes('50/70') || s.includes('50/70')) return 154;
+        if (s.includes('70/100') || s.includes('70/100')) return 187;
+        if (s.includes('90/120') || s.includes('90/120')) return 220;
+
+        // Number-only fallbacks
+        if (s.startsWith('35') || s.endsWith('50')) return 121;
+        if (s.startsWith('50') || s.endsWith('70')) return 154;
+        if (s.startsWith('70') || s.endsWith('100')) return 187;
+        if (s.startsWith('90') || s.endsWith('120')) return 220;
+    }
+    return null;
+}
+
 function updateOrderItem(index, field, value) {
+    const item = currentOrderItems[index];
     if (field === 'color' && value === '__OTHER__') {
         const custom = prompt('הזן צבע חדש:');
         if (custom && custom.trim()) {
-            currentOrderItems[index][field] = custom.trim();
-        } else {
-            // Do not update if cancelled
+            item[field] = custom.trim();
         }
     } else {
-        currentOrderItems[index][field] = value;
+        item[field] = value;
     }
+
+    // Auto-update price for Pull Handles
+    const prod = products.find(p => (item.product_id && p.product_id == item.product_id) || (!item.product_id && p.product_name === item.description));
+    if (prod && prod.product_name && prod.product_name.includes('ידית משיכה')) {
+        if (field === 'size' || field === 'color' || field === 'product_id') {
+            const newPrice = getPullHandlePrice(prod.product_name, item.size, item.color);
+            if (newPrice !== null) {
+                item.unit_price = newPrice;
+            }
+        }
+    }
+
     renderSupplierOrderItems(); // Re-render to update totals
 }
 
