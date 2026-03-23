@@ -1820,6 +1820,7 @@ async function saveDeal(status = null) {
         
         const dealStatus = status || document.getElementById('deal-status').value;
         const dealNotes = document.getElementById('deal-notes').value;
+        const paymentTerms = document.getElementById('deal-payment-terms-new').value;
         
         // Final sync of item notes from DOM just in case
         document.querySelectorAll('.item-notes-input').forEach(textarea => {
@@ -1864,6 +1865,7 @@ async function saveDeal(status = null) {
                     discount_amount: discountAmount,
                     final_amount: finalAmount,
                     notes: dealNotes,
+                    payment_terms: paymentTerms,
                     closed_at: dealStatus === 'זכייה' || dealStatus === 'הפסד' ? new Date().toISOString() : null
                 })
                 .eq('deal_id', editDealId)
@@ -2046,6 +2048,7 @@ async function saveDeal(status = null) {
                     discount_amount: discountAmount,
                     final_amount: finalAmount,
                     notes: dealNotes,
+                    payment_terms: paymentTerms,
                     closed_at: dealStatus === 'זכייה' || dealStatus === 'הפסד' ? new Date().toISOString() : null
                 })
                 .select()

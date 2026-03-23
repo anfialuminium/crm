@@ -51,6 +51,19 @@
                     <input type="hidden" id="acc-customer-id">
                     <p id="selected-customer-name" style="margin-top: 8px; font-weight: 700; color: var(--primary-color);" class="hidden"></p>
                 </div>
+                
+                <div class="form-group">
+                    <label for="acc-payment-terms">תנאי תשלום</label>
+                    <select id="acc-payment-terms" class="input-big">
+                        <option value="שוטף + 30">שוטף + 30</option>
+                        <option value="שוטף + 60">שוטף + 60</option>
+                        <option value="שוטף + 90">שוטף + 90</option>
+                        <option value="שוטף + 120" selected>שוטף + 120</option>
+                        <option value="מזומן">מזומן</option>
+                        <option value="אשראי">אשראי</option>
+                        <option value="העברה בנקאית">העברה בנקאית</option>
+                    </select>
+                </div>
 
                 <div id="acc-items-container">
                     <label>מוצרים בעסקה</label>

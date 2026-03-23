@@ -902,6 +902,7 @@ async function saveAccDeal() {
                 discount_percentage: 0,
                 discount_amount: 0,
                 notes: 'נוצר דרך הממשק הנגיש',
+                payment_terms: document.getElementById('acc-payment-terms').value,
                 created_by: 'עופר'
             })
             .select()
