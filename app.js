@@ -1356,7 +1356,7 @@ function createItemRow(item, index, hasAnyColor = true) {
     
     // Auto-Verify Price for Pull Handles (Fail-Safe)
     if (product && (product.product_name || '').includes('ידית משיכה')) {
-        const autoPrice = getPullHandlePrice(product.product_name, item.size, item.color);
+        const autoPrice = getPullHandlePrice(product, item.size, item.color);
         if (autoPrice !== null) {
             item.unit_price = autoPrice;
             priceInput.value = autoPrice;
@@ -1536,6 +1536,7 @@ function createItemRow(item, index, hasAnyColor = true) {
             const screenWidths = ['0.50', '0.60', '0.70', '0.80', '0.90', '1.00', '1.10', '1.20', '1.50', '1.80', '2.00', '2.50'];
             
             widthSelect.innerHTML = '<option value="">רוחב</option>';
+            widthSelect.dir = 'rtl';
             screenWidths.forEach(w => {
                 const opt = document.createElement('option');
                 opt.value = w;
@@ -1558,9 +1559,9 @@ function createItemRow(item, index, hasAnyColor = true) {
                 lengthInput.inputMode = 'decimal';
                 lengthInput.className = 'form-input';
                 lengthInput.value = item.length || 1;
-                lengthInput.placeholder = 'אורך מ\'';
+                lengthInput.placeholder = "אורך (מ')";
                 lengthInput.step = '0.1';
-                lengthInput.dir = 'ltr';
+                lengthInput.dir = 'rtl';
                 lengthInput.style.width = '100%';
                 lengthInput.addEventListener('input', (e) => {
                     item.length = parseFloat(e.target.value) || 0;
@@ -1577,6 +1578,7 @@ function createItemRow(item, index, hasAnyColor = true) {
             const sizeInput = document.createElement('input');
             sizeInput.type = 'text';
             sizeInput.className = 'form-input';
+            sizeInput.dir = 'rtl';
             sizeInput.value = item.size || '';
             sizeInput.placeholder = 'מידה';
             sizeInput.style.width = '100px';
@@ -1743,7 +1745,7 @@ function calculateTotal() {
         
         // Auto-Verify Price for Pull Handles (Fail-Safe)
         if (product && (product.product_name || '').includes('ידית משיכה')) {
-            const autoPrice = getPullHandlePrice(product.product_name, item.size, item.color);
+            const autoPrice = getPullHandlePrice(product, item.size, item.color);
             if (autoPrice !== null) {
                 item.unit_price = autoPrice;
             }
@@ -4869,10 +4871,22 @@ function openProductModal(product = null) {
         document.getElementById('product-image').value = product.image_url || '';
         document.getElementById('product-requires-color').checked = product.requires_color || false;
         document.getElementById('product-requires-size').checked = product.requires_size || false;
+        
+        // Populate size prices
+        const list = document.getElementById('size-prices-list');
+        list.innerHTML = '';
+        if (product.size_prices && Array.isArray(product.size_prices)) {
+            product.size_prices.forEach(sp => addSizePriceRow(sp.size, sp.price));
+            toggleSizePricesSection(true);
+        } else {
+            toggleSizePricesSection(product.requires_size);
+        }
     } else {
         // Create mode
         title.textContent = 'מוצר חדש';
         document.getElementById('edit-product-id').value = '';
+        document.getElementById('size-prices-list').innerHTML = '';
+        toggleSizePricesSection(false);
     }
     
     modal.classList.add('active');
@@ -4880,6 +4894,29 @@ function openProductModal(product = null) {
 
 function closeProductModal() {
     document.getElementById('product-modal').classList.remove('active');
+}
+
+function toggleSizePricesSection(checked) {
+    const section = document.getElementById('size-prices-section');
+    if (checked) {
+        section.classList.remove('hidden');
+    } else {
+        section.classList.add('hidden');
+    }
+}
+
+function addSizePriceRow(size = '', price = '') {
+    const list = document.getElementById('size-prices-list');
+    const div = document.createElement('div');
+    div.style.display = 'flex';
+    div.style.gap = '0.5rem';
+    div.style.alignItems = 'center';
+    div.innerHTML = `
+        <input type="text" class="form-input size-name-input" placeholder="מידה (למשל: 35/50)" value="${size}" style="flex: 2;">
+        <input type="number" class="form-input size-price-input" placeholder="מחיר (₪)" value="${price}" style="flex: 1;" step="0.01">
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.parentElement.remove()" style="padding: 0 10px; min-width: auto; height: 38px;">&times;</button>
+    `;
+    list.appendChild(div);
 }
 
 // Image lightbox modal
@@ -4954,6 +4991,19 @@ async function saveProduct(event) {
             requires_size: document.getElementById('product-requires-size').checked,
             active: true
         };
+        
+        // Collect size-specific prices
+        const sizePrices = [];
+        if (productData.requires_size) {
+            document.querySelectorAll('.size-name-input').forEach((input, index) => {
+                const name = input.value.trim();
+                const price = parseFloat(document.querySelectorAll('.size-price-input')[index].value) || 0;
+                if (name) {
+                    sizePrices.push({ size: name, price: price });
+                }
+            });
+        }
+        productData.size_prices = sizePrices;
         
         // Fetch old state for logging if update
         let oldProductData = null;
@@ -5509,6 +5559,7 @@ async function viewDealDetails(dealId) {
                         <thead>
                             <tr>
                                 <th style="width: 50px;">#</th>
+                                <th style="width: 60px;">תמונה</th>
                                 <th>מוצר</th>
                                 <th style="width: 80px;">כמות</th>
                                 <th style="width: 110px;">מחיר יח'</th>
@@ -5518,9 +5569,17 @@ async function viewDealDetails(dealId) {
                             </tr>
                         </thead>
                         <tbody>
-                            ${items.map((item, index) => `
+                             ${items.map((item, index) => {
+                                const imageUrl = item.products?.image_url;
+                                return `
                                 <tr>
                                     <td>${index + 1}</td>
+                                    <td>
+                                        ${imageUrl ? 
+                                            `<img src="${imageUrl}" onclick="openImageModal('${imageUrl}')" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color); cursor: zoom-in;" title="הגדל תמונה">` : 
+                                            '<div style="width: 40px; height: 40px; background: var(--bg-tertiary); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); font-size: 1rem;">📦</div>'
+                                        }
+                                    </td>
                                     <td><strong>${fixBiDi(item.products.product_name)}</strong><br>
                                         <small style="color: var(--text-tertiary);">${fixBiDi(item.products.category || '')}</small>
                                         ${item.notes ? `<div style="margin-top: 4px; padding: 4px 8px; background: #f1f5f9; border-radius: 4px; font-size: 0.8rem; color: #475569; border-right: 2px solid #cbd5e1; white-space: pre-wrap;">${formatActivityText(item.notes)}</div>` : ''}
@@ -5538,7 +5597,8 @@ async function viewDealDetails(dealId) {
                                     </td>
                                     <td><strong>₪${item.total_price.toFixed(2)}</strong></td>
                                 </tr>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -13242,7 +13302,7 @@ function renderSupplierOrderItems() {
             
             // Auto-Verify Price for Pull Handles every render
             if (prod && (prod.product_name || '').includes('ידית משיכה')) {
-                const newPrice = getPullHandlePrice(prod.product_name, item.size, item.color);
+                const newPrice = getPullHandlePrice(prod, item.size, item.color);
                 if (newPrice !== null) {
                     item.unit_price = newPrice;
                 }
@@ -13776,10 +13836,38 @@ async function saveNoteChange(content, action, index = null) {
     }
 }
 
-function getPullHandlePrice(productName, size, color) {
-    if (!productName) return null;
-    const name = productName.toString();
-    const isPullHandle = name.includes('ידית') && (name.includes('משיכה') || name.includes('משיכה'));
+function getPriceBySize(product, size) {
+    if (!product || !product.size_prices || !Array.isArray(product.size_prices) || !size) return null;
+    
+    const s = size.toString().trim();
+    // 1. Exact or normalized slash match
+    let entry = product.size_prices.find(sp => {
+        const spSize = (sp.size || '').toString().trim();
+        return spSize === s || spSize.replace(/[-\s]/g, '/') === s.replace(/[-\s]/g, '/');
+    });
+    
+    if (entry) return parseFloat(entry.price);
+    
+    // 2. Partial Match (e.g. "35" in "35/50")
+    entry = product.size_prices.find(sp => {
+        const spSize = (sp.size || '').toString().trim();
+        return (s.length > 1 && spSize.includes(s)) || (spSize.length > 1 && s.includes(spSize));
+    });
+    
+    if (entry) return parseFloat(entry.price);
+    return null;
+}
+
+function getPullHandlePrice(product, size, color) {
+    if (!product) return null;
+    
+    // Try Dynamic Price First
+    const dynamicPrice = getPriceBySize(product, size);
+    if (dynamicPrice !== null) return dynamicPrice;
+
+    // Fallback to Hardcoded Logic
+    const name = (typeof product === 'string') ? product : (product.product_name || '').toString();
+    const isPullHandle = name.includes('ידית') && name.includes('משיכה');
     if (!isPullHandle) return null;
     
     // Prices are now the same for Stainless Steel (נירוסטה) and Black (שחור)
@@ -13828,7 +13916,7 @@ function updateOrderItem(index, field, value) {
     const prod = products.find(p => (item.product_id && p.product_id == item.product_id) || (!item.product_id && p.product_name === item.description));
     if (prod && prod.product_name && prod.product_name.includes('ידית משיכה')) {
         if (field === 'size' || field === 'color' || field === 'product_id') {
-            const newPrice = getPullHandlePrice(prod.product_name, item.size, item.color);
+            const newPrice = getPullHandlePrice(prod, item.size, item.color);
             if (newPrice !== null) {
                 item.unit_price = newPrice;
             }
@@ -16348,4 +16436,23 @@ document.addEventListener('DOMContentLoaded', initCustomPickers);
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initCustomPickers();
 }
+
+function openImageModal(src) {
+    const modal = document.getElementById('image-preview-modal');
+    const img = document.getElementById('image-preview-img');
+    if (modal && img) {
+        img.src = src;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Stop scrolling
+    }
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('image-preview-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = ''; // Restore scrolling
+    }
+}
+
 

@@ -396,14 +396,14 @@ function updateItemProduct(id, productId, btn) {
             sizeContainer.innerHTML = `
                 <div style="margin-bottom: 8px;">
                     <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 4px; display: block;">רוחב:</label>
-                    <select class="input-big" onchange="updateItemSize('${id}', this.value)">
+                    <select class="input-big" dir="rtl" onchange="updateItemSize('${id}', this.value)">
                         <option value="">בחר רוחב</option>
                         ${screenWidths.map(w => `<option value="${w}" ${item.size === w ? 'selected' : ''}>${w}</option>`).join('')}
                     </select>
                 </div>
                 <div>
                     <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 4px; display: block;">אורך (מטר):</label>
-                    <input type="text" class="input-big" id="size-input-${id}" inputmode="decimal" dir="ltr" oninput="updateItemLength('${id}', this.value)" value="${item.length || 1}" placeholder="אורך">
+                    <input type="text" class="input-big" id="size-input-${id}" inputmode="decimal" dir="rtl" oninput="updateItemLength('${id}', this.value)" value="${item.length || 1}" placeholder="אורך (מ')">
                 </div>
             `;
         } else if (isBrush) {
@@ -432,9 +432,9 @@ function updateItemProduct(id, productId, btn) {
                 `;
             }
         } else {
-            sizeContainer.innerHTML = `
-                <input type="text" class="input-big" oninput="updateItemSize('${id}', this.value)" placeholder="מידה">
-            `;
+                sizeContainer.innerHTML = `
+                    <input type="text" class="input-big" dir="rtl" oninput="updateItemSize('${id}', this.value)" placeholder="מידה">
+                `;
             item.size = '';
         }
     } else {
@@ -658,10 +658,34 @@ function updateItemColor(id, color, btn) {
     checkAutoPullHandlePrice(id);
 }
 
-function getPullHandlePrice(productName, size, color) {
-    if (!productName) return null;
-    const name = productName.toString();
-    const isPullHandle = name.includes('ידית') && (name.includes('משיכה') || name.includes('משיכה'));
+function getPriceBySize(product, size) {
+    if (!product || !product.size_prices || !Array.isArray(product.size_prices) || !size) return null;
+    const s = size.toString().trim();
+    // 1. Exact or normalized slash match
+    let entry = product.size_prices.find(sp => {
+        const spSize = (sp.size || '').toString().trim();
+        return spSize === s || spSize.replace(/[-\s]/g, '/') === s.replace(/[-\s]/g, '/');
+    });
+    if (entry) return parseFloat(entry.price);
+    // 2. Partial Match (e.g. "35" in "35/50")
+    entry = product.size_prices.find(sp => {
+        const spSize = (sp.size || '').toString().trim();
+        return (s.length > 1 && spSize.includes(s)) || (spSize.length > 1 && s.includes(spSize));
+    });
+    if (entry) return parseFloat(entry.price);
+    return null;
+}
+
+function getPullHandlePrice(product, size, color) {
+    if (!product) return null;
+    
+    // Try Dynamic Price First
+    const dynamicPrice = getPriceBySize(product, size);
+    if (dynamicPrice !== null) return dynamicPrice;
+
+    // Fallback to Hardcoded Logic
+    const name = (typeof product === 'string') ? product : (product.product_name || '').toString();
+    const isPullHandle = name.includes('ידית') && name.includes('משיכה');
     if (!isPullHandle) return null;
     
     // Prices are now the same for Stainless Steel (נירוסטה) and Black (שחור)
@@ -701,7 +725,7 @@ function checkAutoPullHandlePrice(id) {
     
     const product = products.find(p => p.product_id == item.product_id);
     if (product && product.product_name && product.product_name.includes('ידית משיכה')) {
-        const newPrice = getPullHandlePrice(product.product_name, item.size, item.color);
+        const newPrice = getPullHandlePrice(product, item.size, item.color);
         if (newPrice !== null) {
             item.price = newPrice;
             const priceInp = document.getElementById(`price-${id}`);
@@ -816,7 +840,7 @@ function updateTotal() {
     currentDealItems.forEach(i => {
         const product = products.find(p => p.product_id == i.product_id);
         if (product && (product.product_name || '').includes('ידית משיכה')) {
-            const newPrice = getPullHandlePrice(product.product_name, i.size, i.color);
+            const newPrice = getPullHandlePrice(product, i.size, i.color);
             if (newPrice !== null) {
                 i.price = newPrice;
                 const priceInp = document.getElementById(`price-${i.id}`);
@@ -1264,7 +1288,7 @@ async function viewDealDetails(dealId) {
             html += `
                 <div style="border-bottom:1px solid #eee; padding:12px 0; display: flex; align-items: center; gap: 15px;">
                     ${item.products?.image_url ? 
-                        `<img src="${item.products.image_url}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-color); flex-shrink: 0;">` : 
+                        `<img src="${item.products.image_url}" onclick="openImageModal('${item.products.image_url}')" style="width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-color); flex-shrink: 0; cursor: zoom-in;" title="הגדל תמונה">` : 
                         '<div style="width: 70px; height: 70px; background: var(--bg-secondary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 1.8rem; flex-shrink: 0;">📦</div>'
                     }
                     <div style="flex: 1;">
@@ -1774,3 +1798,22 @@ function fixBiDi(text) {
     // Force LTR for dimensions in brackets and use dir="auto" for automatic English/Hebrew alignment
     return `<bdi dir="auto">${text.replace(/\[([^\]]+)\]/g, '<span dir="ltr">[$1]</span>')}</bdi>`;
 }
+
+function openImageModal(src) {
+    const modal = document.getElementById('image-preview-modal');
+    const img = document.getElementById('image-preview-img');
+    if (modal && img) {
+        img.src = src;
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Stop scrolling
+    }
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('image-preview-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = ''; // Restore scrolling
+    }
+}
+
