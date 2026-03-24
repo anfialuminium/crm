@@ -1387,6 +1387,11 @@ function setupOverflowTooltips() {
         const forceTooltip = target.classList.contains('show-custom-tooltip') || (target.parentElement && target.parentElement.classList.contains('show-custom-tooltip'));
         
         if (isOverflowing || forceTooltip) {
+            // Guard: Don't show automatic overflow tooltips for containers with children (prevents giant section dumps)
+            // But allow it if the element specifically has a title or requested a tooltip via class
+            const hasTitle = !!(target.title || target.dataset.originalTitle);
+            if (!hasTitle && !forceTooltip && target.childElementCount > 0) return;
+
             // Avoid re-triggering for the same element
             if (activeTarget === target) return;
             activeTarget = target;
@@ -1395,6 +1400,9 @@ function setupOverflowTooltips() {
             const text = target.dataset.originalTitle || target.title || target.innerText || target.textContent;
             
             if (text && text.trim().length > 0) {
+                // Guard: Don't show giant blobs of text in a tooltip unless it's an explicit title
+                if (text.trim().length > 300 && !hasTitle) return;
+
                 // Remove the native title temporarily to prevent double tooltip
                 if (target.title) {
                     target.dataset.originalTitle = target.title;
