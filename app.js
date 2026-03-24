@@ -46,23 +46,49 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Login Logic
-function handleLogin(event) {
+async function handleLogin(event) {
     event.preventDefault();
-    const password = document.getElementById('password').value;
+    const passwordInput = document.getElementById('password');
+    const password = passwordInput.value;
     const rememberMe = document.getElementById('remember-me')?.checked;
+    const loginButton = event.target.querySelector('button[type="submit"]');
+    const originalText = loginButton ? loginButton.innerHTML : '';
     
-    if (password === '3737') {
-        sessionStorage.setItem('isLoggedIn', 'true');
-        if (rememberMe) {
-            localStorage.setItem('isLoggedIn', 'true');
+    if (loginButton) {
+        loginButton.disabled = true;
+        loginButton.innerHTML = 'מתחבר...';
+    }
+
+    try {
+        // Try calling the Vercel Serverless Function
+        const response = await fetch('/api/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            sessionStorage.setItem('isLoggedIn', 'true');
+            if (rememberMe) {
+                localStorage.setItem('isLoggedIn', 'true');
+            }
+            document.getElementById('login-modal').classList.remove('active');
+            initializeApp();
+        } else {
+            alert('סיסמה שגויה');
+            passwordInput.value = '';
+            passwordInput.focus();
         }
-        document.getElementById('login-modal').classList.remove('active');
-        // Initialize app only after login
-        initializeApp();
-    } else {
-        alert('סיסמה שגויה');
-        document.getElementById('password').value = '';
-        document.getElementById('password').focus();
+    } catch (error) {
+        console.error('Auth API error:', error);
+        alert('שגיאה בחיבור למערכת האימות. וודא שהפרויקט רץ ב-Vercel.');
+    } finally {
+        if (loginButton) {
+            loginButton.disabled = false;
+            loginButton.innerHTML = originalText;
+        }
     }
 }
 
