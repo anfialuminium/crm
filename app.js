@@ -83,6 +83,17 @@ async function handleLogin(event) {
         }
     } catch (error) {
         console.error('Auth API error:', error);
+        // Fallback for local development if serverless functions aren't running (e.g. localhost or file protocol)
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') {
+             console.warn('Authentication API not detected. Proceeding with local access.');
+             sessionStorage.setItem('isLoggedIn', 'true');
+             if (rememberMe) {
+                 localStorage.setItem('isLoggedIn', 'true');
+             }
+             document.getElementById('login-modal').classList.remove('active');
+             initializeApp();
+             return;
+        }
         alert('שגיאה בחיבור למערכת האימות. וודא שהפרויקט רץ ב-Vercel.');
     } finally {
         if (loginButton) {
