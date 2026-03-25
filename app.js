@@ -12581,8 +12581,14 @@ async function fetchWithTimeout(resource, options = {}) {
     }
 }
 
+let currencyServiceAvailable = true;
+let currencyApiFailCount = 0;
+
 async function getExchangeRate(date, currency = 'USD') {
     if (!currency || currency === 'ILS') return 1;
+    
+    let defaultRate = (currency === 'USD' ? 3.6 : (currency === 'EUR' ? 3.8 : 1));
+    if (!currencyServiceAvailable) return defaultRate;
     
     // Normalize date to YYYY-MM-DD
     let dateStr = date;
@@ -12600,25 +12606,22 @@ async function getExchangeRate(date, currency = 'USD') {
     if (inflightRates[key]) return inflightRates[key];
 
     inflightRates[key] = (async () => {
-        let rate = (currency === 'USD' ? 3.6 : 3.8);
+        let rate = defaultRate;
         try {
-            // Short timeout to prevent hanging UI
-            const res = await fetchWithTimeout(`https://api.frankfurter.app/${dateStr}?from=${currency}&to=ILS`, { timeout: 2500 });
+            // Very short timeout to prevent hanging UI. If it's blocked, it should fail fast.
+            const res = await fetchWithTimeout(`https://api.frankfurter.app/${dateStr}?from=${currency}&to=ILS`, { timeout: 1000 });
             if (res.ok) {
                 const json = await res.json();
                 rate = json.rates.ILS;
                 exchangeRatesCache[key] = rate;
             } else {
-                // Secondary fallback to latest
-                const resLat = await fetchWithTimeout(`https://api.frankfurter.app/latest?from=${currency}&to=ILS`, { timeout: 1500 });
-                if (resLat.ok) {
-                    const jsonLat = await resLat.json();
-                    rate = jsonLat.rates.ILS;
-                    exchangeRatesCache[key] = rate;
-                }
+                currencyApiFailCount++;
+                if (currencyApiFailCount > 2) currencyServiceAvailable = false;
             }
         } catch (e) {
-            console.warn(`[Currency] Failed to fetch rate for ${key}, using default ${rate}:`, e.message);
+            currencyApiFailCount++;
+            if (currencyApiFailCount > 2) currencyServiceAvailable = false;
+            console.warn(`[Currency] Failed to fetch rate for ${key}, using default ${rate}`);
         }
         delete inflightRates[key];
         return rate;
