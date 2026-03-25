@@ -10674,33 +10674,13 @@ async function loadReports() {
         
         // Calculate Expenses (on filtered data)
         const activeOrders = filteredSupplierOrders.filter(o => o.order_status !== 'בוטל');
-        const rateCache = {};
-        const getRateForDate = async (dateStr) => {
-            if (rateCache[dateStr]) return rateCache[dateStr];
-            const today = new Date().toISOString().split('T')[0];
-            if (dateStr > today) dateStr = today;
-            try {
-                const res = await fetch(`https://api.frankfurter.app/${dateStr}?from=USD&to=ILS`);
-                const json = await res.json();
-                rateCache[dateStr] = json.rates.ILS;
-                return json.rates.ILS;
-            } catch (e) {
-                if (!rateCache['fallback']) {
-                    try {
-                        const fb = await fetch('https://api.frankfurter.app/latest?from=USD&to=ILS');
-                        const res = await fb.json();
-                        rateCache['fallback'] = res.rates.ILS;
-                    } catch { rateCache['fallback'] = 3.6; }
-                }
-                rateCache[dateStr] = rateCache['fallback'];
-                return rateCache['fallback'];
-            }
-        };
-
-        const uniqueDates = [...new Set(activeOrders.map(o => 
-            o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-        ))];
-        await Promise.all(uniqueDates.map(date => getRateForDate(date)));
+        const rateCache = {}; // Local to this function for backward compat with return logic
+        
+        await Promise.all(activeOrders.map(async (o) => {
+             const dateStr = o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+             const rate = await getExchangeRate(dateStr, 'USD');
+             rateCache[dateStr] = rate;
+        }));
 
         const totalSupplierExpenses = activeOrders.reduce((sum, o) => {
              const dateStr = o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
@@ -12567,6 +12547,76 @@ function closeSupplierDetailsModal() {
 }
 
 // ============================================
+// CURRENCY & EXCHANGE RATES
+// ============================================
+
+const exchangeRatesCache = {};
+const inflightRates = {};
+
+async function fetchWithTimeout(resource, options = {}) {
+    const { timeout = 5000 } = options;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(resource, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (e) {
+        clearTimeout(id);
+        throw e;
+    }
+}
+
+async function getExchangeRate(date, currency = 'USD') {
+    if (!currency || currency === 'ILS') return 1;
+    
+    // Normalize date to YYYY-MM-DD
+    let dateStr = date;
+    if (date instanceof Date) dateStr = date.toISOString().split('T')[0];
+    else if (typeof date === 'string' && date.includes('T')) dateStr = date.split('T')[0];
+    
+    if (!dateStr) dateStr = new Date().toISOString().split('T')[0];
+    
+    // Clamp to today
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (dateStr > todayStr) dateStr = todayStr;
+
+    const key = `${dateStr}_${currency}`;
+    if (exchangeRatesCache[key]) return exchangeRatesCache[key];
+    if (inflightRates[key]) return inflightRates[key];
+
+    inflightRates[key] = (async () => {
+        let rate = (currency === 'USD' ? 3.6 : 3.8);
+        try {
+            // Short timeout to prevent hanging UI
+            const res = await fetchWithTimeout(`https://api.frankfurter.app/${dateStr}?from=${currency}&to=ILS`, { timeout: 2500 });
+            if (res.ok) {
+                const json = await res.json();
+                rate = json.rates.ILS;
+                exchangeRatesCache[key] = rate;
+            } else {
+                // Secondary fallback to latest
+                const resLat = await fetchWithTimeout(`https://api.frankfurter.app/latest?from=${currency}&to=ILS`, { timeout: 1500 });
+                if (resLat.ok) {
+                    const jsonLat = await resLat.json();
+                    rate = jsonLat.rates.ILS;
+                    exchangeRatesCache[key] = rate;
+                }
+            }
+        } catch (e) {
+            console.warn(`[Currency] Failed to fetch rate for ${key}, using default ${rate}:`, e.message);
+        }
+        delete inflightRates[key];
+        return rate;
+    })();
+
+    return inflightRates[key];
+}
+
+// ============================================
 // SUPPLIER ORDERS LOGIC
 // ============================================
 
@@ -12625,7 +12675,7 @@ async function loadSupplierOrders() {
         
         supplierOrders = data || [];
 
-        // Pre-fetch exchange rates for display
+        // Pre-fetch exchange rates for display with caching and deduplication
         const ordersWithRates = await Promise.all(supplierOrders.map(async (o) => {
             let orderNotes = o.notes || '';
             let orderExtraData = {};
@@ -12672,35 +12722,16 @@ async function loadSupplierOrders() {
             }
 
             if (currency !== 'ILS') {
-                const fetchRateInner = async (dStr) => {
-                    let rate = (currency === 'USD' ? 3.6 : 3.8); // Default
-                    try {
-                         const today = new Date().toISOString().split('T')[0];
-                         const queryDate = dStr > today ? today : dStr;
-                         const res = await fetch(`https://api.frankfurter.app/${queryDate}?from=${currency}&to=ILS`);
-                         if (res.ok) {
-                             const json = await res.json();
-                             rate = json.rates.ILS;
-                         } else {
-                             const resLat = await fetch(`https://api.frankfurter.app/latest?from=${currency}&to=ILS`);
-                             if(resLat.ok) {
-                                 const jsonLat = await resLat.json();
-                                 rate = jsonLat.rates.ILS;
-                             }
-                         }
-                    } catch(e) { console.error('Rate fetch failed', e); }
-                    return rate;
-                };
-
                 const dateStr = o.created_at ? new Date(o.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
                 const dpDateStr = o.down_payment_date ? new Date(o.down_payment_date).toISOString().split('T')[0] : (orderExtraData.down_payment_date ? orderExtraData.down_payment_date.split('T')[0] : dateStr);
                 const fpDateStr = o.full_payment_date ? new Date(o.full_payment_date).toISOString().split('T')[0] : (orderExtraData.full_payment_date ? orderExtraData.full_payment_date.split('T')[0] : dateStr);
                 const todayStr = new Date().toISOString().split('T')[0];
 
-                const rate = await fetchRateInner(dateStr);
-                const dpRate = await fetchRateInner(dpDateStr);
-                const fpRate = await fetchRateInner(fpDateStr);
-                const todayRate = await fetchRateInner(todayStr);
+                // These use the cache automatically
+                const rate = await getExchangeRate(dateStr, currency);
+                const dpRate = await getExchangeRate(dpDateStr, currency);
+                const fpRate = await getExchangeRate(fpDateStr, currency);
+                const todayRate = await getExchangeRate(todayStr, currency);
                 
                 const totalAmt = parseFloat(o.total_amount) || 0;
                 const dp = parseFloat(o.down_payment) || 0;
@@ -13203,37 +13234,17 @@ async function updateOrderExchangeRate(preserveCurrency = false) {
     const fpDateVal = document.getElementById('order-full-payment-date')?.value;
     const fpQueryDate = fpDateVal && fpDateVal <= today ? fpDateVal : queryDate;
 
-    // Helper to fetch rate
-    const fetchRate = async (qDate) => {
-        try {
-            const res = await fetch(`https://api.frankfurter.app/${qDate}?from=${modalCurrency}&to=ILS`);
-            if (res.ok) {
-                const json = await res.json();
-                return json.rates.ILS;
-            } else {
-                const fallbackRes = await fetch(`https://api.frankfurter.app/latest?from=${modalCurrency}&to=ILS`);
-                if (fallbackRes.ok) {
-                    const fbJson = await fallbackRes.json();
-                    return fbJson.rates.ILS;
-                }
-            }
-        } catch (e) {
-            console.error('Exchange rate fetch error:', e);
-        }
-        return (modalCurrency === 'USD' ? 3.6 : 3.8);
-    };
-
-    modalExchangeRate = await fetchRate(queryDate);
-    window.modalTodayRate = await fetchRate(today);
+    modalExchangeRate = await getExchangeRate(queryDate, modalCurrency);
+    window.modalTodayRate = await getExchangeRate(today, modalCurrency);
     
     if (dpQueryDate !== queryDate) {
-        window.modalDownPaymentRate = await fetchRate(dpQueryDate);
+        window.modalDownPaymentRate = await getExchangeRate(dpQueryDate, modalCurrency);
     } else {
         window.modalDownPaymentRate = modalExchangeRate;
     }
     
     if (fpQueryDate !== queryDate) {
-        window.modalFullPaymentRate = await fetchRate(fpQueryDate);
+        window.modalFullPaymentRate = await getExchangeRate(fpQueryDate, modalCurrency);
     } else {
         window.modalFullPaymentRate = modalExchangeRate;
     }
