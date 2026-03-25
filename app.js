@@ -555,6 +555,8 @@ function setupTabs() {
             loadThisWeek();
         } else if (tabName === 'auditlog') {
             loadAuditLog();
+        } else if (tabName === 'inventory') {
+            loadInventory();
         } else if (tabName === 'reports') {
             loadReports();
         } else if (tabName === 'search') {
@@ -1946,6 +1948,14 @@ async function saveDeal(status = null) {
             
             if (itemsError) throw itemsError;
             
+            // Automated Stock Update: If status JUST changed to "זכייה", decrement stock
+            if (dealStatus === 'זכייה' && oldDealData.deal_status !== 'זכייה') {
+                for (const item of dealItems) {
+                    const variation = (item.color || item.size) ? `${item.color || ''} ${item.size || ''}`.trim() : 'כללי';
+                    await updateInventoryStock(item.product_id, variation, -item.quantity, 'sale', editDealId, `זכייה בעסקה #${editDealId.slice(0,6)}`);
+                }
+            }
+            
             // Build detailed change description for audit log
             const customerName = customers.find(c => c.customer_id === customerId)?.business_name || 'לקוח';
             const changes = [];
@@ -2115,6 +2125,13 @@ async function saveDeal(status = null) {
             
             if (itemsError) throw itemsError;
             
+            // Automated Stock Update: If new deal is created with status "זכייה", decrement stock
+            if (dealStatus === 'זכייה') {
+                for (const item of dealItems) {
+                    const variation = (item.color || item.size) ? `${item.color || ''} ${item.size || ''}`.trim() : 'כללי';
+                    await updateInventoryStock(item.product_id, variation, -item.quantity, 'sale', dealData.deal_id, `זכייה בעסקה חדשה #${dealData.deal_id.slice(0,6)}`);
+                }
+            }
             
             // Log the action
             const customerNameNew = customers.find(c => c.customer_id === customerId)?.business_name || 'לקוח';
@@ -14127,6 +14144,19 @@ async function saveSupplierOrder(event) {
         }
         
         showAlert('הזמנה נשמרה בהצלחה', 'success');
+        
+        // Automated Stock Update: If status is "התקבל", increment stock
+        if (orderData.order_status === 'התקבל') {
+            for (const item of currentOrderItems) {
+                const product = products.find(p => p.sku === item.sku);
+                if (product) {
+                    const variation = (item.color || item.size) ? `${item.color || ''} ${item.size || ''}`.trim() : 'כללי';
+                    const qty = (parseFloat(item.quantity) || 0) * (parseFloat(item.cartons) || 1);
+                    await updateInventoryStock(product.product_id, variation, qty, 'purchase', savedOrderId, `קבלת הזמנת רכש #${savedOrderId.slice(0,6)}`);
+                }
+            }
+        }
+
         closeSupplierOrderModal();
         loadSupplierOrders();
         
@@ -15058,6 +15088,7 @@ const NAV_SECTIONS = [
     { id: 'suppliers', name: 'ספקים', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>' },
     { id: 'supplier-orders', name: 'הזמנות רכש', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>' },
     { id: 'products', name: 'מוצרים', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>' },
+    { id: 'inventory', name: 'ניהול מלאי', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>' },
     { id: 'auditlog', name: 'פעולות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>' },
     { id: 'reports', name: 'דוחות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>' },
     { id: 'search', name: 'חיפוש', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>' },
@@ -16489,13 +16520,6 @@ function initCustomPickers() {
     }
 })();
 
-// Initial run
-document.addEventListener('DOMContentLoaded', initCustomPickers);
-// Also run immediately if DOM already loaded
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    initCustomPickers();
-}
-
 function openImageModal(src) {
     const modal = document.getElementById('image-preview-modal');
     const img = document.getElementById('image-preview-img');
@@ -16513,5 +16537,543 @@ function closeImageModal() {
         document.body.style.overflow = ''; // Restore scrolling
     }
 }
+
+// Initial run
+document.addEventListener('DOMContentLoaded', initCustomPickers);
+// Also run immediately if DOM already loaded
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initCustomPickers();
+}
+
+// ============================================
+// Inventory Management Logic
+// ============================================
+
+let inventoryData = [];
+
+async function loadInventory() {
+    const container = document.getElementById('inventory-list-container');
+    if (container) container.innerHTML = '<div class="spinner"></div>';
+
+    try {
+        // 1. Fetch products and current stock in parallel
+        const [productsRes, stockRes, transRes] = await Promise.all([
+            supabaseClient.from('products').select('*').eq('active', true),
+            supabaseClient.from('product_stock').select('*'),
+            supabaseClient.from('inventory_transactions')
+                .select('*')
+                .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+        ]);
+
+        if (productsRes.error) throw productsRes.error;
+        if (stockRes.error) throw stockRes.error;
+        
+        if (transRes.error) {
+            console.warn('⚠️ Inventory transactions table not found or inaccessible. Have you run the SQL?', transRes.error);
+        }
+
+        const allProducts = productsRes.data || [];
+        const allStock = stockRes.data || [];
+        const recentTransactionsCount = (transRes.data || []).length;
+
+        // 2. Map stock to products
+        inventoryData = allProducts.flatMap(product => {
+            const productStock = allStock.filter(s => s.product_id === product.product_id);
+            
+            if (productStock.length === 0) {
+                // If no stock record exists, show as 0 with "כללי" variation
+                return [{
+                    ...product,
+                    variation_name: 'כללי',
+                    stock_quantity: 0,
+                    stock_id: null,
+                    is_new: true
+                }];
+            }
+            
+            return productStock.map(s => ({
+                ...product,
+                variation_name: s.variation_name,
+                stock_quantity: parseFloat(s.stock_quantity || 0),
+                stock_id: s.stock_id,
+                updated_at: s.updated_at,
+                is_new: false
+            }));
+        });
+
+        // 3. Update summary cards
+        updateInventorySummary(inventoryData, recentTransactionsCount);
+        
+        // Populate category filter if empty
+        const invCatFilter = document.getElementById('filter-inventory-category');
+        if (invCatFilter && invCatFilter.options.length <= 1) {
+            const categories = [...new Set(allProducts.map(p => p.category).filter(Boolean))].sort();
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                invCatFilter.appendChild(opt);
+            });
+        }
+
+        // 4. Display
+        filterInventory();
+
+    } catch (error) {
+        console.error('❌ Error loading inventory:', error);
+        if (container) container.innerHTML = '<div class="alert alert-error">שגיאה בטעינת נתוני מלאי. וודא שטבלאות המלאי קיימות במסד הנתונים.</div>';
+    }
+}
+
+function updateInventorySummary(data, transactionsCount) {
+    const totalItems = data.reduce((sum, item) => sum + (item.stock_quantity > 0 ? 1 : 0), 0);
+    const lowStockItems = data.filter(item => item.stock_quantity > 0 && item.stock_quantity < 5).length;
+
+    const totalEl = document.getElementById('inv-total-items');
+    const lowEl = document.getElementById('inv-low-stock');
+    const transEl = document.getElementById('inv-monthly-transactions');
+
+    if (totalEl) totalEl.textContent = totalItems;
+    if (lowEl) lowEl.textContent = lowStockItems;
+    if (transEl) transEl.textContent = transactionsCount;
+}
+
+function filterInventory() {
+    const searchTerm = document.getElementById('filter-inventory-search')?.value.toLowerCase() || '';
+    const category = document.getElementById('filter-inventory-category')?.value || '';
+    const status = document.getElementById('filter-inventory-status')?.value || '';
+
+    const filtered = inventoryData.filter(item => {
+        const matchesSearch = !searchTerm || 
+            item.product_name.toLowerCase().includes(searchTerm) || 
+            (item.sku && item.sku.toLowerCase().includes(searchTerm)) ||
+            item.variation_name.toLowerCase().includes(searchTerm);
+        
+        const matchesCategory = !category || item.category === category;
+        
+        let matchesStatus = true;
+        if (status === 'instock') matchesStatus = item.stock_quantity > 0;
+        else if (status === 'lowstock') matchesStatus = item.stock_quantity > 0 && item.stock_quantity < 5;
+        else if (status === 'outofstock') matchesStatus = item.stock_quantity <= 0;
+
+        return matchesSearch && matchesCategory && matchesStatus;
+    });
+
+    displayInventoryList(filtered);
+}
+
+function displayInventoryList(data) {
+    const container = document.getElementById('inventory-list-container');
+    if (!container) return;
+
+    if (data.length === 0) {
+        container.innerHTML = '<div class="text-center" style="padding: 3rem; color: var(--text-tertiary);">לא נמצאו מוצרים תואמים לסינון</div>';
+        return;
+    }
+
+    let html = `
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>מוצר</th>
+                    <th>קטגוריה</th>
+                    <th>וריאציה</th>
+                    <th>כמות במלאי</th>
+                    <th>עדכון אחרון</th>
+                    <th>פעולות</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    data.forEach(item => {
+        const stockStatusClass = item.stock_quantity <= 0 ? 'status-lost' : (item.stock_quantity < 5 ? 'status-pending' : 'status-won');
+        const lastUpdate = item.updated_at ? new Date(item.updated_at).toLocaleDateString('he-IL', {day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit'}) : '-';
+        
+        html += `
+            <tr>
+                <td>
+                    <div style="font-weight: 600;">${item.product_name}${item.variation_name !== 'כללי' ? ' - ' + item.variation_name : ''}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-tertiary);">מקט: ${item.sku || '-'}</div>
+                </td>
+                <td><span class="badge badge-secondary">${item.category || 'אחר'}</span></td>
+                <td><span style="color: var(--text-secondary);">${item.variation_name}</span></td>
+                <td>
+                    <span class="badge ${stockStatusClass}" style="font-size: 1.1rem; padding: 0.5rem 1rem; min-width: 60px; text-align: center;">
+                        ${item.stock_quantity.toLocaleString()} ${item.unit || 'יח\''}
+                    </span>
+                </td>
+                <td style="font-size: 0.85rem; color: var(--text-tertiary);">${lastUpdate}</td>
+                <td>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary btn-sm" onclick="showInventoryAdjustmentModal('${item.product_id}', '${item.variation_name.replace(/'/g, "\\'")}', ${item.stock_quantity}, '${item.product_name.replace(/'/g, "\\'")}')" title="עדכון מלאי">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="loadInventoryTransactions('${item.product_id}', '${item.variation_name.replace(/'/g, "\\'")}')" title="היסטוריית תנועות">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function showInventoryAdjustmentModal(productId, variation, currentQty, productName) {
+    const modalId = 'inventory-adjustment-modal';
+    document.getElementById('inv-adj-product-id').value = productId;
+    document.getElementById('inv-adj-variation').value = variation;
+    document.getElementById('inv-adj-product-name').textContent = productName;
+    document.getElementById('inv-adj-variation-name').textContent = variation;
+    document.getElementById('inv-adj-current-qty').value = currentQty;
+    document.getElementById('inv-adj-amount').value = '';
+    document.getElementById('inv-adj-notes').value = '';
+    document.getElementById('inv-adj-type').value = 'adjustment';
+    
+    updateAdjustmentFields();
+    
+    document.getElementById(modalId).classList.add('active');
+}
+
+function updateAdjustmentFields() {
+    const type = document.getElementById('inv-adj-type').value;
+    const label = document.getElementById('inv-adj-qty-label');
+    const hint = document.getElementById('inv-adj-hint');
+    const amountInput = document.getElementById('inv-adj-amount');
+
+    if (!label || !hint || !amountInput) return;
+
+    if (type === 'adjustment') {
+        label.textContent = 'כמות לשינוי (+/-)';
+        hint.textContent = 'הזן מספר חיובי להוספה או שלילי להפחתה.';
+        amountInput.placeholder = 'לדוגמה: 10 או -5';
+    } else if (type === 'purchase') {
+        label.textContent = 'כמות להוספה';
+        hint.textContent = 'הזן את הכמות שנתקבלה במלאי.';
+        amountInput.placeholder = 'לדוגמה: 20';
+    } else if (type === 'sale') {
+        label.textContent = 'כמות להפחתה';
+        hint.textContent = 'הזן את הכמות שיצאה מהמלאי.';
+        amountInput.placeholder = 'לדוגמה: 5';
+    }
+}
+
+function closeInventoryAdjustmentModal() {
+    document.getElementById('inventory-adjustment-modal').classList.remove('active');
+}
+
+async function saveInventoryAdjustment(event) {
+    event.preventDefault();
+    
+    const productId = document.getElementById('inv-adj-product-id').value;
+    const variation = document.getElementById('inv-adj-variation').value;
+    const type = document.getElementById('inv-adj-type').value;
+    let amount = parseFloat(document.getElementById('inv-adj-amount').value);
+    const notes = document.getElementById('inv-adj-notes').value;
+    
+    if (isNaN(amount)) return;
+
+    // Adjust amount based on type
+    if (type === 'sale' && amount > 0) amount = -amount;
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'מעדכן...';
+    }
+
+    try {
+        await updateInventoryStock(productId, variation, amount, type, null, notes);
+        showAlert('המלאי עודכן בהצלחה', 'success');
+        closeInventoryAdjustmentModal();
+        loadInventory();
+    } catch (error) {
+        console.error('Adjustment error:', error);
+        showAlert('שגיאה בעדכון המלאי', 'error');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'בצע עדכון';
+        }
+    }
+}
+
+async function updateInventoryStock(productId, variation, amount, type, referenceId = null, notes = '') {
+    const currentUser = document.getElementById('header-user-select')?.value || 'System';
+    
+    // 1. Get or create stock record
+    const { data: stockRecords, error: fetchError } = await supabaseClient
+        .from('product_stock')
+        .select('*')
+        .eq('product_id', productId)
+        .eq('variation_name', variation);
+    
+    if (fetchError) throw fetchError;
+    
+    let currentStock = 0;
+    let stockId = null;
+
+    if (stockRecords && stockRecords.length > 0) {
+        currentStock = parseFloat(stockRecords[0].stock_quantity || 0);
+        stockId = stockRecords[0].stock_id;
+    }
+
+    const newStock = currentStock + amount;
+
+    // 2. Update/Insert stock record
+    if (stockId) {
+        const { error: updateError } = await supabaseClient
+            .from('product_stock')
+            .update({ stock_quantity: newStock, updated_at: new Date().toISOString() })
+            .eq('stock_id', stockId);
+        if (updateError) throw updateError;
+    } else {
+        const { error: insertError } = await supabaseClient
+            .from('product_stock')
+            .insert({ 
+                product_id: productId, 
+                variation_name: variation, 
+                stock_quantity: newStock 
+            });
+        if (insertError) throw insertError;
+    }
+
+    // 3. Log transaction
+    const { error: logError } = await supabaseClient
+        .from('inventory_transactions')
+        .insert({
+            product_id: productId,
+            variation_name: variation,
+            change_amount: amount,
+            transaction_type: type,
+            reference_id: referenceId,
+            notes: notes,
+            created_by: currentUser
+        });
+    
+    if (logError) throw logError;
+    
+    // 4. Update main products table total quantity
+    await syncProductTotalStock(productId);
+}
+
+async function syncProductTotalStock(productId) {
+    const { data, error } = await supabaseClient
+        .from('product_stock')
+        .select('stock_quantity')
+        .eq('product_id', productId);
+    
+    if (error) return;
+    
+    const total = (data || []).reduce((sum, s) => sum + parseFloat(s.stock_quantity || 0), 0);
+    
+    await supabaseClient
+        .from('products')
+        .update({ stock_quantity: total })
+        .eq('product_id', productId);
+}
+
+async function loadInventoryTransactions(productId, variation) {
+    const modal = document.getElementById('inventory-transactions-modal');
+    const list = document.getElementById('inv-transactions-list');
+    
+    if (modal) modal.classList.add('active');
+    if (list) list.innerHTML = '<div class="spinner"></div>';
+    
+    try {
+        const { data, error } = await supabaseClient
+            .from('inventory_transactions')
+            .select('*')
+            .eq('product_id', productId)
+            .eq('variation_name', variation)
+            .order('created_at', { ascending: false })
+            .limit(50);
+            
+        if (error) throw error;
+        
+        if (!data || data.length === 0) {
+            list.innerHTML = '<div class="text-center" style="padding: 2rem; color: var(--text-tertiary);">לא נמצאו תנועות עבור וריאציה זו</div>';
+            return;
+        }
+
+        let html = `
+            <table class="items-table" style="font-size: 0.9rem;">
+                <thead>
+                    <tr>
+                        <th>תאריך</th>
+                        <th>סוג</th>
+                        <th>שינוי</th>
+                        <th>מבצע</th>
+                        <th>הערות</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        data.forEach(t => {
+            const date = new Date(t.created_at).toLocaleString('he-IL');
+            const typeLabels = {
+                'adjustment': '🔧 תיקון',
+                'purchase': '📥 רכש',
+                'sale': '📤 מכירה'
+            };
+            const amountClass = t.change_amount > 0 ? 'color: var(--success-color); font-weight: 700;' : 'color: var(--error-color); font-weight: 700;';
+            const amountPrefix = t.change_amount > 0 ? '+' : '';
+            
+            html += `
+                <tr>
+                    <td>${date}</td>
+                    <td>${typeLabels[t.transaction_type] || t.transaction_type}</td>
+                    <td style="${amountClass}">${amountPrefix}${t.change_amount}</td>
+                    <td>${t.created_by || '-'}</td>
+                    <td style="font-size: 0.8rem;">${t.notes || '-'}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        list.innerHTML = html;
+
+    } catch (error) {
+        console.error('Transactions fetch error:', error);
+        list.innerHTML = '<div class="alert alert-error">שגיאה בטעינת היסטוריה</div>';
+    }
+}
+
+function closeInventoryTransactionsModal() {
+    document.getElementById('inventory-transactions-modal').classList.remove('active');
+}
+
+async function promptAddVariation(productId, productName) {
+    const { value: variationName } = await Swal.fire({
+        title: 'פיצול מלאי למידות/צבעים',
+        text: `הוסף מידה/וריאציה חדשה למוצר: ${productName}`,
+        input: 'text',
+        inputPlaceholder: 'לדוגמה: 500מ"מ, 1000מ"מ, לבן...',
+        showCancelButton: true,
+        confirmButtonText: 'הוסף שורה חדשה',
+        cancelButtonText: 'ביטול',
+        confirmButtonColor: '#10b981'
+    });
+
+    if (variationName) {
+        try {
+            // Check if it already exists
+            const alreadyExists = inventoryData.some(i => i.product_id === productId && i.variation_name === variationName);
+            if (alreadyExists) {
+                showAlert('וריאציה זו כבר קיימת עבור מוצר זה', 'warning');
+                return;
+            }
+
+            // Create a 0-stock record to initialize the variation row
+            await updateInventoryStock(productId, variationName, 0, 'adjustment', null, 'אתחול וריאציה (פיצול מלאי)');
+            loadInventory();
+            showAlert('נוספה שורה חדשה למלאי עבור: ' + variationName, 'success');
+        } catch (error) {
+            console.error('Error adding variation:', error);
+            const msg = error.message || (error.error_description) || JSON.stringify(error);
+            showAlert('שגיאה בהוספת וריאציה: ' + msg, 'error');
+        }
+    }
+}
+
+function exportInventory() {
+    if (inventoryData.length === 0) return;
+    
+    const ws_data = [
+        ['מוצר', 'מקט', 'קטגוריה', 'וריאציה', 'כמות במלאי', 'יחידה', 'עדכון אחרון']
+    ];
+    
+    inventoryData.forEach(item => {
+        ws_data.push([
+            item.product_name,
+            item.sku || '',
+            item.category || '',
+            item.variation_name,
+            item.stock_quantity,
+            item.unit || 'יח\'',
+            item.updated_at ? new Date(item.updated_at).toLocaleDateString('he-IL') : ''
+        ]);
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+    XLSX.writeFile(wb, `inventory_export_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+async function retroactiveInventorySync() {
+    try {
+        const { isConfirmed } = await Swal.fire({
+            title: 'סנכרון מלאי רטרואקטיבי',
+            text: 'האם לעדכן את המלאי עבור כל הזמנות הרכש שכבר נמצאות בסטטוס "התקבל"? (זה ימלא את המלאי לפי כל מה שקנית בעבר)',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'כן, סנכרן הכל',
+            cancelButtonText: 'ביטול',
+            confirmButtonColor: '#10b981'
+        });
+
+        if (!isConfirmed) return;
+
+        Swal.fire({ 
+            title: 'מבצע סנכרון...', 
+            allowOutsideClick: false, 
+            didOpen: () => Swal.showLoading() 
+        });
+
+        const { data: orders, error: ordersError } = await supabaseClient
+            .from('supplier_orders')
+            .select('order_id, order_status, inventory_updated')
+            .eq('order_status', 'התקבל')
+            .eq('inventory_updated', false);
+        
+        if (ordersError) throw ordersError;
+        
+        if (!orders || orders.length === 0) {
+            Swal.fire('לא נמצאו הזמנות הממתינות לסנכרון', 'כל הזמנות הרכש "התקבל" כבר מעודכנות במלאי.', 'info');
+            return;
+        }
+
+        let totalUpdated = 0;
+        let itemsProcessed = 0;
+        
+        for (const order of orders) {
+            const { data: items, error: itemsError } = await supabaseClient
+                .from('supplier_order_items')
+                .select('*')
+                .eq('order_id', order.order_id);
+            
+            if (itemsError) continue;
+
+            for (const item of items) {
+                // Fuzzy match product by SKU or Description
+                const product = products.find(p => p.sku === item.sku || (item.description && p.product_name === item.description.split(' (')[0]));
+                if (product) {
+                    let variation = 'כללי';
+                    const match = item.description.match(/\(([^)]+)\)/);
+                    if (match) variation = match[1].trim();
+                    
+                    await updateInventoryStock(product.product_id, variation, parseFloat(item.quantity || 0), 'purchase', order.order_id, `סנכרון רטרואקטיבי #${order.order_id.slice(0,6)}`);
+                    itemsProcessed++;
+                }
+            }
+            
+            await supabaseClient.from('supplier_orders').update({ inventory_updated: true }).eq('order_id', order.order_id);
+            totalUpdated++;
+        }
+        
+        await loadInventory();
+        Swal.fire('סנכרון הושלם!', `עודכנו ${totalUpdated} הזמנות (${itemsProcessed} שורות מלאי).`, 'success');
+        
+    } catch (e) {
+        console.error('❌ Sync failed:', e);
+        Swal.fire('שגיאה בסנכרון', e.message, 'error');
+    }
+}
+
 
 

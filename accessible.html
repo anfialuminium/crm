@@ -33,6 +33,9 @@
                 <button onclick="showScreen('history')" class="btn-big btn-primary">
                     <span>📋 היסטוריית עסקאות וחיפוש</span>
                 </button>
+                <button onclick="showScreen('inventory')" class="btn-big" style="background-color: #10b981; color: white;">
+                    <span>📊 צפייה במלאי</span>
+                </button>
             </div>
         </div>
 
@@ -159,6 +162,25 @@
 
                 <div id="acc-orders-list">
                     <!-- Orders will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Screen -->
+        <div id="screen-inventory" class="hidden">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="section-title" style="margin-bottom: 0;">📊 צפייה במלאי</h2>
+                    <button onclick="showScreen('main')" class="btn-big btn-outline" style="width: auto; padding: 10px 20px; font-size: 1rem;">🏠 חזור</button>
+                </div>
+
+                <div class="form-group">
+                    <label style="font-size: 0.9rem; color: var(--text-secondary);">חיפוש מוצר:</label>
+                    <input type="text" id="acc-inventory-search" class="input-big" placeholder="שם מוצר, מק״ט או מידה..." onkeyup="filterAccInventory()">
+                </div>
+
+                <div id="acc-inventory-list">
+                    <!-- Inventory will be loaded here -->
                 </div>
             </div>
         </div>

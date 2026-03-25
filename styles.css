@@ -3125,3 +3125,83 @@ input::-ms-clear {
     padding: 0.4rem 0.8rem;
     font-size: 0.85rem;
 }
+
+/* ============================================
+   Inventory Management Styles
+   ============================================ */
+
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.inventory-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    transition: all var(--transition-base);
+}
+
+.inventory-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-light);
+}
+
+.inventory-card .card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.inventory-card .card-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    line-height: 1.2;
+}
+
+.inventory-card .card-label {
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+}
+
+/* Transaction Log Styling */
+.transaction-row {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.transaction-row:last-child {
+    border-bottom: none;
+}
+
+.transaction-type-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.type-purchase { background: #dcfce7; color: #166534; }
+.type-sale { background: #fee2e2; color: #991b1b; }
+.type-adjustment { background: #f1f5f9; color: #475569; }
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .inventory-grid {
+        grid-template-columns: 1fr;
+    }
+}
+

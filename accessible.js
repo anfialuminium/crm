@@ -194,6 +194,11 @@ function showScreen(screenId) {
     if (screenId === 'new-deal') {
         resetNewDealForm();
     }
+
+    if (screenId === 'inventory') {
+        document.getElementById('acc-inventory-search').value = '';
+        loadAccInventory();
+    }
 }
 
 // Customer Search Logic
@@ -1825,3 +1830,86 @@ function closeImageModal() {
     }
 }
 
+
+// Inventory Logic
+async function loadAccInventory() {
+    const container = document.getElementById('acc-inventory-list');
+    container.innerHTML = '<div class="spinner" style="margin: 20px auto;"></div>';
+
+    try {
+        const { data: stock, error: stockError } = await supabaseClient
+            .from('product_stock')
+            .select('*');
+        
+        if (stockError) throw stockError;
+
+        // Map products and stock
+        const inventory = products.map(p => {
+            const pStock = stock.filter(s => s.product_id === p.product_id);
+            if (pStock.length === 0) {
+                return { ...p, variation: 'כללי', quantity: 0 };
+            }
+            return pStock.map(s => ({ ...p, variation: s.variation_name, quantity: s.stock_quantity }));
+        }).flat();
+
+        window.accInventoryData = inventory;
+        displayAccInventory(inventory);
+    } catch (err) {
+        console.error('Error loading inventory:', err);
+        container.innerHTML = '<p style="color:red; text-align:center;">שגיאה בטעינת המלאי</p>';
+    }
+}
+
+function displayAccInventory(items) {
+    const container = document.getElementById('acc-inventory-list');
+    if (items.length === 0) {
+        container.innerHTML = '<p style="text-align:center; padding: 20px; color: #666;">לא נמצאו מוצרים במלאי</p>';
+        return;
+    }
+
+    let html = `
+        <table class="acc-table">
+            <thead>
+                <tr>
+                    <th style="text-align:right;">מוצר</th>
+                    <th>מידה/צבע</th>
+                    <th>כמות</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    items.forEach(item => {
+        const statusClass = item.quantity <= 0 ? 'status-lost' : (item.quantity < 5 ? 'status-pending' : '');
+        html += `
+            <tr>
+                <td style="text-align:right;">
+                    <strong>${item.product_name}</strong><br>
+                    <span style="font-size:0.8rem; color:#666;">מק"ט: ${item.sku}</span>
+                </td>
+                <td style="text-align:center;">${item.variation}</td>
+                <td style="text-align:center;">
+                    <span class="status-badge ${statusClass}" style="font-size: 1.1rem; font-weight: 700;">
+                        ${item.quantity} יח'
+                    </span>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function filterAccInventory() {
+    const query = document.getElementById('acc-inventory-search').value.toLowerCase();
+    if (!window.accInventoryData) return;
+
+    const filtered = window.accInventoryData.filter(item => 
+        item.product_name.toLowerCase().includes(query) || 
+        item.sku.toLowerCase().includes(query) || 
+        item.variation.toLowerCase().includes(query)
+    );
+
+    displayAccInventory(filtered);
+}
