@@ -1938,7 +1938,8 @@ async function openAccInventoryTransactions(productId, variation) {
             data.forEach(t => {
                 const date = new Date(t.created_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
                 const amountClass = t.change_amount > 0 ? 'color: var(--success-color);' : 'color: var(--error-color);';
-                const prefix = t.change_amount > 0 ? '+' : '';
+                const prefix = t.change_amount > 0 ? '+' : '-';
+                const absAmount = Math.abs(t.change_amount);
                 
                 let notesHtml = t.notes || '-';
                 if (t.reference_id) {
@@ -1952,7 +1953,7 @@ async function openAccInventoryTransactions(productId, variation) {
                 html += `
                     <tr>
                         <td style="text-align:right;">${date}</td>
-                        <td style="text-align:center; font-weight: 700; ${amountClass}">${prefix}${t.change_amount}</td>
+                        <td style="text-align:center; font-weight: 700; ${amountClass} direction: ltr;">${absAmount}${prefix}</td>
                         <td style="text-align:center;">${notesHtml}</td>
                     </tr>
                 `;

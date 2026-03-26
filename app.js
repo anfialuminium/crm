@@ -16937,7 +16937,7 @@ async function loadInventoryTransactions(productId, variation) {
                 <tr>
                     <td>${date}</td>
                     <td>${typeLabels[t.transaction_type] || t.transaction_type}</td>
-                    <td style="${amountClass}">${amountPrefix}${t.change_amount}</td>
+                    <td style="${amountClass} direction: ltr; text-align: right;">${Math.abs(t.change_amount)}${amountPrefix}</td>
                     <td>${t.created_by || '-'}</td>
                     <td style="font-size: 0.8rem;">${notesHtml}</td>
                 </tr>
