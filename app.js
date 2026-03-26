@@ -17037,7 +17037,7 @@ async function retroactiveInventorySync() {
 
         const { data: orders, error: ordersError } = await supabaseClient
             .from('supplier_orders')
-            .select('order_id, order_status, inventory_updated, expected_date, suppliers(name)')
+            .select('order_id, order_status, inventory_updated, expected_date, suppliers(supplier_name)')
             .eq('order_status', 'התקבל')
             .eq('inventory_updated', false);
         
@@ -17068,7 +17068,7 @@ async function retroactiveInventorySync() {
                     if (match) variation = match[1].trim();
                     
                     const receiptDate = order.expected_date ? new Date(order.expected_date).toLocaleDateString('he-IL') : 'לא ידוע';
-                    const supplierName = order.suppliers?.name || 'לא ידוע';
+                    const supplierName = order.suppliers?.supplier_name || 'לא ידוע';
                     await updateInventoryStock(product.product_id, variation, parseFloat(item.quantity || 0), 'purchase', order.order_id, `הזמנה שהתקבלה ב-${receiptDate}, מאת ${supplierName}`);
                     itemsProcessed++;
                 }
@@ -17126,10 +17126,10 @@ async function resetInventoryAndSyncDescriptions() {
         if (resetStockError) throw resetStockError;
 
         // 3. Mark all orders as NOT updated so they can be re-synced
-        await supabaseClient.from('supplier_orders').update({ inventory_updated: false }).eq('order_status', 'התקבל');
+        await supabaseClient.from('supplier_orders').update({ inventory_updated: false }).eq('order_status', 'התקבל').neq('order_id', '00000000-0000-0000-0000-000000000000');
         
         // 4. Mark all deals as NOT updated so they can be re-synced (if we had deal sync logic)
-        await supabaseClient.from('deals').update({ inventory_updated: false }).eq('deal_status', 'זכייה');
+        await supabaseClient.from('deals').update({ inventory_updated: false }).eq('deal_status', 'זכייה').neq('deal_id', '00000000-0000-0000-0000-000000000000');
 
         // 5. Run the new sync logic
         await retroactiveInventorySync();
