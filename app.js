@@ -17120,7 +17120,8 @@ async function resetInventoryAndSyncDescriptions() {
         // 2. Reset all stock quantities to 0
         const { error: resetStockError } = await supabaseClient
             .from('product_stock')
-            .update({ stock_quantity: 0 });
+            .update({ stock_quantity: 0 })
+            .neq('product_id', '00000000-0000-0000-0000-000000000000'); // PostgREST requires a WHERE clause for update
         
         if (resetStockError) throw resetStockError;
 
