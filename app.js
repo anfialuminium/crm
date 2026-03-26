@@ -17089,3 +17089,79 @@ async function retroactiveInventorySync() {
 
 
 
+async function resetInventoryAndSyncDescriptions() {
+    try {
+        const { isConfirmed } = await Swal.fire({
+            title: 'איפוס ועדכון תיאורי תנועות',
+            text: 'פעולה זו תמחק את כל תנועות המלאי הקיימות ותייצר אותן מחדש עם התיאורים המפורטים (שם ספק ותאריך). האם להמשיך?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'כן, בצע איפוס וסנכרון',
+            cancelButtonText: 'ביטול',
+            confirmButtonColor: '#d33'
+        });
+
+        if (!isConfirmed) return;
+
+        Swal.fire({ 
+            title: 'מבצע איפוס וסנכרון...', 
+            allowOutsideClick: false, 
+            didOpen: () => Swal.showLoading() 
+        });
+
+        // 1. Delete all transactions
+        const { error: delTransError } = await supabaseClient
+            .from('inventory_transactions')
+            .delete()
+            .neq('product_id', '00000000-0000-0000-0000-000000000000'); // Delete all
+        
+        if (delTransError) throw delTransError;
+
+        // 2. Reset all stock quantities to 0
+        const { error: resetStockError } = await supabaseClient
+            .from('product_stock')
+            .update({ stock_quantity: 0 });
+        
+        if (resetStockError) throw resetStockError;
+
+        // 3. Mark all orders as NOT updated so they can be re-synced
+        await supabaseClient.from('supplier_orders').update({ inventory_updated: false }).eq('order_status', 'התקבל');
+        
+        // 4. Mark all deals as NOT updated so they can be re-synced (if we had deal sync logic)
+        await supabaseClient.from('deals').update({ inventory_updated: false }).eq('deal_status', 'זכייה');
+
+        // 5. Run the new sync logic
+        await retroactiveInventorySync();
+        
+        // 6. Also sync deals (sales)
+        const { data: deals, error: dealsError } = await supabaseClient
+            .from('deals')
+            .select('deal_id, deal_status, inventory_updated, created_at, customers(business_name)')
+            .eq('deal_status', 'זכייה');
+        
+        if (!dealsError && deals) {
+            for (const deal of deals) {
+                const { data: items } = await supabaseClient.from('deal_items').select('*').eq('deal_id', deal.deal_id);
+                if (items) {
+                    for (const item of items) {
+                        const product = products.find(p => p.product_id === item.product_id);
+                        if (product) {
+                            const variation = item.variation_name || 'כללי';
+                            const saleDate = new Date(deal.created_at).toLocaleDateString('he-IL');
+                            const customerName = deal.customers?.business_name || 'לקוח';
+                            await updateInventoryStock(product.product_id, variation, -parseFloat(item.quantity || 0), 'sale', deal.deal_id, `מכירה בתאריך ${saleDate}, עבור ${customerName}`);
+                        }
+                    }
+                }
+                await supabaseClient.from('deals').update({ inventory_updated: true }).eq('deal_id', deal.deal_id);
+            }
+        }
+
+        Swal.fire('הסנכרון הושלם!', 'כל תנועות המלאי עודכנו עם התיאורים החדשים.', 'success');
+        await loadInventory();
+
+    } catch (e) {
+        console.error('❌ Reset & Sync failed:', e);
+        Swal.fire('שגיאה בתהליך', e.message, 'error');
+    }
+}
