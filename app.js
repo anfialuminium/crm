@@ -16701,7 +16701,7 @@ function displayInventoryList(data) {
                 <td><span style="color: var(--text-secondary);">${item.variation_name}</span></td>
                 <td>
                     <span class="badge ${stockStatusClass}" style="font-size: 1.1rem; padding: 0.5rem 1rem; min-width: 60px; text-align: center;">
-                        ${item.stock_quantity.toLocaleString()} ${item.unit || 'יח\''}
+                        ${item.stock_quantity.toLocaleString()} ${(item.category === 'מברשות') ? "מ'" : (item.unit || "יח'")}
                     </span>
                 </td>
                 <td style="font-size: 0.85rem; color: var(--text-tertiary);">${lastUpdate}</td>
