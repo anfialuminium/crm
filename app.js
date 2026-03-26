@@ -16923,13 +16923,22 @@ async function loadInventoryTransactions(productId, variation) {
             const amountClass = t.change_amount > 0 ? 'color: var(--success-color); font-weight: 700;' : 'color: var(--error-color); font-weight: 700;';
             const amountPrefix = t.change_amount > 0 ? '+' : '';
             
+            let notesHtml = t.notes || '-';
+            if (t.reference_id) {
+                if (t.transaction_type === 'purchase') {
+                    notesHtml = `<a href="javascript:void(0)" onclick="viewSupplierOrder('${t.reference_id}')" class="deal-link" style="text-decoration: underline;">${t.notes || 'צפה בהזמנה'}</a>`;
+                } else if (t.transaction_type === 'sale') {
+                    notesHtml = `<a href="javascript:void(0)" onclick="viewDealDetails('${t.reference_id}')" class="deal-link" style="text-decoration: underline;">${t.notes || 'צפה בעסקה'}</a>`;
+                }
+            }
+            
             html += `
                 <tr>
                     <td>${date}</td>
                     <td>${typeLabels[t.transaction_type] || t.transaction_type}</td>
                     <td style="${amountClass}">${amountPrefix}${t.change_amount}</td>
                     <td>${t.created_by || '-'}</td>
-                    <td style="font-size: 0.8rem;">${t.notes || '-'}</td>
+                    <td style="font-size: 0.8rem;">${notesHtml}</td>
                 </tr>
             `;
         });

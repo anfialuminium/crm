@@ -1882,7 +1882,7 @@ function displayAccInventory(items) {
     items.forEach(item => {
         const statusClass = item.quantity <= 0 ? 'status-lost' : (item.quantity < 5 ? 'status-pending' : '');
         html += `
-            <tr>
+            <tr onclick="openAccInventoryTransactions('${item.product_id}', '${item.variation}')" style="cursor:pointer;">
                 <td style="text-align:right;">
                     <strong>${item.product_name}</strong><br>
                     <span style="font-size:0.8rem; color:#666;">מק"ט: ${item.sku}</span>
@@ -1899,6 +1899,73 @@ function displayAccInventory(items) {
 
     html += '</tbody></table>';
     container.innerHTML = html;
+}
+
+async function openAccInventoryTransactions(productId, variation) {
+    const modalBody = document.getElementById('acc-modal-body');
+    modalBody.innerHTML = '<div class="spinner" style="margin: 20px auto;"></div>';
+    document.getElementById('acc-modal').classList.add('active');
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('inventory_transactions')
+            .select('*')
+            .eq('product_id', productId)
+            .eq('variation_name', variation)
+            .order('created_at', { ascending: false })
+            .limit(30);
+
+        if (error) throw error;
+
+        let html = `
+            <div style="padding: 10px;">
+                <h2 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px;">🕰️ היסטוריית תנועות - ${variation}</h2>
+                <div style="overflow-x: auto;">
+                    <table class="acc-table" style="font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:right;">תאריך</th>
+                                <th>שינוי</th>
+                                <th>הערות</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+
+        if (!data || data.length === 0) {
+            html += '<tr><td colspan="3" style="text-align:center; padding: 20px;">אין תנועות להצגה</td></tr>';
+        } else {
+            data.forEach(t => {
+                const date = new Date(t.created_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const amountClass = t.change_amount > 0 ? 'color: var(--success-color);' : 'color: var(--error-color);';
+                const prefix = t.change_amount > 0 ? '+' : '';
+                
+                let notesHtml = t.notes || '-';
+                if (t.reference_id) {
+                    if (t.transaction_type === 'purchase') {
+                        notesHtml = `<button onclick="closeAccModal(); viewOrderDetails('${t.reference_id}')" class="btn-big btn-outline" style="font-size:0.8rem; padding: 4px 8px; width:auto;">📄 הזמנה</button>`;
+                    } else if (t.transaction_type === 'sale') {
+                        notesHtml = `<button onclick="closeAccModal(); viewDealDetails('${t.reference_id}')" class="btn-big btn-outline" style="font-size:0.8rem; padding: 4px 8px; width:auto;">💰 עסקה</button>`;
+                    }
+                }
+
+                html += `
+                    <tr>
+                        <td style="text-align:right;">${date}</td>
+                        <td style="text-align:center; font-weight: 700; ${amountClass}">${prefix}${t.change_amount}</td>
+                        <td style="text-align:center;">${notesHtml}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        html += '</tbody></table></div></div>';
+        modalBody.innerHTML = html;
+
+    } catch (err) {
+        console.error('Error loading transactions:', err);
+        modalBody.innerHTML = '<p style="color:red; text-align:center;">שגיאה בטעינת ההיסטוריה</p>';
+    }
 }
 
 function filterAccInventory() {
