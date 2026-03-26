@@ -14147,12 +14147,13 @@ async function saveSupplierOrder(event) {
         
         // Automated Stock Update: If status is "התקבל", increment stock
         if (orderData.order_status === 'התקבל') {
+            const receiptDate = orderData.expected_date ? new Date(orderData.expected_date).toLocaleDateString('he-IL') : new Date().toLocaleDateString('he-IL');
             for (const item of currentOrderItems) {
                 const product = products.find(p => p.sku === item.sku);
                 if (product) {
                     const variation = (item.color || item.size) ? `${item.color || ''} ${item.size || ''}`.trim() : 'כללי';
                     const qty = (parseFloat(item.quantity) || 0) * (parseFloat(item.cartons) || 1);
-                    await updateInventoryStock(product.product_id, variation, qty, 'purchase', savedOrderId, `קבלת הזמנת רכש #${savedOrderId.slice(0,6)}`);
+                    await updateInventoryStock(product.product_id, variation, qty, 'purchase', savedOrderId, `הזמנה שהתקבלה ב-${receiptDate}, מאת ${supplierName}`);
                 }
             }
         }
@@ -17036,7 +17037,7 @@ async function retroactiveInventorySync() {
 
         const { data: orders, error: ordersError } = await supabaseClient
             .from('supplier_orders')
-            .select('order_id, order_status, inventory_updated')
+            .select('order_id, order_status, inventory_updated, expected_date, suppliers(name)')
             .eq('order_status', 'התקבל')
             .eq('inventory_updated', false);
         
@@ -17066,7 +17067,9 @@ async function retroactiveInventorySync() {
                     const match = item.description.match(/\(([^)]+)\)/);
                     if (match) variation = match[1].trim();
                     
-                    await updateInventoryStock(product.product_id, variation, parseFloat(item.quantity || 0), 'purchase', order.order_id, `סנכרון רטרואקטיבי #${order.order_id.slice(0,6)}`);
+                    const receiptDate = order.expected_date ? new Date(order.expected_date).toLocaleDateString('he-IL') : 'לא ידוע';
+                    const supplierName = order.suppliers?.name || 'לא ידוע';
+                    await updateInventoryStock(product.product_id, variation, parseFloat(item.quantity || 0), 'purchase', order.order_id, `הזמנה שהתקבלה ב-${receiptDate}, מאת ${supplierName}`);
                     itemsProcessed++;
                 }
             }
