@@ -5481,8 +5481,10 @@ async function viewDealDetails(dealId) {
             .select(`
                 *,
                 products (
+                    product_id,
                     product_name,
-                    category
+                    category,
+                    image_url
                 )
             `)
             .eq('deal_id', dealId);
@@ -5624,7 +5626,11 @@ async function viewDealDetails(dealId) {
                         </thead>
                         <tbody>
                              ${items.map((item, index) => {
-                                const imageUrl = item.products?.image_url;
+                                let imageUrl = item.products?.image_url;
+                                if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('data:')) {
+                                    const cleanPath = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
+                                    imageUrl = `https://anfialuminium.github.io/catalog/${cleanPath}`;
+                                }
                                 return `
                                 <tr>
                                     <td>${index + 1}</td>
@@ -7196,6 +7202,7 @@ async function editDeal(dealId) {
                     product_id,
                     product_name,
                     price,
+                    image_url,
                     requires_color,
                     requires_size
                 )

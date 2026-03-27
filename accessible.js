@@ -1290,10 +1290,16 @@ async function viewDealDetails(dealId) {
             const itemTotal = item.quantity * item.unit_price * multiplier;
             subtotal += itemTotal;
 
+            let imageUrl = item.products?.image_url;
+            if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('data:')) {
+                const cleanPath = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
+                imageUrl = `https://anfialuminium.github.io/catalog/${cleanPath}`;
+            }
+
             html += `
                 <div style="border-bottom:1px solid #eee; padding:12px 0; display: flex; align-items: center; gap: 15px;">
-                    ${item.products?.image_url ? 
-                        `<img src="${item.products.image_url}" onclick="openImageModal('${item.products.image_url}')" style="width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-color); flex-shrink: 0; cursor: zoom-in;" title="הגדל תמונה">` : 
+                    ${imageUrl ? 
+                        `<img src="${imageUrl}" onclick="openImageModal('${imageUrl}')" style="width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-color); flex-shrink: 0; cursor: zoom-in;" title="הגדל תמונה">` : 
                         '<div style="width: 70px; height: 70px; background: var(--bg-secondary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 1.8rem; flex-shrink: 0;">📦</div>'
                     }
                     <div style="flex: 1;">
