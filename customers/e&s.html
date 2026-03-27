@@ -237,94 +237,116 @@
 
         @media print {
             .print-btn, .no-print { display: none !important; }
-            
-            @page { 
-                margin: 1.5cm; 
-                size: A4 portrait; 
+
+            @page {
+                margin: 1cm;
+                size: A4 portrait;
             }
-            
-            body { 
-                background-color: #fff; 
-                padding: 0; 
-                margin: 0; 
-                -webkit-print-color-adjust: exact; 
+
+            body {
+                background-color: #fff !important;
+                -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
-                font-size: 12pt;
+                font-size: 8pt;
             }
 
-            .container { 
-                box-shadow: none; 
-                width: 100%; 
-                max-width: 100%; 
-                margin: 0; 
-                padding: 0;
-                border: none; 
-                min-height: auto;
-            }
-            
-            /* Ensure colors print */
-            .section-title { 
-                background-color: #2c3e50 !important; 
-                color: #fff !important; 
-                box-shadow: none;
-                border: 1px solid #2c3e50;
-                page-break-after: avoid;
-            }
-            
-            th { 
-                background-color: #ecf0f1 !important; 
-                color: #000 !important;
-                border-bottom: 2px solid #333;
+            .container {
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                min-height: auto !important;
+                max-width: 100% !important;
+                padding: 0 !important;
             }
 
-            .unit-badge { color: #fff !important; }
-
-            /* Table Page Breaks */
-            table { 
-                page-break-inside: auto; 
-                width: 100%; 
-                border: none;
+            /* Compact header */
+            header {
+                margin-bottom: 8px !important;
+                padding-bottom: 6px !important;
             }
-            
-            tr { 
-                page-break-inside: avoid; 
-                break-inside: avoid; 
-            }
-            
-            thead { display: table-header-group; }
-            tfoot { display: table-footer-group; }
 
-            /* Restore desktop layout if printing from mobile view defaults */
-            table, thead, tbody, th, td, tr { display: inherit; }
-            table { display: table; }
-            thead { display: table-header-group; }
-            tbody { display: table-row-group; }
-            tr { display: table-row; }
-            td, th { display: table-cell; }
-            
-            td { 
-                padding: 6px 10px; 
-                text-align: right; 
-                border-bottom: 1px solid #ccc; 
+            .logo-container img {
+                max-height: 40px !important;
             }
-            
-            td::before { content: none !important; } /* Hide mobile labels */
 
-            /* Category Block Wrapper for Print */
+            .company-info p {
+                font-size: 8pt !important;
+                margin: 0 !important;
+            }
+
+            /* 2-column grid for all categories */
+            .main-content {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px !important;
+                align-items: start !important;
+            }
+
             .category-block {
-                page-break-inside: avoid;
-                break-inside: avoid;
-                display: block;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                margin: 0 !important;
             }
 
-            /* Link cleanup */
-            a { text-decoration: none; color: #000; }
-            
-            /* Footer */
-            footer { 
-                margin-top: 30px; 
-                border-top: 1px solid #333; 
-                page-break-inside: avoid;
+            .section-title {
+                background-color: #2c3e50 !important;
+                color: #fff !important;
+                padding: 4px 8px !important;
+                font-size: 8pt !important;
+                margin-top: 0 !important;
+                border-radius: 4px 4px 0 0 !important;
+            }
+
+            .unit-badge {
+                background-color: #e74c3c !important;
+                color: #fff !important;
+                font-size: 7pt !important;
+                padding: 2px 6px !important;
+            }
+
+            .unit-badge.unit {
+                background-color: #27ae60 !important;
+            }
+
+            /* Reset mobile card layout */
+            table, thead, tbody, th, td, tr { display: revert !important; }
+            thead tr { position: static !important; }
+
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-bottom: 0 !important;
+            }
+
+            th {
+                background-color: #ecf0f1 !important;
+                padding: 3px 6px !important;
+                font-size: 7.5pt !important;
+                font-weight: 600 !important;
+            }
+
+            td {
+                padding: 2px 6px !important;
+                text-align: right !important;
+                border-bottom: 1px solid #eee !important;
+                font-size: 7.5pt !important;
+            }
+
+            td::before { display: none !important; }
+
+            /* Footer - hide the standalone footer, use inline one instead */
+            footer {
+                display: none !important;
+            }
+
+            .print-footer {
+                display: block !important;
+                grid-column: 1 / -1;
+                text-align: center;
+                font-size: 7pt;
+                color: #555;
+                border-top: 1px solid #ccc;
+                padding-top: 3px;
+                margin-top: 4px;
             }
         }
     </style>
@@ -342,6 +364,24 @@
             });
         });
     });
+
+    // Before printing: shrink each category block until it fits on one A4 page
+    const A4_HEIGHT_PX = 1122; // ~297mm at 96dpi
+    window.addEventListener('beforeprint', function() {
+        document.querySelectorAll('.category-block').forEach(block => {
+            let fontSize = 16; // start from 16px (browser default)
+            block.style.fontSize = fontSize + 'px';
+            while (block.scrollHeight > A4_HEIGHT_PX && fontSize > 7) {
+                fontSize -= 0.5;
+                block.style.fontSize = fontSize + 'px';
+            }
+        });
+    });
+    window.addEventListener('afterprint', function() {
+        document.querySelectorAll('.category-block').forEach(block => {
+            block.style.fontSize = '';
+        });
+    });
 </script>
 </head>
 <body>
@@ -355,116 +395,124 @@
                 <button onclick="window.print()" class="print-btn">
                     הדפס הצעת מחיר 🖨️
                 </button>
-                <p>תאריך: 25/03/2026</p>
+                <p>תאריך: 27/03/2026</p>
             </div>
         </header>
 
-        <div class="category-block">
-            <div class="section-title">
-                <span>מברשות איטום, סנפיר והדבקה</span>
-                <span class="unit-badge">מחיר למטר</span>
+        <div class="main-content">
+            <div class="category-block">
+                <div class="section-title">
+                    <span>מברשות איטום, סנפיר והדבקה</span>
+                    <span class="unit-badge">מחיר למטר</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>תיאור המוצר</th>
+                            <th class="price-col">מחיר</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>מברשת צר גבוה</td><td class="price-col">₪0.27</td></tr>
+                        <tr><td>מברשת צר נמוך</td><td class="price-col">₪0.16</td></tr>
+                        <tr><td>מברשת רחב גבוה</td><td class="price-col">₪0.27</td></tr>
+                        <tr><td>מברשת רחב נמוך</td><td class="price-col">₪0.16</td></tr>
+                        <tr><td>מברשת אינסרט</td><td class="price-col">₪1.20</td></tr>
+                        <tr><td>מברשת הדבקה</td><td class="price-col">₪2.00</td></tr>
+                    </tbody>
+                </table>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>תיאור המוצר</th>
-                        <th class="price-col">מחיר</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>מברשת צר גבוה</td><td class="price-col">₪0.27</td></tr>
-                    <tr><td>מברשת צר נמוך</td><td class="price-col">₪0.16</td></tr>
-                    <tr><td>מברשת רחב גבוה</td><td class="price-col">₪0.27</td></tr>
-                    <tr><td>מברשת רחב נמוך</td><td class="price-col">₪0.16</td></tr>
-                    <tr><td>מברשת אינסרט</td><td class="price-col">₪1.20</td></tr>
-                    <tr><td>מברשת הדבקה</td><td class="price-col">₪2.00</td></tr>
-                </tbody>
-            </table>
+
+            <div class="category-block">
+                <div class="section-title">
+                    <span>רשתות</span>
+                    <span class="unit-badge">מחיר למטר</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>תיאור המוצר</th>
+                            <th class="price-col">מחיר</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>רשת פיברגלס</td><td class="price-col">₪3.00</td></tr>
+                        <tr><td>רשת שקופה</td><td class="price-col">₪3.00</td></tr>
+                        <tr><td>רשת שקופה פוליפרופילן</td><td class="price-col">₪10.00</td></tr>
+                        <tr><td>רשת בעלי חיים</td><td class="price-col">₪12.00</td></tr>
+                        <tr><td>רשת גלילה</td><td class="price-col">₪150.00</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="category-block">
+                <div class="section-title">
+                    <span>ידיות ופרזול</span>
+                    <span class="unit-badge unit">מחיר ליחידה</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>תיאור המוצר</th>
+                            <th class="price-col">מחיר</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>חצי ידית 6 ברגים</td><td class="price-col">₪8.80</td></tr>
+                        <tr><td>חצי ידית כבדה 4 ברגים</td><td class="price-col">₪9.70</td></tr>
+                        <tr><td>ידית קיפ</td><td class="price-col">₪9.50</td></tr>
+                        <tr><td>חצי ידית משופרת (אלמא)</td><td class="price-col">-</td></tr>
+                        <tr><td>מנעול חשמלי (תוצרת ספרד)</td><td class="price-col">₪59.00</td></tr>
+                        <tr><td>מנעול חשמלי בקרטון (70 יח') - ₪53 ליח'</td><td class="price-col">₪3,710.00</td></tr>
+                        <tr><td>ידית משיכה בודדת (35/50)</td><td class="price-col">₪70.00</td></tr>
+                        <tr><td>ידית משיכה בודדת (50/70)</td><td class="price-col">₪83.00</td></tr>
+                        <tr><td>ידית משיכה בודדת (70/100)</td><td class="price-col">₪105.00</td></tr>
+                        <tr><td>ידית משיכה בודדת (90/120)</td><td class="price-col">₪120.00</td></tr>
+                        <tr><td>ידית משיכה כפולה (35/50)</td><td class="price-col">₪125.00</td></tr>
+                        <tr><td>ידית משיכה כפולה (50/70)</td><td class="price-col">₪150.00</td></tr>
+                        <tr><td>ידית משיכה כפולה (70/100)</td><td class="price-col">₪185.00</td></tr>
+                        <tr><td>ידית משיכה כפולה (90/120)</td><td class="price-col canvas-marker">₪220.00</td></tr>
+                        <tr><td>מזלג נעילה לחלון</td><td class="price-col">₪2.00</td></tr>
+                        <tr><td>נגד נעילה לחלון</td><td class="price-col">₪2.50</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="category-block">
+                <div class="section-title">
+                    <span>גלגלים ואביזרים</span>
+                    <span class="unit-badge unit">מחיר ליחידה</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>תיאור המוצר</th>
+                            <th class="price-col">מחיר</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>גלגל 7000 מתכת בודד</td><td class="price-col">₪12.00</td></tr>
+                        <tr><td>גלגל 7000 מתכת כפול</td><td class="price-col">₪16.00</td></tr>
+                        <tr><td>גלגל 7000 פלסטיק בודד</td><td class="price-col">₪12.00</td></tr>
+                        <tr><td>גלגל 7000 פלסטיק כפול</td><td class="price-col">₪23.00</td></tr>
+                        <tr><td>גלגל 7300 פלסטיק בודד</td><td class="price-col">₪18.00</td></tr>
+                        <tr><td>גלגל 7300 כפול משקל כבד</td><td class="price-col">-</td></tr>
+                        <tr><td>גלגל 9000 כפול משקל כבד</td><td class="price-col">-</td></tr>
+                        <tr><td>גלגל פלסטיק לרשת קלה</td><td class="price-col">₪1.70</td></tr>
+                        <tr><td>פינה 4300</td><td class="price-col">₪2.00</td></tr>
+                        <tr><td>פינה 7300</td><td class="price-col">₪2.20</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <div class="category-block">
-            <div class="section-title">
-                <span>רשתות</span>
-                <span class="unit-badge">מחיר למטר</span>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>תיאור המוצר</th>
-                        <th class="price-col">מחיר</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>רשת פיברגלס</td><td class="price-col">₪3.00</td></tr>
-                    <tr><td>רשת שקופה</td><td class="price-col">₪3.00</td></tr>
-                    <tr><td>רשת שקופה פוליפרופילן</td><td class="price-col">₪10.00</td></tr>
-                    <tr><td>רשת בעלי חיים</td><td class="price-col">₪12.00</td></tr>
-                    <tr><td>רשת גלילה</td><td class="price-col">₪150.00</td></tr>
-                </tbody>
-            </table>
+
+
+
+
+        <div class="print-footer" style="display:none">
+            המחירים אינם כוללים מע"מ &nbsp;|&nbsp; אנפי יבוא ושיווק בע״מ
         </div>
-
-        <div class="category-block">
-            <div class="section-title">
-                <span>ידיות ופרזול</span>
-                <span class="unit-badge unit">מחיר ליחידה</span>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>תיאור המוצר</th>
-                        <th class="price-col">מחיר</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>חצי ידית 6 ברגים</td><td class="price-col">₪8.80</td></tr>
-                    <tr><td>חצי ידית כבדה 4 ברגים</td><td class="price-col">₪9.70</td></tr>
-                    <tr><td>ידית קיפ</td><td class="price-col">₪9.50</td></tr>
-                    <tr><td>חצי ידית משופרת (אלמא)</td><td class="price-col">-</td></tr>
-                    <tr><td>מנעול חשמלי (תוצרת ספרד)</td><td class="price-col">₪59.00</td></tr>
-                    <tr><td>מנעול חשמלי בקרטון (70 יח') - ₪53 ליח'</td><td class="price-col">₪3,710.00</td></tr>
-                    <tr><td>ידית משיכה בודדת (35/50)</td><td class="price-col">₪70.00</td></tr>
-                    <tr><td>ידית משיכה בודדת (50/70)</td><td class="price-col">₪83.00</td></tr>
-                    <tr><td>ידית משיכה בודדת (70/100)</td><td class="price-col">₪105.00</td></tr>
-                    <tr><td>ידית משיכה בודדת (90/120)</td><td class="price-col">₪120.00</td></tr>
-                    <tr><td>ידית משיכה כפולה (35/50)</td><td class="price-col">₪125.00</td></tr>
-                    <tr><td>ידית משיכה כפולה (50/70)</td><td class="price-col">₪150.00</td></tr>
-                    <tr><td>ידית משיכה כפולה (70/100)</td><td class="price-col">₪185.00</td></tr>
-                    <tr><td>ידית משיכה כפולה (90/120)</td><td class="price-col canvas-marker">₪220.00</td></tr>
-                    <tr><td>מזלג נעילה לחלון</td><td class="price-col">₪2.00</td></tr>
-                    <tr><td>נגד נעילה לחלון</td><td class="price-col">₪2.50</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="category-block">
-            <div class="section-title">
-                <span>גלגלים ואביזרים</span>
-                <span class="unit-badge unit">מחיר ליחידה</span>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>תיאור המוצר</th>
-                        <th class="price-col">מחיר</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr><td>גלגל 7000 מתכת בודד</td><td class="price-col">₪12.00</td></tr>
-                    <tr><td>גלגל 7000 מתכת כפול</td><td class="price-col">₪16.00</td></tr>
-                    <tr><td>גלגל 7000 פלסטיק בודד</td><td class="price-col">₪12.00</td></tr>
-                    <tr><td>גלגל 7000 פלסטיק כפול</td><td class="price-col">₪23.00</td></tr>
-                    <tr><td>גלגל 7300 פלסטיק בודד</td><td class="price-col">₪18.00</td></tr>
-                    <tr><td>גלגל 7300 כפול משקל כבד</td><td class="price-col">-</td></tr>
-                    <tr><td>גלגל 9000 כפול משקל כבד</td><td class="price-col">-</td></tr>
-                    <tr><td>גלגל פלסטיק לרשת קלה</td><td class="price-col">₪1.70</td></tr>
-                    <tr><td>פינה 4300</td><td class="price-col">₪2.00</td></tr>
-                    <tr><td>פינה 7300</td><td class="price-col">₪2.20</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-
 
 
 
