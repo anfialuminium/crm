@@ -365,6 +365,23 @@
         });
     });
 
+    // Before printing: shrink each category block until it fits on one A4 page
+    const A4_HEIGHT_PX = 1122; // ~297mm at 96dpi
+    window.addEventListener('beforeprint', function() {
+        document.querySelectorAll('.category-block').forEach(block => {
+            let fontSize = 16; // start from 16px (browser default)
+            block.style.fontSize = fontSize + 'px';
+            while (block.scrollHeight > A4_HEIGHT_PX && fontSize > 7) {
+                fontSize -= 0.5;
+                block.style.fontSize = fontSize + 'px';
+            }
+        });
+    });
+    window.addEventListener('afterprint', function() {
+        document.querySelectorAll('.category-block').forEach(block => {
+            block.style.fontSize = '';
+        });
+    });
 </script>
 </head>
 <body>
@@ -372,7 +389,7 @@
     <div class="container">
         <header>
             <div class="logo-container">
-                <img src="../../catalog/logo.png" alt="לוגו אנפי יבוא ושיווק">
+                <img src="https://github.com/anfialuminium/crm/blob/main/customers/logo.png?raw=true" alt="לוגו אנפי יבוא ושיווק">
             </div>
             <div class="company-info">
                 <button onclick="window.print()" class="print-btn">
