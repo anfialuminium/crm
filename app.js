@@ -5930,8 +5930,8 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
                     </div>
                     <textarea id="edit-note-input-${note.id}" class="form-textarea" rows="3" style="width: 100%; margin-bottom: 0.5rem;">${note.content}</textarea>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button onclick="saveActivityNoteEdit(${note.id}, '${activityId}')" class="btn btn-sm btn-primary">${APP_ICONS.SAVE} שמור</button>
-                        <button onclick="cancelActivityNoteEdit('${activityId}')" class="btn btn-sm btn-secondary">ביטול</button>
+                        <button onclick="saveActivityNoteEdit(${note.id}, '${activityId}', '${container.id}')" class="btn btn-sm btn-primary">${APP_ICONS.SAVE} שמור</button>
+                        <button onclick="cancelActivityNoteEdit('${activityId}', '${container.id}')" class="btn btn-sm btn-secondary">ביטול</button>
                     </div>
                 </div>`;
             }
@@ -5942,12 +5942,12 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                      <div style="font-size: 0.9rem; white-space: pre-wrap; ${isDone ? 'text-decoration: line-through;' : ''}">${formattedContent}</div>
                      <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <button onclick="toggleActivityNoteCompletion(${note.id}, '${activityId}', ${isDone})" type="button" 
+                        <button onclick="toggleActivityNoteCompletion(${note.id}, '${activityId}', ${isDone}, '${container.id}')" type="button" 
                             style="background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1.1rem; color: ${isDone ? 'var(--success-color)' : 'var(--text-tertiary)'};" 
                             title="${isDone ? 'סמן כלא בוצע' : 'סמן כבוצע'}">
                             ${isDone ? APP_ICONS.CHECK_CIRCLE : APP_ICONS.CHECK}
                         </button>
-                        <button onclick="editActivityNote(${note.id}, '${activityId}')" type="button" 
+                        <button onclick="editActivityNote(${note.id}, '${activityId}', '${container.id}')" type="button" 
                             style="background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1rem; color: var(--text-secondary);" title="ערוך">
                             ${APP_ICONS.EDIT}
                         </button>
@@ -5981,23 +5981,23 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
     }
 }
 
-function editActivityNote(noteId, activityId) {
-    const container = document.getElementById('activity-notes-list') || document.getElementById('view-activity-notes-list');
+function editActivityNote(noteId, activityId, containerId) {
+    const container = containerId ? document.getElementById(containerId) : (document.getElementById('activity-notes-list') || document.getElementById('view-activity-notes-list'));
     if (container) {
         container.dataset.editingId = noteId;
         loadActivityNotes(activityId, container.id);
     }
 }
 
-function cancelActivityNoteEdit(activityId) {
-    const container = document.getElementById('activity-notes-list') || document.getElementById('view-activity-notes-list');
+function cancelActivityNoteEdit(activityId, containerId) {
+    const container = containerId ? document.getElementById(containerId) : (document.getElementById('activity-notes-list') || document.getElementById('view-activity-notes-list'));
     if (container) {
         delete container.dataset.editingId;
         loadActivityNotes(activityId, container.id);
     }
 }
 
-async function saveActivityNoteEdit(noteId, activityId) {
+async function saveActivityNoteEdit(noteId, activityId, containerId) {
     try {
         const input = document.getElementById(`edit-note-input-${noteId}`);
         const newContent = input.value.trim();
@@ -6015,7 +6015,7 @@ async function saveActivityNoteEdit(noteId, activityId) {
         if (error) throw error;
         
         // Clear editing state and reload
-        const container = document.getElementById('activity-notes-list') || document.getElementById('view-activity-notes-list');
+        const container = containerId ? document.getElementById(containerId) : (document.getElementById('activity-notes-list') || document.getElementById('view-activity-notes-list'));
         if (container) {
             delete container.dataset.editingId;
             loadActivityNotes(activityId, container.id);
@@ -6024,6 +6024,7 @@ async function saveActivityNoteEdit(noteId, activityId) {
             const otherContainerId = container.id === 'activity-notes-list' ? 'view-activity-notes-list' : 'activity-notes-list';
             loadActivityNotes(activityId, otherContainerId);
         }
+
         
     } catch (error) {
         console.error('❌ Error saving activity note:', error);
@@ -6050,6 +6051,7 @@ async function addActivityNote() {
         await insertActivityNoteToDb(activityId, content);
         input.value = '';
         await loadActivityNotes(activityId, 'activity-notes-list');
+        await loadActivityNotes(activityId, 'view-activity-notes-list');
     } catch (error) {
         console.error('❌ Error adding activity note:', error);
         showAlert('שגיאה בהוספת הערה', 'error');
@@ -6065,6 +6067,7 @@ async function addActivityNoteFromView(activityId) {
     try {
         await insertActivityNoteToDb(activityId, content);
         input.value = '';
+        await loadActivityNotes(activityId, 'activity-notes-list');
         await loadActivityNotes(activityId, 'view-activity-notes-list');
     } catch (error) {
         console.error('❌ Error adding activity note from view:', error);
@@ -6868,7 +6871,7 @@ function openNewActivityModal(prefillData = null) {
     modal.classList.add('active');
 }
 
-async function toggleActivityNoteCompletion(noteId, activityId, currentStatus) {
+async function toggleActivityNoteCompletion(noteId, activityId, currentStatus, containerId) {
     try {
         const newStatus = !currentStatus;
         const { error } = await supabaseClient
@@ -6883,10 +6886,9 @@ async function toggleActivityNoteCompletion(noteId, activityId, currentStatus) {
         
         showAlert(newStatus ? 'הערה סומנה כבוצעה!' : 'הערה הוחזרה למצב פתוח', 'success');
         
-        // Refresh notes in the current view
-        const notesList = document.getElementById('view-activity-notes-list');
-        const containerId = notesList ? 'view-activity-notes-list' : 'activity-notes-list';
-        loadActivityNotes(activityId, containerId);
+        // Refresh notes in all potential views
+        loadActivityNotes(activityId, 'activity-notes-list');
+        loadActivityNotes(activityId, 'view-activity-notes-list');
         
     } catch (error) {
         console.error('❌ Error toggling note status:', error);
