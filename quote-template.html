@@ -237,6 +237,24 @@
         .print-button.pdf-btn:hover {
             background: #dc2626;
         }
+
+        .date-with-day {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.1;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .date-with-day small {
+            font-size: 0.65em;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 1px;
+            display: block;
+        }
     </style>
     <!-- PDF Generation Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -456,8 +474,17 @@
             return `<bdi dir="auto">${text.toString().replace(/\[([^\]]+)\]/g, '<span dir="ltr">[$1]</span>')}</bdi>`;
         }
 
+        function formatDateWithDay(date, options = {}) {
+            if (!date) return '-';
+            const d = new Date(date);
+            if (isNaN(d.getTime())) return '-';
+            const dayName = d.toLocaleDateString('he-IL', { weekday: 'short' });
+            const dateStr = d.toLocaleDateString('he-IL', options);
+            return `<span class="date-with-day"><small>${dayName}</small><span>${dateStr}</span></span>`;
+        }
+
         // Set current date
-        document.getElementById('quote-date').textContent = new Date().toLocaleDateString('he-IL');
+        document.getElementById('quote-date').innerHTML = formatDateWithDay(new Date());
         
         // Function to populate quote from deal data
         function populateQuote(dealData) {

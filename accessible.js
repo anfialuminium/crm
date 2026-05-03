@@ -53,14 +53,19 @@ function formatAccDate(dateStr) {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
     
-    // Format: "יום א', 28.12.25"
     const weekday = d.toLocaleDateString('he-IL', { weekday: 'short' });
     const date = d.toLocaleDateString('he-IL', { 
         day: '2-digit', 
         month: '2-digit', 
         year: '2-digit' 
     });
-    return `${weekday}, ${date}`;
+    
+    return `
+        <span class="date-with-day">
+            <small>${weekday}</small>
+            <span>${date}</span>
+        </span>
+    `;
 }
 
 async function loadData() {

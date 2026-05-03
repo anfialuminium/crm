@@ -309,6 +309,24 @@ input[inputmode="decimal"]::placeholder {
 .hidden { display: none !important; }
 .text-center { text-align: center; }
 
+.date-with-day {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.1;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.date-with-day small {
+    font-size: 0.65em;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    margin-bottom: 1px;
+    display: block;
+}
+
 /* Inline Alert System */
 #alert-container {
     position: fixed;

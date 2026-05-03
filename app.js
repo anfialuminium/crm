@@ -211,6 +211,22 @@ function openNavigationMenu(address, event) {
     }, 10);
 }
 
+function formatDateWithDay(date, options = {}) {
+    if (!date) return '-';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '-';
+    
+    const dayName = d.toLocaleDateString('he-IL', { weekday: 'short' });
+    const dateStr = d.toLocaleDateString('he-IL', options);
+    
+    return `
+        <span class="date-with-day">
+            <small>${dayName}</small>
+            <span>${dateStr}</span>
+        </span>
+    `;
+}
+
 // Global state
 let products = [];
 let customers = [];
@@ -5259,7 +5275,7 @@ async function loadDealsHistory(preservePage = false) {
                                 'הפסד': 'badge-lost'
                             }[deal.deal_status] || 'badge-new';
                             
-                            const date = new Date(deal.created_at).toLocaleDateString('he-IL', {
+                            const date = formatDateWithDay(deal.created_at, {
                                 day: '2-digit',
                                 month: '2-digit',
                                 year: '2-digit'
@@ -5343,7 +5359,7 @@ function createDealCard(deal) {
         'הפסד': 'badge-lost'
     }[deal.deal_status] || 'badge-new';
     
-    const date = new Date(deal.created_at).toLocaleDateString('he-IL', {
+    const date = formatDateWithDay(deal.created_at, {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
@@ -7858,7 +7874,7 @@ function renderThisWeekActivityCard(activity) {
                     <span class="badge ${statusClass}">${statusText}</span>
                     ${activity.completed && activity.completed_at ? `
                         <div style="font-size: 0.75rem; color: var(--success-color); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
-                            ${APP_ICONS.CALENDAR} ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })} • ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                            ${APP_ICONS.CALENDAR} ${formatDateWithDay(activity.completed_at, { day: '2-digit', month: '2-digit' })} • ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                     ` : ''}
                 </div>
@@ -8238,7 +8254,7 @@ async function viewActivityDetails(activityId) {
                             </button>
                             ${activity.completed && activity.completed_at ? `
                                 <div style="font-size: 0.8rem; color: var(--success-color); margin-top: 5px;">
-                                    <strong>ביצוע:</strong> <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CALENDAR} ${new Date(activity.completed_at).toLocaleDateString('he-IL')}</span>
+                                    <strong>ביצוע:</strong> <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CALENDAR} ${formatDateWithDay(activity.completed_at)}</span>
                                 </div>
                             ` : ''}
                         </span>
@@ -8574,7 +8590,7 @@ async function loadActivities(preservePage = false) {
                         ${pagedActivities.map(activity => {
                             const icon = typeIcons[activity.activity_type] || APP_ICONS.NOTE;
                             const activityDate = activity.activity_date 
-                                ? new Date(activity.activity_date).toLocaleDateString('he-IL')
+                                ? formatDateWithDay(activity.activity_date)
                                 : '-';
                             
                              let rowBusinessName = 'לא משויך';
@@ -8805,7 +8821,7 @@ async function loadActivities(preservePage = false) {
                             ` : ''}
                             <div><strong>משויך ל:</strong> ${activity.assigned_to || activity.created_by || 'מערכת'}</div>
                             ${activity.assigned_to && activity.created_by && activity.assigned_to !== activity.created_by ? `<div style="font-size: 0.75rem; color: var(--text-tertiary);">נוצר ע"י: ${activity.created_by}</div>` : ''}
-                            ${activity.completed && activity.completed_at ? `<div><strong>בוצע:</strong> <span style="color: var(--success-color); display: flex; align-items: center; gap: 4px;">${APP_ICONS.CALENDAR} ${new Date(activity.completed_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })} • ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span></div>` : ''}
+                            ${activity.completed && activity.completed_at ? `<div><strong>בוצע:</strong> <span style="color: var(--success-color); display: flex; align-items: center; gap: 4px;">${APP_ICONS.CALENDAR} ${formatDateWithDay(activity.completed_at, { day: '2-digit', month: '2-digit' })} • ${new Date(activity.completed_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span></div>` : ''}
                         </div>
                         <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.3rem;">נוצר: ${createdDate}</div>
                     </div>
@@ -11393,7 +11409,7 @@ async function loadCustomerDeals(customerId, containerId = 'view-customer-deals-
         
         container.innerHTML = deals.map(deal => {
             const dateObj = new Date(deal.created_at);
-            const formattedDate = dateObj.toLocaleDateString('he-IL');
+            const formattedDate = formatDateWithDay(deal.created_at);
             
             // Format title
             const dealDay = String(dateObj.getDate()).padStart(2, '0');
@@ -11601,7 +11617,7 @@ async function exportInteractiveReport() {
 </head>
 <body>
     <h1>דוח פעילות ונתונים עסקיים</h1>
-    <div class="date">נכון לתאריך: ${new Date().toLocaleDateString('he-IL')} בשעה ${new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</div>
+    <div class="date">נכון לתאריך: ${formatDateWithDay(new Date())} בשעה ${new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</div>
 
     <div class="summary-grid">
         <div class="card">
@@ -12558,7 +12574,7 @@ async function viewSupplierDetails(id) {
                                     const currencySymbol = curr === 'USD' ? '$' : (curr === 'EUR' ? '€' : '₪');
                                     return `
                                     <tr>
-                                        <td>${new Date(o.created_at).toLocaleDateString('he-IL')}</td>
+                                        <td>${formatDateWithDay(o.created_at)}</td>
                                         <td>${currencySymbol}${(parseFloat(o.total_amount) || 0).toLocaleString()}</td>
                                         <td><span class="badge ${getStatusBadgeClass(o.order_status)}">${o.order_status}</span></td>
                                         <td>
@@ -12860,8 +12876,8 @@ function renderSupplierOrdersList(list) {
                         <tr>
                             <td><strong>${o.order_number ? '#' + o.order_number : '#' + o.order_id.slice(0, 6).toUpperCase()}</strong></td>
                             <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${o.suppliers?.supplier_name || ''}" dir="auto">${fixBiDi(o.suppliers?.supplier_name || 'לא ידוע')}</td>
-                            <td>${new Date(o.created_at).toLocaleDateString('he-IL')}</td>
-                            <td>${o.expected_date ? new Date(o.expected_date).toLocaleDateString('he-IL') : '-'}</td>
+                            <td>${formatDateWithDay(o.created_at)}</td>
+                            <td>${o.expected_date ? formatDateWithDay(o.expected_date) : '-'}</td>
                             <td>
                                 <div style="font-weight: 600; color: var(--primary-color);">${primaryDisplay}</div>
                                 ${statusInfo}
@@ -13130,8 +13146,8 @@ async function openSupplierOrderModal(orderId = null, readOnly = false, targetSu
                 statusEl.textContent = order.order_status;
                 statusEl.className = `badge ${getStatusBadgeClass(order.order_status)}`;
                 
-                document.getElementById('view-order-date').textContent = order.expected_date ? new Date(order.expected_date).toLocaleDateString('he-IL') : '-';
-                document.getElementById('view-order-creation-date').textContent = order.created_at ? new Date(order.created_at).toLocaleDateString('he-IL') : '-';
+                document.getElementById('view-order-date').innerHTML = order.expected_date ? formatDateWithDay(order.expected_date) : '-';
+                document.getElementById('view-order-creation-date').innerHTML = order.created_at ? formatDateWithDay(order.created_at) : '-';
             }
             
             // Fetch items
