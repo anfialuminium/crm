@@ -94,3 +94,27 @@ CREATE POLICY "Enable read access for all users" ON activities FOR SELECT USING 
 CREATE POLICY "Enable insert access for all users" ON activities FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable update access for all users" ON activities FOR UPDATE USING (true);
 CREATE POLICY "Enable delete access for all users" ON activities FOR DELETE USING (true);
+
+-- PRODUCT STOCK
+ALTER TABLE product_stock ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read access for all users" ON product_stock;
+DROP POLICY IF EXISTS "Enable insert access for all users" ON product_stock;
+DROP POLICY IF EXISTS "Enable update access for all users" ON product_stock;
+DROP POLICY IF EXISTS "Enable delete access for all users" ON product_stock;
+
+CREATE POLICY "Enable read access for all users" ON product_stock FOR SELECT USING (true);
+CREATE POLICY "Enable insert access for all users" ON product_stock FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable update access for all users" ON product_stock FOR UPDATE USING (true);
+CREATE POLICY "Enable delete access for all users" ON product_stock FOR DELETE USING (true);
+
+-- INVENTORY TRANSACTIONS
+ALTER TABLE inventory_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read access for all users" ON inventory_transactions;
+DROP POLICY IF EXISTS "Enable insert access for all users" ON inventory_transactions;
+DROP POLICY IF EXISTS "Enable update access for all users" ON inventory_transactions;
+DROP POLICY IF EXISTS "Enable delete access for all users" ON inventory_transactions;
+
+CREATE POLICY "Enable read access for all users" ON inventory_transactions FOR SELECT USING (true);
+CREATE POLICY "Enable insert access for all users" ON inventory_transactions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable update access for all users" ON inventory_transactions FOR UPDATE USING (true);
+CREATE POLICY "Enable delete access for all users" ON inventory_transactions FOR DELETE USING (true);

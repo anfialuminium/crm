@@ -12651,7 +12651,7 @@ async function getExchangeRate(date, currency = 'USD') {
         let rate = defaultRate;
         try {
             // Very short timeout to prevent hanging UI. If it's blocked, it should fail fast.
-            const res = await fetchWithTimeout(`https://api.frankfurter.app/${dateStr}?from=${currency}&to=ILS`, { timeout: 1000 });
+            const res = await fetchWithTimeout(`https://api.frankfurter.dev/${dateStr}?from=${currency}&to=ILS`, { timeout: 1000 });
             if (res.ok) {
                 const json = await res.json();
                 rate = json.rates.ILS;

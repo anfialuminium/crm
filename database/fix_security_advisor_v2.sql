@@ -10,8 +10,10 @@ ALTER FUNCTION public.update_deal_total() SET search_path = public;
 ALTER FUNCTION public.update_supplier_order_total() SET search_path = public;
 
 -- 2. ENABLE RLS ON MISSING TABLES
--- This addresses the 'RLS Disabled in Public' warning for 'resource_links'.
+-- This addresses the 'RLS Disabled in Public' warning.
 ALTER TABLE public.resource_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.product_stock ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.inventory_transactions ENABLE ROW LEVEL SECURITY;
 
 -- 3. FIX OVERLY PERMISSIVE (ALWAYS TRUE) POLICIES
 -- We split 'FOR ALL' policies into separate SELECT, INSERT, UPDATE, DELETE policies.
@@ -26,7 +28,7 @@ DECLARE
         'activities', 'activity_notes', 'audit_log', 'contacts', 'customers', 
         'deal_items', 'deals', 'product_colors', 'products', 
         'supplier_order_items', 'supplier_orders', 'suppliers', 'system_settings',
-        'resource_links'
+        'resource_links', 'product_stock', 'inventory_transactions'
     ];
 BEGIN
     FOREACH t IN ARRAY tables LOOP
