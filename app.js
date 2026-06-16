@@ -17265,10 +17265,16 @@ async function loadNotes() {
     }
     
     if (dbSuccess) {
-        // If DB succeeded, our notes are DB notes + any local-only notes that haven't been synced yet
-        // Local-only notes have IDs starting with 'local-'
+        // If DB succeeded, let's sync local-only notes to Supabase in the background
         const localOnlyNotes = localNotes.filter(n => String(n.note_id).startsWith('local-'));
-        notes = [...localOnlyNotes, ...dbNotes];
+        if (localOnlyNotes.length > 0) {
+            syncLocalNotes().then(() => {
+                // Reload notes to show the newly synced database notes
+                displayNotes();
+            });
+        }
+        
+        notes = dbNotes;
     } else {
         // If DB failed, our notes are all local notes
         notes = localNotes;
@@ -17280,6 +17286,63 @@ async function loadNotes() {
         if (!a.is_pinned && b.is_pinned) return 1;
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     });
+}
+
+async function syncLocalNotes() {
+    let localNotes = [];
+    try {
+        const localNotesData = localStorage.getItem('crm_notes');
+        localNotes = localNotesData ? JSON.parse(localNotesData) : [];
+    } catch (e) {
+        return;
+    }
+    
+    const localOnlyNotes = localNotes.filter(n => String(n.note_id).startsWith('local-'));
+    if (localOnlyNotes.length === 0) return;
+    
+    console.log(`🔄 Found ${localOnlyNotes.length} local-only notes. Attempting to sync to Supabase...`);
+    
+    let syncSuccessCount = 0;
+    for (const note of localOnlyNotes) {
+        const noteDataForDb = {
+            title: note.title,
+            content: note.content,
+            is_list: note.is_list,
+            items: note.items,
+            color: note.color,
+            is_pinned: note.is_pinned,
+            customer_id: note.customer_id,
+            deal_id: note.deal_id,
+            created_at: note.created_at || new Date().toISOString(),
+            updated_at: note.updated_at || new Date().toISOString()
+        };
+        
+        try {
+            const { error } = await supabaseClient
+                .from('notes')
+                .insert([noteDataForDb]);
+            
+            if (!error) {
+                syncSuccessCount++;
+                // Remove this note from local storage tracking
+                localNotes = localNotes.filter(n => n.note_id !== note.note_id);
+            } else {
+                console.error(`❌ Failed to sync note "${note.title}":`, error.message);
+            }
+        } catch (err) {
+            console.error(`❌ Failed to sync note "${note.title}":`, err);
+        }
+    }
+    
+    if (syncSuccessCount > 0) {
+        try {
+            localStorage.setItem('crm_notes', JSON.stringify(localNotes));
+            console.log(`✅ Successfully synced ${syncSuccessCount} notes to Supabase!`);
+            showAlert(`סונכרנו בהצלחה ${syncSuccessCount} פתקים מקומיים לענן!`, 'success');
+        } catch (e) {
+            console.error('Failed to update localStorage after sync:', e);
+        }
+    }
 }
 
 async function displayNotes() {
