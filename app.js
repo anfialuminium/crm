@@ -237,6 +237,7 @@ let dealItems = [];
 let itemCounter = 0;
 let orderColors = []; // Global state for colors
 let globalCategories = [];
+let notes = [];
 
 // Reminder system state
 let notifiedActivityIds = new Set();
@@ -289,7 +290,7 @@ function showActivityReminder(activity) {
     if (!panel || !desc || !actionBtn) return;
 
     const customerName = activity.customers ? activity.customers.business_name : 'לקוח כללי';
-    desc.textContent = `${activity.activity_type} עבור ${customerName}: ${activity.description || ''}`;
+    desc.innerHTML = `${activity.activity_type} עבור ${customerName !== 'לקוח כללי' ? `<span class="sensitive-data">${customerName}</span>` : 'לקוח כללי'}: ${activity.description ? `<span class="sensitive-data">${activity.description}</span>` : ''}`;
     
     actionBtn.onclick = () => {
         closeActivityReminder();
@@ -577,6 +578,8 @@ function setupTabs() {
             loadReports();
         } else if (tabName === 'search') {
             document.getElementById('global-search-input')?.focus();
+        } else if (tabName === 'notes') {
+            displayNotes();
         }
         
         // Scroll to top
@@ -852,11 +855,11 @@ function setupCustomerSearch() {
                 const div = document.createElement('div');
                 div.className = 'search-result-item';
                 div.innerHTML = `
-                    <div style="font-weight: 500;">${fixBiDi(c.business_name)}</div>
+                    <div style="font-weight: 500;"><span class="sensitive-data">${fixBiDi(c.business_name)}</span></div>
                     <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
-                        <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CONTACT} ${c.contact_name || 'ללא איש קשר'}</span> 
-                        ${c.phone ? `| ${c.phone}` : ''}
-                        ${c.city ? `| <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.LOCATION} ${c.city}</span>` : ''}
+                        <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CONTACT} ${c.contact_name ? `<span class="sensitive-data">${c.contact_name}</span>` : 'ללא איש קשר'}</span> 
+                        ${c.phone ? `| <span class="sensitive-data">${c.phone}</span>` : ''}
+                        ${c.city ? `| <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.LOCATION} <span class="sensitive-data">${c.city}</span></span>` : ''}
                     </div>
                 `;
                 div.onclick = () => {
@@ -888,11 +891,11 @@ function setupCustomerSearch() {
                 const div = document.createElement('div');
                 div.className = 'search-result-item';
                 div.innerHTML = `
-                    <div style="font-weight: 500;">${fixBiDi(c.business_name)}</div>
+                    <div style="font-weight: 500;"><span class="sensitive-data">${fixBiDi(c.business_name)}</span></div>
                     <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
-                        <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CONTACT} ${c.contact_name || 'ללא איש קשר'}</span> 
-                        ${c.phone ? `| ${c.phone}` : ''}
-                        ${c.city ? `| <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.LOCATION} ${c.city}</span>` : ''}
+                        <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CONTACT} ${c.contact_name ? `<span class="sensitive-data">${c.contact_name}</span>` : 'ללא איש קשר'}</span> 
+                        ${c.phone ? `| <span class="sensitive-data">${c.phone}</span>` : ''}
+                        ${c.city ? `| <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.LOCATION} <span class="sensitive-data">${c.city}</span></span>` : ''}
                     </div>
                 `;
                 div.onclick = () => {
@@ -962,9 +965,9 @@ function suggestCustomerContacts(customerId) {
                         const div = document.createElement('div');
                         div.className = 'search-result-item';
                         div.innerHTML = `
-                            <div style="font-weight: 500;">${fixBiDi(c.contact_name)}</div>
+                            <div style="font-weight: 500;"><span class="sensitive-data">${fixBiDi(c.contact_name)}</span></div>
                             <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                ${c.phone ? `${c.phone}` : ''} ${c.role ? `| ${c.role}` : ''}
+                                ${c.phone ? `<span class="sensitive-data">${c.phone}</span>` : ''} ${c.role ? `| ${c.role}` : ''}
                             </div>
                         `;
                         div.onclick = () => {
@@ -1032,10 +1035,10 @@ function setupDealContactSearch() {
                     div.className = 'search-result-item';
                     const businessName = c.customers?.business_name || 'ללא לקוח';
                     div.innerHTML = `
-                        <div style="font-weight: 500;">${fixBiDi(c.contact_name)}</div>
+                        <div style="font-weight: 500;"><span class="sensitive-data">${fixBiDi(c.contact_name)}</span></div>
                         <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
-                            <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CONTACT} ${businessName}</span> 
-                            ${c.phone ? `| ${c.phone}` : ''}
+                            <span style="display: flex; align-items: center; gap: 4px;">${APP_ICONS.CONTACT} ${businessName !== 'ללא לקוח' ? `<span class="sensitive-data">${businessName}</span>` : 'ללא לקוח'}</span> 
+                            ${c.phone ? `| <span class="sensitive-data">${c.phone}</span>` : ''}
                             ${c.role ? `| ${c.role}` : ''}
                         </div>
                     `;
@@ -2571,18 +2574,18 @@ function filterCustomers(preservePage = false) {
 
                         return `
                         <tr>
-                            <td><strong>${customer.business_name} ${customer.active === false ? '<span style="color: var(--error-color); font-size: 0.8rem;">(לא פעיל)</span>' : ''}</strong></td>
+                            <td><strong><span class="sensitive-data">${customer.business_name}</span> ${customer.active === false ? '<span style="color: var(--error-color); font-size: 0.8rem;">(לא פעיל)</span>' : ''}</strong></td>
                             <td>
                                 ${contactId && contactName !== '-' 
-                                    ? `<a href="javascript:void(0)" onclick="viewContactDetails('${contactId}')" style="font-weight: 500;">${contactName}</a>`
-                                    : contactName}
+                                    ? `<a href="javascript:void(0)" onclick="viewContactDetails('${contactId}')" style="font-weight: 500;"><span class="sensitive-data">${contactName}</span></a>`
+                                    : (contactName !== '-' ? `<span class="sensitive-data">${contactName}</span>` : '-')}
                             </td>
                             <td>${contactPhone !== '-' ? contactPhone.split(',').map(p => {
                                 const clean = p.replace(/[^\d+]/g, '');
-                                return clean.length > 6 ? `<a href="tel:${clean}">${p.trim()}</a>` : p.trim();
+                                return clean.length > 6 ? `<a href="tel:${clean}"><span class="sensitive-data">${p.trim()}</span></a>` : `<span class="sensitive-data">${p.trim()}</span>`;
                             }).join(', <br>') : '-'}</td>
                             <td>
-                                ${customer.city || '-'}
+                                ${customer.city ? `<span class="sensitive-data">${customer.city}</span>` : '-'}
                                 ${customer.city ? renderNavigationIcon(customer.city) : ''}
                             </td>
                             <td>${customer.customer_type ? `<span class="badge ${typeBadgeClass}">${customer.customer_type}</span>` : '-'}</td>
@@ -2640,12 +2643,12 @@ function filterCustomers(preservePage = false) {
             card.innerHTML = `
                 <div class="deal-card-header">
                     <div>
-                        <div class="deal-card-title">${fixBiDi(customer.business_name)} ${customer.active === false ? '<span style="color: var(--error-color); font-size: 0.8rem; font-weight: normal;">(לא פעיל)</span>' : ''}</div>
+                        <div class="deal-card-title"><span class="sensitive-data">${fixBiDi(customer.business_name)}</span> ${customer.active === false ? '<span style="color: var(--error-color); font-size: 0.8rem; font-weight: normal;">(לא פעיל)</span>' : ''}</div>
                         <div class="deal-card-date">
                             👤 ${
-                                (customer.primary_contact_id || customer.contact_id) && contactName !== 'ללא איש קשר'
-                                    ? `<a href="javascript:void(0)" onclick="viewContactDetails('${customer.primary_contact_id || customer.contact_id}')" style="color: inherit; text-decoration: underline;">${contactName}</a>`
-                                    : contactName
+                                (customer.primary_contact_id || customer.contact_id) && contactName !== 'ללא איש קשר' && contactName !== '-'
+                                    ? `<a href="javascript:void(0)" onclick="viewContactDetails('${customer.primary_contact_id || customer.contact_id}')" style="color: inherit; text-decoration: underline;"><span class="sensitive-data">${contactName}</span></a>`
+                                    : (contactName !== '-' && contactName !== 'ללא איש קשר' ? `<span class="sensitive-data">${contactName}</span>` : contactName)
                             }${contactRole ? ` (${contactRole})` : ''}
                         </div>
                     </div>
@@ -2657,7 +2660,7 @@ function filterCustomers(preservePage = false) {
                         <span class="deal-card-value">
                             ${contactPhone !== '-' ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span style="color: var(--text-primary);">${contactPhone}</span>
+                                    <span style="color: var(--text-primary);"><span class="sensitive-data">${contactPhone}</span></span>
                                     <a href="tel:${contactPhone}" title="התקשר">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
@@ -2674,7 +2677,7 @@ function filterCustomers(preservePage = false) {
                         <span class="deal-card-value">
                             ${contactEmail !== '-' ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <a href="mailto:${contactEmail}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${contactEmail}</a>
+                                    <a href="mailto:${contactEmail}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;"><span class="sensitive-data">${contactEmail}</span></a>
                                     <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${contactEmail}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                 </div>
                             ` : '-'}
@@ -2682,7 +2685,7 @@ function filterCustomers(preservePage = false) {
                     </div>
                     <div class="deal-card-info">
                         <span class="deal-card-label">כתובת:</span>
-                        <span class="deal-card-value">${customer.city || '-'} ${customer.city ? renderNavigationIcon(customer.city) : ''}</span>
+                        <span class="deal-card-value">${customer.city ? `<span class="sensitive-data">${customer.city}</span>` : '-'} ${customer.city ? renderNavigationIcon(customer.city) : ''}</span>
                     </div>
                     ${customer.source ? `
                         <div class="deal-card-info">
@@ -3056,7 +3059,7 @@ async function viewCustomerDetails(customerId) {
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
                     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
-                            <h3 style="margin: 0; color: var(--primary-color);">${customer.business_name}</h3>
+                            <h3 style="margin: 0; color: var(--primary-color);"><span class="sensitive-data">${customer.business_name}</span></h3>
                             ${customer.customer_type ? `<span class="badge ${typeBadgeClass}">${customer.customer_type}</span>` : ''}
                         </div>
                     </div>
@@ -3088,7 +3091,7 @@ async function viewCustomerDetails(customerId) {
                     <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                         <div class="deal-card-info">
                             <span class="deal-card-label">שם:</span>
-                            <span class="deal-card-value font-medium">${customer.primary_contact.contact_name}</span>
+                            <span class="deal-card-value font-medium"><span class="sensitive-data">${customer.primary_contact.contact_name}</span></span>
                         </div>
                         <div class="deal-card-info">
                             <span class="deal-card-label">תפקיד:</span>
@@ -3109,7 +3112,7 @@ async function viewCustomerDetails(customerId) {
                                          
                                          return `
                                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
-                                                <a href="tel:${cleanNum}" style="word-break: break-all;">${num}</a>
+                                                <a href="tel:${cleanNum}" style="word-break: break-all;"><span class="sensitive-data">${num}</span></a>
                                                 ${isMobile ? `
                                                 <a href="https://wa.me/${waNum}" target="_blank" title="ווטסאפ" style="flex-shrink: 0;">
                                                     <img src="images/whatsapp.png" style="width: 16px; height: 16px; display: block;">
@@ -3124,7 +3127,7 @@ async function viewCustomerDetails(customerId) {
                         <div class="deal-card-info">
                             <span class="deal-card-label">אימייל:</span>
                             <span class="deal-card-value">
-                                 ${customer.primary_contact.email ? `<a href="mailto:${customer.primary_contact.email}">${customer.primary_contact.email}</a>` : '-'}
+                                 ${customer.primary_contact.email ? `<a href="mailto:${customer.primary_contact.email}"><span class="sensitive-data">${customer.primary_contact.email}</span></a>` : '-'}
                             </span>
                         </div>
                     </div>
@@ -3136,7 +3139,7 @@ async function viewCustomerDetails(customerId) {
                     <div class="deal-card-info">
                         <span class="deal-card-label">איש קשר (עסק):</span>
                         <span class="deal-card-value">
-                            ${customer.contact_name || '-'}
+                            ${customer.contact_name ? `<span class="sensitive-data">${customer.contact_name}</span>` : '-'}
                         </span>
                     </div>
                     ` : ''}
@@ -3147,7 +3150,7 @@ async function viewCustomerDetails(customerId) {
                         <span class="deal-card-value">
                             ${customer.phone ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span style="color: var(--text-primary);">${customer.phone}</span>
+                                    <span style="color: var(--text-primary);"><span class="sensitive-data">${customer.phone}</span></span>
                                     <a href="tel:${customer.phone}" title="התקשר">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
@@ -3163,7 +3166,7 @@ async function viewCustomerDetails(customerId) {
                         <span class="deal-card-value">
                             ${customer.email ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <a href="mailto:${customer.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${customer.email}</a>
+                                    <a href="mailto:${customer.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;"><span class="sensitive-data">${customer.email}</span></a>
                                     <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${customer.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                 </div>
                             ` : '-'}
@@ -3173,7 +3176,7 @@ async function viewCustomerDetails(customerId) {
 
                     <div class="deal-card-info">
                         <span class="deal-card-label">כתובת:</span>
-                        <span class="deal-card-value">${customer.city || '-'} ${customer.city ? renderNavigationIcon(customer.city) : ''}</span>
+                        <span class="deal-card-value"><span class="sensitive-data">${customer.city || '-'}</span> ${customer.city ? renderNavigationIcon(customer.city) : ''}</span>
                     </div>
                     ${customer.source ? `
                         <div class="deal-card-info">
@@ -3190,7 +3193,7 @@ async function viewCustomerDetails(customerId) {
                             output += `
                                 <div class="deal-card-info" style="grid-column: 1 / -1;">
                                     <span class="deal-card-label">הערות כלליות:</span>
-                                    <span class="deal-card-value" style="white-space: pre-wrap;">${formatActivityText(text)}</span>
+                                    <span class="deal-card-value sensitive-data" style="white-space: pre-wrap;">${formatActivityText(text)}</span>
                                 </div>
                             `;
                         }
@@ -3204,8 +3207,8 @@ async function viewCustomerDetails(customerId) {
                                         ${data.additional_addresses.map(addr => `
                                             <div style="display: flex; align-items: center; justify-content: flex-start; gap: 0.5rem; font-size: 0.95rem;">
                                                 <div>
-                                                    <span style="font-weight: 500;">${addr.address}</span>
-                                                    ${addr.description ? `<span style="color: var(--text-tertiary); margin-right: 0.5rem;">(${addr.description})</span>` : ''}
+                                                    <span style="font-weight: 500;"><span class="sensitive-data">${addr.address}</span></span>
+                                                    ${addr.description ? `<span style="color: var(--text-tertiary); margin-right: 0.5rem;"><span class="sensitive-data">(${addr.description})</span></span>` : ''}
                                                 </div>
                                                 ${renderNavigationIcon(addr.address)}
                                             </div>
@@ -3420,7 +3423,7 @@ async function loadCustomerContacts(customerId, primaryContactId) {
             </p>
             ${customerContacts.map(c => `
                 <div style="display: inline-block; background: var(--bg-secondary); padding: 0.3rem 0.6rem; border-radius: 15px; margin: 0.2rem; font-size: 0.85rem; cursor: pointer;" onclick="window.returnToCustomerId = '${customerId}'; closeCustomerDetailsModal(); viewContactDetails('${c.contact_id}')">
-                    ${APP_ICONS.CONTACT} ${c.contact_name}${c.role ? ` - ${c.role}` : ''}
+                    ${APP_ICONS.CONTACT} <span class="sensitive-data">${c.contact_name}${c.role ? ` - ${c.role}` : ''}</span>
                     ${c.contact_id === primaryContactId ? `<span style="color: #fbbf24; margin-left: 5px;">${APP_ICONS.STAR_FILL}</span>` : ''}
                 </div>
             `).join('')}
@@ -3891,7 +3894,7 @@ function filterContacts(preservePage = false) {
                 <tbody>
                     ${pagedContacts.map(contact => `
                         <tr>
-                            <td><strong>${contact.contact_name}</strong></td>
+                            <td><strong><span class="sensitive-data">${contact.contact_name}</span></strong></td>
                             <td>
                                 ${(() => {
                                     const r = contact.role || '-';
@@ -3902,7 +3905,7 @@ function filterContacts(preservePage = false) {
                                 })()}
                             </td>
                             <td style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${contact.customers?.business_name || ''}">
-                                ${contact.customers ? `<span class="badge badge-new" style="cursor: pointer; display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom;" onclick="viewCustomerDetails('${contact.customers.customer_id}')">${contact.customers.business_name}</span>` : '-'}
+                                ${contact.customers ? `<span class="badge badge-new" style="cursor: pointer; display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom;" onclick="viewCustomerDetails('${contact.customers.customer_id}')"><span class="sensitive-data">${contact.customers.business_name}</span></span>` : '-'}
                             </td>
                             <td>
                                 ${contact.phone ? contact.phone.split(',').map(p => {
@@ -3923,7 +3926,7 @@ function filterContacts(preservePage = false) {
                                     return `
                                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2px;">
                                         <div style="display: flex; flex-direction: column; line-height: 1.1;">
-                                            <span style="color: var(--text-primary); font-weight: 500;">${phone}</span>
+                                            <span style="color: var(--text-primary); font-weight: 500;"><span class="sensitive-data">${phone}</span></span>
                                             ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                                         </div>
                                         <div style="display: flex; gap: 0.5rem;">
@@ -3944,7 +3947,7 @@ function filterContacts(preservePage = false) {
                             <td>
                                 ${contact.email ? `
                                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                        <a href="mailto:${contact.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${contact.email}</a>
+                                        <a href="mailto:${contact.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;"><span class="sensitive-data">${contact.email}</span></a>
                                         <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${contact.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                     </div>
                                 ` : '-'}
@@ -3973,10 +3976,10 @@ function filterContacts(preservePage = false) {
             card.innerHTML = `
                 <div class="deal-card-header">
                     <div>
-                        <div class="deal-card-title">👤 ${contact.contact_name}</div>
+                        <div class="deal-card-title">👤 <span class="sensitive-data">${contact.contact_name}</span></div>
                         <div class="deal-card-date">${contact.role || 'ללא תפקיד'}</div>
                     </div>
-                    ${contact.customers ? `<span class="badge badge-new">${contact.customers.business_name}</span>` : '<span class="badge badge-pending">ללא לקוח</span>'}
+                    ${contact.customers ? `<span class="badge badge-new"><span class="sensitive-data">${contact.customers.business_name}</span></span>` : '<span class="badge badge-pending">ללא לקוח</span>'}
                 </div>
                 <div class="deal-card-body">
                     <div class="deal-card-info">
@@ -3998,7 +4001,7 @@ function filterContacts(preservePage = false) {
                                 return `
                                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
                                     <div style="display: flex; flex-direction: column; line-height: 1.1;">
-                                        <span style="color: var(--text-primary); font-weight: 500;">${phone}</span>
+                                        <span style="color: var(--text-primary); font-weight: 500;"><span class="sensitive-data">${phone}</span></span>
                                         ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                                     </div>
                                     <div style="display: flex; gap: 0.5rem;">
@@ -4020,7 +4023,7 @@ function filterContacts(preservePage = false) {
                         <span class="deal-card-value">
                             ${contact.email ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <a href="mailto:${contact.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${contact.email}</a>
+                                    <a href="mailto:${contact.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;"><span class="sensitive-data">${contact.email}</span></a>
                                     <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${contact.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                 </div>
                             ` : '-'}
@@ -4029,7 +4032,7 @@ function filterContacts(preservePage = false) {
                     ${contact.notes ? `
                     <div class="deal-card-info" style="display: block; margin-top: 0.5rem; background: var(--bg-secondary); padding: 0.5rem; border-radius: 4px;">
                         <span class="deal-card-label" style="display: block; margin-bottom: 0.25rem;">הערות:</span>
-                        <span class="deal-card-value" style="font-size: 0.9rem;">${contact.notes}</span>
+                        <span class="deal-card-value" style="font-size: 0.9rem;"><span class="sensitive-data">${contact.notes}</span></span>
                     </div>
                     ` : ''}
                 </div>
@@ -4380,7 +4383,7 @@ async function viewContactDetails(contactId) {
             <div style="margin-bottom: 2rem;">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <h3 style="margin: 0; margin-bottom: 0.5rem; color: var(--primary-color);">${contact.contact_name}</h3>
+                        <h3 style="margin: 0; margin-bottom: 0.5rem; color: var(--primary-color);"><span class="sensitive-data">${contact.contact_name}</span></h3>
                         <div style="color: var(--text-secondary); margin-bottom: 1.5rem;">${contact.role || 'ללא תפקיד'}</div>
                     </div>
                     <button class="btn btn-sm btn-secondary btn-icon" onclick="switchToEditContact('${contact.contact_id}')" title="ערוך פרטים">${APP_ICONS.EDIT}</button>
@@ -4407,7 +4410,7 @@ async function viewContactDetails(contactId) {
                                 return `
                                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2px;">
                                     <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1;">
-                                        <span style="color: var(--text-primary); text-align: right; direction: ltr; display: inline-block;">${phone}</span>
+                                        <span style="color: var(--text-primary); text-align: right; direction: ltr; display: inline-block;"><span class="sensitive-data">${phone}</span></span>
                                         ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                                     </div>
                                     <div style="display: flex; gap: 0.5rem;">
@@ -4431,7 +4434,7 @@ async function viewContactDetails(contactId) {
                         <span class="deal-card-value">
                             ${contact.email ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <a href="mailto:${contact.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${contact.email}</a>
+                                    <a href="mailto:${contact.email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;"><span class="sensitive-data">${contact.email}</span></a>
                                     <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${contact.email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                 </div>
                             ` : '-'}
@@ -4442,7 +4445,7 @@ async function viewContactDetails(contactId) {
                         <span class="deal-card-label">לקוח:</span>
                         <span class="deal-card-value">
                             ${contact.customers ? `
-                                <span class="badge badge-new" style="cursor: pointer;" onclick="window.returnToContactId = '${contact.contact_id}'; viewCustomerDetails('${contact.customers.customer_id}'); closeContactDetailsModal();">${contact.customers.business_name}</span>
+                                <span class="badge badge-new" style="cursor: pointer;" onclick="window.returnToContactId = '${contact.contact_id}'; viewCustomerDetails('${contact.customers.customer_id}'); closeContactDetailsModal();"><span class="sensitive-data">${contact.customers.business_name}</span></span>
                             ` : '-'}
                         </span>
                     </div>
@@ -4468,7 +4471,7 @@ async function viewContactDetails(contactId) {
                                         <button class="btn btn-sm btn-danger" onclick="deleteContactNote('${contact.contact_id}', ${index})" title="מחק" style="padding: 2px 6px; font-size: 0.8rem;">${APP_ICONS.TRASH}</button>
                                     </div>
                                 </div>
-                                <div id="contact-note-content-${index}" style="white-space: pre-wrap; font-size: 0.95rem; color: var(--text-primary);">${formatActivityText(note.content)}</div>
+                                <div id="contact-note-content-${index}" style="white-space: pre-wrap; font-size: 0.95rem; color: var(--text-primary);"><span class="sensitive-data">${formatActivityText(note.content)}</span></div>
                             </div>
                         `).join('');
                     })()}
@@ -5289,7 +5292,7 @@ async function loadDealsHistory(preservePage = false) {
                                 <td>
                                     <strong>
                                         <a href="javascript:void(0)" onclick="viewCustomerDetails('${deal.customer_id}')" class="clickable-text" style="color: inherit; text-decoration: none;">
-                                            ${deal.customers.business_name}
+                                            <span class="sensitive-data">${deal.customers.business_name}</span>
                                         </a>
                                     </strong>
                                </td>
@@ -5299,8 +5302,8 @@ async function loadDealsHistory(preservePage = false) {
                                         const contactName = displayContact.contact_name || deal.customers?.contact_name || '-';
                                         const contactId = deal.contact_id || deal.customers?.primary_contact_id;
                                         return contactId ? 
-                                            `<span class="clickable-text" style="color: var(--primary-color); font-weight: 500;" onclick="viewContactDetails('${contactId}')">${contactName}</span>` 
-                                            : contactName;
+                                            `<span class="clickable-text" style="color: var(--primary-color); font-weight: 500;" onclick="viewContactDetails('${contactId}')">${contactName !== '-' ? `<span class="sensitive-data">${contactName}</span>` : '-'}</span>` 
+                                            : (contactName !== '-' ? `<span class="sensitive-data">${contactName}</span>` : '-');
                                     })()}
                                 </td>
                                 <td><span class="badge ${statusBadgeClass}">${statusDisplay}</span></td>
@@ -5376,7 +5379,7 @@ function createDealCard(deal) {
                 <div class="deal-card-title">
                     <a href="javascript:void(0)" onclick="viewCustomerDetails('${deal.customer_id}')" class="clickable-text" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 6px;">
                         <span style="color: var(--primary-color);">${APP_ICONS.BRIEFCASE}</span>
-                        ${fixBiDi(deal.customers.business_name)}
+                        <span class="sensitive-data">${fixBiDi(deal.customers.business_name)}</span>
                     </a>
                 </div>
                 <div class="deal-card-date">${date}</div>
@@ -5388,8 +5391,8 @@ function createDealCard(deal) {
                 <span class="deal-card-label">איש קשר:</span>
                 <span class="deal-card-value">
                     ${contactId ? 
-                        `<a href="javascript:void(0)" onclick="viewContactDetails('${contactId}')" style="font-weight: 500; color: inherit; text-decoration: underline;">${contactName}</a>` 
-                        : contactName}
+                        `<a href="javascript:void(0)" onclick="viewContactDetails('${contactId}')" style="font-weight: 500; color: inherit; text-decoration: underline;">${contactName !== '-' ? `<span class="sensitive-data">${contactName}</span>` : '-'}</a>` 
+                        : (contactName !== '-' ? `<span class="sensitive-data">${contactName}</span>` : '-')}
                 </span>
             </div>
             <div class="deal-card-info">
@@ -5397,7 +5400,7 @@ function createDealCard(deal) {
                 <span class="deal-card-value">
                     ${phone !== '-' ? `
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span style="color: var(--text-primary);">${phone}</span>
+                            <span style="color: var(--text-primary);"><span class="sensitive-data">${phone}</span></span>
                             <a href="tel:${phone}" title="התקשר">
                                 <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                             </a>
@@ -5412,7 +5415,7 @@ function createDealCard(deal) {
             ${deal.notes ? `
                 <div class="deal-card-info">
                     <span class="deal-card-label">הערות:</span>
-                    <span class="deal-card-value" style="white-space: pre-wrap;">${formatActivityText(deal.notes)}</span>
+                    <span class="deal-card-value" style="white-space: pre-wrap;"><span class="sensitive-data">${formatActivityText(deal.notes)}</span></span>
                 </div>
             ` : ''}
         </div>
@@ -5527,7 +5530,7 @@ async function viewDealDetails(dealId) {
         // Update modal header title directly
         const modalHeaderTitle = modal.querySelector('.modal-header h2');
         if (modalHeaderTitle) {
-            modalHeaderTitle.textContent = dealTitle;
+            modalHeaderTitle.innerHTML = `הצעת מחיר עבור <span class="sensitive-data">${deal.customers.business_name}</span> ${dealDay}${dealMonth}${dealYear}`;
         }
 
         const statusBadgeClass = {
@@ -5556,14 +5559,14 @@ async function viewDealDetails(dealId) {
             <div class="customer-section" style="margin-bottom: 2rem;">
                 <h3 style="margin-bottom: 1rem;">פרטי לקוח</h3>
                 <div class="customer-details">
-                    <p><strong>שם העסק:</strong> <a href="javascript:void(0)" onclick="window.returnToDealId = '${deal.deal_id}'; closeDealModal(); viewCustomerDetails('${deal.customer_id}')" style="color: inherit; text-decoration: underline; font-weight: 500;">${fixBiDi(deal.customers.business_name)}</a></p>
+                    <p><strong>שם העסק:</strong> <a href="javascript:void(0)" onclick="window.returnToDealId = '${deal.deal_id}'; closeDealModal(); viewCustomerDetails('${deal.customer_id}')" style="color: inherit; text-decoration: underline; font-weight: 500;"><span class="sensitive-data">${fixBiDi(deal.customers.business_name)}</span></a></p>
                     <p><strong>איש קשר (עסקה):</strong> ${deal.contact_id ? `
-                        <a href="javascript:void(0)" onclick="window.returnToDealId = '${deal.deal_id}'; closeDealModal(); viewContactDetails('${deal.contact_id}')" style="color: var(--primary-color); font-weight: 500; text-decoration: underline;">${deal.contacts?.contact_name || 'נבחר אך ללא שם'}</a>
-                    ` : `<span style="color: var(--primary-color); font-weight: 500;">${deal.contacts?.contact_name || 'לא נבחר'}</span>`}</p>
+                        <a href="javascript:void(0)" onclick="window.returnToDealId = '${deal.deal_id}'; closeDealModal(); viewContactDetails('${deal.contact_id}')" style="color: var(--primary-color); font-weight: 500; text-decoration: underline;">${deal.contacts?.contact_name && deal.contacts?.contact_name !== 'נבחר אך ללא שם' ? `<span class="sensitive-data">${deal.contacts.contact_name}</span>` : 'נבחר אך ללא שם'}</a>
+                    ` : `<span style="color: var(--primary-color); font-weight: 500;">${deal.contacts?.contact_name && deal.contacts?.contact_name !== 'לא נבחר' ? `<span class="sensitive-data">${deal.contacts.contact_name}</span>` : 'לא נבחר'}</span>`}</p>
                     ${(deal.contacts?.contact_name !== (deal.customers.primary_contact?.contact_name || deal.customers.contact_name)) ? `
                         <p><strong>איש קשר (לקוח):</strong> ${deal.customers.primary_contact_id ? `
-                            <a href="javascript:void(0)" onclick="window.returnToDealId = '${deal.deal_id}'; closeDealModal(); viewContactDetails('${deal.customers.primary_contact_id}')" style="color: inherit; text-decoration: underline;">${deal.customers.primary_contact?.contact_name || deal.customers.contact_name || 'נבחר אך ללא שם'}</a>
-                        ` : (deal.customers.primary_contact?.contact_name || deal.customers.contact_name || '-')}</p>
+                            <a href="javascript:void(0)" onclick="window.returnToDealId = '${deal.deal_id}'; closeDealModal(); viewContactDetails('${deal.customers.primary_contact_id}')" style="color: inherit; text-decoration: underline;">${(deal.customers.primary_contact?.contact_name || deal.customers.contact_name) ? `<span class="sensitive-data">${deal.customers.primary_contact?.contact_name || deal.customers.contact_name}</span>` : 'נבחר אך ללא שם'}</a>
+                        ` : ((deal.customers.primary_contact?.contact_name || deal.customers.contact_name) ? `<span class="sensitive-data">${deal.customers.primary_contact?.contact_name || deal.customers.contact_name}</span>` : '-')}</p>
                     ` : ''}
                     ${(() => {
                         const displayContact = deal.contacts || deal.customers?.primary_contact || deal.customers || {};
@@ -5575,7 +5578,7 @@ async function viewDealDetails(dealId) {
                             <strong>טלפון:</strong> 
                             ${phone ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span style="color: var(--text-primary); direction: ltr;">${phone}</span>
+                                    <span style="color: var(--text-primary); direction: ltr;"><span class="sensitive-data">${phone}</span></span>
                                     <a href="tel:${phone}" title="התקשר">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
@@ -5589,14 +5592,14 @@ async function viewDealDetails(dealId) {
                         <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
                             <strong>אימייל:</strong> 
                             ${email ? `
-                                <a href="mailto:${email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${email}</a>
+                                <a href="mailto:${email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;"><span class="sensitive-data">${email}</span></a>
                                 <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                             ` : '-'}
                         </div>
                         `;
                     })()}
                     <div class="deal-card-info" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                        <strong>כתובת:</strong> ${deal.customers.city || '-'} ${deal.customers.city ? renderNavigationIcon(deal.customers.city) : ''}
+                        <strong>כתובת:</strong> ${deal.customers.city ? `<span class="sensitive-data">${deal.customers.city}</span>` : '-'} ${deal.customers.city ? renderNavigationIcon(deal.customers.city) : ''}
                     </div>
                 </div>
             </div>
@@ -5620,7 +5623,7 @@ async function viewDealDetails(dealId) {
             ${deal.notes ? `
                 <div style="margin-bottom: 2rem;">
                     <h3 style="margin-bottom: 0.5rem;">הערות כלליות</h3>
-                    <div style="color: var(--text-secondary); white-space: pre-wrap;">${formatActivityText(deal.notes)}</div>
+                    <div style="color: var(--text-secondary); white-space: pre-wrap;"><span class="sensitive-data">${formatActivityText(deal.notes)}</span></div>
                 </div>
             ` : ''}
             
@@ -5956,7 +5959,7 @@ async function loadActivityNotes(activityId, containerId = 'activity-notes-list'
             return `
             <div style="background: var(--bg-primary); padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid var(--border-color); ${isDone ? 'opacity: 0.7; border-right: 4px solid #10b981;' : ''}">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                     <div style="font-size: 0.9rem; white-space: pre-wrap; ${isDone ? 'text-decoration: line-through;' : ''}">${formattedContent}</div>
+                     <div style="font-size: 0.9rem; white-space: pre-wrap; ${isDone ? 'text-decoration: line-through;' : ''}"><span class="sensitive-data">${formattedContent}</span></div>
                      <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <button onclick="toggleActivityNoteCompletion(${note.id}, '${activityId}', ${isDone}, '${container.id}')" type="button" 
                             style="background: none; border: none; cursor: pointer; padding: 0 0.2rem; font-size: 1.1rem; color: ${isDone ? 'var(--success-color)' : 'var(--text-tertiary)'};" 
@@ -7860,10 +7863,10 @@ function renderThisWeekActivityCard(activity) {
                         <span style="color: var(--text-tertiary); font-size: 0.85rem; margin-right: auto; display: flex; align-items: center; gap: 4px;"> <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> ${activityTime}</span>
                     </div>
                     <div class="deal-card-date" style="font-size: 0.9rem; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
-                        <span>${APP_ICONS.LOCATION}</span> ${customer ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customer.customer_id}')" style="color: inherit; text-decoration: underline; font-weight: 500;">${customerName}</a>` : customerName}
+                        <span>${APP_ICONS.LOCATION}</span> ${customer ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${customer.customer_id}')" style="color: inherit; text-decoration: underline; font-weight: 500;"><span class="sensitive-data">${customerName}</span></a>` : (customerName !== 'ללא לקוח' ? `<span class="sensitive-data">${customerName}</span>` : 'ללא לקוח')}
                         ${(contactName && contactId) 
-                            ? ` • <a href="javascript:void(0)" onclick="viewContactDetails('${contactId}')" style="color: inherit; text-decoration: underline;">${contactName}</a>` 
-                            : (contactName ? ` • ${contactName}` : '')}
+                            ? ` • <a href="javascript:void(0)" onclick="viewContactDetails('${contactId}')" style="color: inherit; text-decoration: underline;"><span class="sensitive-data">${contactName}</span></a>` 
+                            : (contactName ? ` • <span class="sensitive-data">${contactName}</span>` : '')}
                         ${customer?.city ? (() => {
                             const cityName = getCityFromAddress(customer.city);
                             return cityName ? ` • ${cityName} ${renderNavigationIcon(customer.city)}` : '';
@@ -7881,14 +7884,14 @@ function renderThisWeekActivityCard(activity) {
             </div>
             
             ${activity.description ? `
-                <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9rem; overflow-wrap: break-word; word-break: break-word; white-space: pre-wrap;">${formatActivityText(activity.description)}</div>
+                <div style="margin-bottom: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 8px; font-size: 0.9rem; overflow-wrap: break-word; word-break: break-word; white-space: pre-wrap;"><span class="sensitive-data">${formatActivityText(activity.description)}</span></div>
             ` : ''}
             
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                 <div style="display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem;">
                     ${phone ? `
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span style="color: var(--text-primary);">${phone}</span>
+                            <span style="color: var(--text-primary);"><span class="sensitive-data">${phone}</span></span>
                             <a href="tel:${phone}" title="התקשר">
                                 <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                             </a>
@@ -7903,7 +7906,7 @@ function renderThisWeekActivityCard(activity) {
                         return `
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             ${APP_ICONS.MAIL} 
-                            <a href="mailto:${email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${email}</a>
+                            <a href="mailto:${email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;"><span class="sensitive-data">${email}</span></a>
                             <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                         </div>
                         `;
@@ -8207,21 +8210,23 @@ async function viewActivityDetails(activityId) {
         
         if (customer) {
             // Customer Link
-            customerHtml = `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500; text-decoration: underline;" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewCustomerDetails('${customer.customer_id}')">${customer.business_name}</span>`;
+            customerHtml = `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500; text-decoration: underline;" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewCustomerDetails('${customer.customer_id}')"><span class="sensitive-data">${customer.business_name}</span></span>`;
             
             // Contact Link
             if (linkedContact) {
                 // Use specific linked contact
-                 contactHtml = `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500; text-decoration: underline;" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewContactDetails('${linkedContact.contact_id}')">${linkedContact.contact_name} ${linkedContact.role ? `(${linkedContact.role})` : ''}</span>`;
+                 contactHtml = `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500; text-decoration: underline;" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewContactDetails('${linkedContact.contact_id}')"><span class="sensitive-data">${linkedContact.contact_name}</span> ${linkedContact.role ? `(${linkedContact.role})` : ''}</span>`;
             } else if (customer.primary_contact_id) {
                 // Fallback to primary
-                contactHtml = `<span style="color: var(--text-tertiary); cursor: pointer; text-decoration: underline;" title="איש קשר ראשי (לא שויך ספציפית)" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewContactDetails('${customer.primary_contact_id}')">${customer.primary_contact?.contact_name || customer.contact_name || '-'} (ראשי)</span>`;
+                const primaryName = customer.primary_contact?.contact_name || customer.contact_name || '-';
+                contactHtml = `<span style="color: var(--text-tertiary); cursor: pointer; text-decoration: underline;" title="איש קשר ראשי (לא שויך ספציפית)" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewContactDetails('${customer.primary_contact_id}')">${primaryName !== '-' ? `<span class="sensitive-data">${primaryName}</span>` : '-'} (ראשי)</span>`;
             } else {
-                contactHtml = customer.contact_name || '-';
+                const cName = customer.contact_name || '-';
+                contactHtml = cName !== '-' ? `<span class="sensitive-data">${cName}</span>` : '-';
             }
         } else if (linkedContact) {
             // No customer, but has a linked contact
-            contactHtml = `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500; text-decoration: underline;" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewContactDetails('${linkedContact.contact_id}')">${linkedContact.contact_name} ${linkedContact.role ? `(${linkedContact.role})` : ''}</span>`;
+            contactHtml = `<span style="color: var(--primary-color); cursor: pointer; font-weight: 500; text-decoration: underline;" onclick="window.returnToActivityId = '${activity.activity_id}'; closeViewActivityModal(); viewContactDetails('${linkedContact.contact_id}')"><span class="sensitive-data">${linkedContact.contact_name}</span> ${linkedContact.role ? `(${linkedContact.role})` : ''}</span>`;
             customerHtml = '-'; // Explicitly no customer
         }
         
@@ -8289,7 +8294,7 @@ async function viewActivityDetails(activityId) {
                         <span class="deal-card-value">
                             ${customer?.phone || linkedContact?.phone ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <span style="color: var(--text-primary);">${customer?.phone || linkedContact?.phone}</span>
+                                    <span style="color: var(--text-primary);"><span class="sensitive-data">${customer?.phone || linkedContact?.phone}</span></span>
                                     <a href="tel:${customer?.phone || linkedContact?.phone}" title="התקשר">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
@@ -8305,7 +8310,7 @@ async function viewActivityDetails(activityId) {
                 
                 <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px; overflow-wrap: break-word; word-break: break-word;">
                     <label style="font-weight: 600; display: block; margin-bottom: 0.5rem; color: var(--text-secondary);">תיאור הפעילות:</label>
-                    <div style="white-space: pre-wrap;">${formatActivityText(activity.description || '-')}</div>
+                    <div style="white-space: pre-wrap;">${(activity.description && activity.description !== '-') ? `<span class="sensitive-data">${formatActivityText(activity.description)}</span>` : '-'}</div>
                 </div>
                 
                 <div style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
@@ -8621,8 +8626,8 @@ async function loadActivities(preservePage = false) {
                             }
                             
                             const contactDisplay = (primaryContactId && contactNameRaw !== '-')
-                                ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500;">${contactNameRaw}</a>`
-                                : contactNameRaw;
+                                ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500;">${contactNameRaw !== '-' && contactNameRaw !== 'לא משויך' ? `<span class="sensitive-data">${contactNameRaw}</span>` : contactNameRaw}</a>`
+                                : (contactNameRaw !== '-' && contactNameRaw !== 'לא משויך' ? `<span class="sensitive-data">${contactNameRaw}</span>` : contactNameRaw);
 
                             const activityDateObj = new Date(activity.activity_date);
                             const now = new Date();
@@ -8639,14 +8644,14 @@ async function loadActivities(preservePage = false) {
                                             : '<span class="badge badge-pending" style="font-size: 0.7rem;">ממתין</span>'}
                                     </td>
                                     <td style="${textStyle}">
-                                        <div style="max-width: 50ch; overflow-x: auto; white-space: pre-wrap; direction: rtl;">${formatActivityText(activity.description || '-')}</div>
+                                        <div style="max-width: 50ch; overflow-x: auto; white-space: pre-wrap; direction: rtl;">${activity.description ? `<span class="sensitive-data">${formatActivityText(activity.description)}</span>` : '-'}</div>
                                     </td>
                                     <td>
                                         ${rowCustomerId 
-                                            ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${rowCustomerId}')" style="font-weight: 500;">${rowBusinessName}</a>`
+                                            ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${rowCustomerId}')" style="font-weight: 500;">${rowBusinessName !== 'לא משויך' ? `<span class="sensitive-data">${rowBusinessName}</span>` : rowBusinessName}</a>`
                                             : (primaryContactId && rowBusinessName === contactNameRaw 
-                                                ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500;">${rowBusinessName}</a>`
-                                                : rowBusinessName)
+                                                ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500;">${rowBusinessName !== '-' ? `<span class="sensitive-data">${rowBusinessName}</span>` : '-'}</a>`
+                                                : (rowBusinessName !== 'לא משויך' && rowBusinessName !== '-' ? `<span class="sensitive-data">${rowBusinessName}</span>` : rowBusinessName))
                                         }
                                         <div style="font-size: 0.8em; color: var(--text-tertiary);">${contactDisplay}</div>
                                         ${activity.deal_id ? `
@@ -8752,8 +8757,8 @@ async function loadActivities(preservePage = false) {
                 }
                 
                 const contactDisplay = (primaryContactId && contactName)
-                    ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500; color: inherit; text-decoration: underline;">${contactName}</a>`
-                    : contactName;
+                    ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="font-weight: 500; color: inherit; text-decoration: underline;">${contactName !== '-' && contactName !== 'לא משויך' ? `<span class="sensitive-data">${contactName}</span>` : contactName}</a>`
+                    : (contactName !== '-' && contactName !== 'לא משויך' ? `<span class="sensitive-data">${contactName}</span>` : contactName);
                 
                 // Format phone for WhatsApp
                 let whatsappLink = '';
@@ -8795,27 +8800,27 @@ async function loadActivities(preservePage = false) {
                         </div>
                     </div>
                     <div class="deal-card-body" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">
-                        <div style="margin-bottom: 0.4rem; white-space: pre-wrap; ${activity.completed ? 'text-decoration: line-through; opacity: 0.7;' : ''}"><strong>תיאור:</strong> ${formatActivityText(activity.description || '-')}</div>
+                        <div style="margin-bottom: 0.4rem; white-space: pre-wrap; ${activity.completed ? 'text-decoration: line-through; opacity: 0.7;' : ''}"><strong>תיאור:</strong> ${activity.description ? `<span class="sensitive-data">${formatActivityText(activity.description)}</span>` : '-'}</div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 1rem; font-size: 0.8rem; color: var(--text-secondary);">
                             ${activityDate ? `<div><strong>תאריך:</strong> <span style="color: var(--primary-color);">${activityDate}</span></div>` : ''}
                             <div><strong>לקוח:</strong> ${rowCustomerId 
-                                ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${rowCustomerId}')" style="color: inherit; text-decoration: underline;">${rowBusinessName}</a>`
+                                ? `<a href="javascript:void(0)" onclick="viewCustomerDetails('${rowCustomerId}')" style="color: inherit; text-decoration: underline;">${rowBusinessName !== 'לא משויך' ? `<span class="sensitive-data">${rowBusinessName}</span>` : rowBusinessName}</a>`
                                 : (primaryContactId && rowBusinessName === contactName
-                                    ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="color: inherit; text-decoration: underline;">${rowBusinessName}</a>`
-                                    : rowBusinessName)}</div>
+                                    ? `<a href="javascript:void(0)" onclick="viewContactDetails('${primaryContactId}')" style="color: inherit; text-decoration: underline;">${rowBusinessName !== '-' ? `<span class="sensitive-data">${rowBusinessName}</span>` : '-'}</a>`
+                                    : (rowBusinessName !== 'לא משויך' && rowBusinessName !== '-' ? `<span class="sensitive-data">${rowBusinessName}</span>` : rowBusinessName))}</div>
                             ${contactName && rowBusinessName !== contactName ? `<div><strong>איש קשר:</strong> ${contactDisplay}</div>` : ''}
                             ${activity.deal_id ? `<div><strong>עסקה:</strong> <a href="javascript:void(0)" onclick="viewDealDetails('${activity.deal_id}')" class="deal-link clickable-text" style="color: var(--primary-color); padding: 1px 4px; font-size: 0.75rem;">${APP_ICONS.BRIEFCASE} עסקה מקושרת</a></div>` : ''}
                             ${email ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <strong>מייל:</strong> 
-                                    <a href="mailto:${email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;">${email}</a>
+                                    <a href="mailto:${email}" style="color: var(--primary-color); direction: ltr; text-align: right; display: inline-block;"><span class="sensitive-data">${email}</span></a>
                                     <img src="images/copy.png" alt="Copy" style="cursor: pointer; width: 14px; height: 14px;" data-copy="${email}" onclick="copyToClipboard(this.dataset.copy)" title="העתק אימייל">
                                 </div>
                             ` : ''}
                             ${phone ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <strong>טלפון:</strong> 
-                                    <a href="tel:${phone}" style="color: var(--text-primary); text-decoration: none;">${phone}</a>
+                                    <a href="tel:${phone}" style="color: var(--text-primary); text-decoration: none;"><span class="sensitive-data">${phone}</span></a>
                                     ${whatsappLink ? `<a href="${whatsappLink}" target="_blank" title="שלח הודעה בווטסאפ"><img src="images/whatsapp.png" alt="WhatsApp" style="width: 20px; height: 20px; vertical-align: middle;"></a>` : ''}
                                 </div>
                             ` : ''}
@@ -9677,6 +9682,34 @@ function saveNotificationSettings() {
     showAlert('הגדרות התקבלו בהצלחה', 'success');
 }
 
+function loadBlurSensitiveMode() {
+    const isBlurActive = localStorage.getItem('crm_blur_sensitive_data') === 'true';
+    const elCheckbox = document.getElementById('settings-blur-sensitive');
+    if (elCheckbox) {
+        elCheckbox.checked = isBlurActive;
+    }
+    if (isBlurActive) {
+        document.body.classList.add('blur-sensitive-data');
+    } else {
+        document.body.classList.remove('blur-sensitive-data');
+    }
+}
+
+function toggleBlurSensitiveMode() {
+    const elCheckbox = document.getElementById('settings-blur-sensitive');
+    if (!elCheckbox) return;
+    const isBlurActive = elCheckbox.checked;
+    localStorage.setItem('crm_blur_sensitive_data', isBlurActive ? 'true' : 'false');
+    
+    if (isBlurActive) {
+        document.body.classList.add('blur-sensitive-data');
+        showAlert('מצב צילום הופעל. נתוני הלקוחות מטושטשים.', 'success');
+    } else {
+        document.body.classList.remove('blur-sensitive-data');
+        showAlert('מצב צילום כובה. נתוני הלקוחות מוצגים כרגיל.', 'success');
+    }
+}
+
 function loadNotificationSettings() {
     const enabled = localStorage.getItem('crm_notification_enabled') === 'true' || true;
     const email = localStorage.getItem('crm_notification_email') || 'anfialuminium@gmail.com';
@@ -10313,9 +10346,9 @@ async function loadAuditLog() {
                                             <div class="audit-change-line ${isLongText ? 'audit-change-line-vertical' : ''}">
                                                 <div class="audit-change-label" style="min-width: 120px;">${c.label}</div>
                                                 <div class="audit-change-values" style="display: flex; align-items: center; gap: 0.75rem; flex: 1; justify-content: flex-start; ${isLongText ? 'flex-direction: column; align-items: flex-start; width: 100%;' : ''}">
-                                                    <span class="audit-change-old" style="color: var(--text-tertiary); ${isLongText ? 'max-width: none; white-space: normal; overflow: visible;' : ''}" title="${c.old}">${c.old}</span>
+                                                    <span class="audit-change-old" style="color: var(--text-tertiary); ${isLongText ? 'max-width: none; white-space: normal; overflow: visible;' : ''}" title="${c.old}">${(c.old && c.old !== '-') ? `<span class="sensitive-data">${c.old}</span>` : '-'}</span>
                                                     <span class="audit-change-arrow" style="color: var(--primary-color); ${isLongText ? 'transform: rotate(90deg); margin: 0.25rem 0;' : ''}">←</span>
-                                                    <span class="audit-change-new" style="color: var(--success-color); font-weight: 600; ${isLongText ? 'max-width: none; white-space: normal; overflow: visible;' : ''}" title="${c.new}">${c.new}</span>
+                                                    <span class="audit-change-new" style="color: var(--success-color); font-weight: 600; ${isLongText ? 'max-width: none; white-space: normal; overflow: visible;' : ''}" title="${c.new}">${(c.new && c.new !== '-') ? `<span class="sensitive-data">${c.new}</span>` : '-'}</span>
                                                 </div>
                                             </div>
                                         `;
@@ -10329,8 +10362,8 @@ async function loadAuditLog() {
                 else if (log.action_type === 'delete' && log.old_value) {
                     const info = [];
                     if (log.entity_type === 'customer') {
-                        info.push(`שם עסק: ${log.old_value.business_name}`);
-                        if (log.old_value.phone) info.push(`טלפון: ${log.old_value.phone}`);
+                        info.push(`שם עסק: ${log.old_value.business_name ? `<span class="sensitive-data">${log.old_value.business_name}</span>` : '-'}`);
+                        if (log.old_value.phone) info.push(`טלפון: <span class="sensitive-data">${log.old_value.phone}</span>`);
                     } else if (log.entity_type === 'supplier_order') {
                         if (log.old_value.total_amount) info.push(`סכום: ₪${log.old_value.total_amount}`);
                         if (log.old_value.created_at) info.push(`תאריך: ${new Date(log.old_value.created_at).toLocaleDateString('he-IL')}`);
@@ -10366,13 +10399,13 @@ async function loadAuditLog() {
                             <div class="audit-item-header">
                                 <div class="audit-entity-info">
                                     <span class="audit-entity-type">${entity}</span>
-                                    <span class="audit-entity-name">${formatAuditText(log.entity_name) || '-'}</span>
+                                    <span class="audit-entity-name">${(log.entity_name && log.entity_name !== '-') ? `<span class="sensitive-data">${formatAuditText(log.entity_name)}</span>` : '-'}</span>
                                 </div>
                                 <span class="badge ${action.class}">${action.label}</span>
                             </div>
                             
                             <div class="audit-description">
-                                ${formatAuditText(log.description) || 'אין תיאור נוסף'}
+                                ${log.description && log.description !== 'אין תיאור נוסף' ? `<span class="sensitive-data">${formatAuditText(log.description)}</span>` : 'אין תיאור נוסף'}
                             </div>
 
                             ${itemChangesHtml}
@@ -11431,7 +11464,7 @@ async function loadCustomerDeals(customerId, containerId = 'view-customer-deals-
                 <div style="padding: 0.75rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
                     <div style="flex: 1;">
                         <div style="font-weight: 600; margin-bottom: 0.25rem;" class="deal-link clickable-text" onclick="window.returnToCustomerId = '${customerId}'; closeCustomerDetailsModal(); viewDealDetails('${deal.deal_id}');">
-                            ${APP_ICONS.BRIEFCASE} ${dealTitle}
+                            ${APP_ICONS.BRIEFCASE} <span class="sensitive-data">${dealTitle}</span>
                         </div>
                         <div style="font-size: 0.85rem; color: var(--text-tertiary);">
                             ${formattedDate} • ₪${(deal.final_amount || 0).toLocaleString()}
@@ -11880,10 +11913,10 @@ function renderGlobalSearchResults(results, query) {
             <tbody>`;
         results.customers.forEach(c => {
              html += `<tr>
-                <td><strong>${highlight(c.business_name, query)}</strong></td>
-                <td>${highlight(c.primary_contact?.contact_name || c.contact_name || '-', query)}</td>
-                <td>${highlight(c.phone || '-', query)}</td>
-                <td>${highlight(c.city || '-', query)}</td>
+                <td><strong><span class="sensitive-data">${highlight(c.business_name, query)}</span></strong></td>
+                <td>${(c.primary_contact?.contact_name || c.contact_name) ? `<span class="sensitive-data">${highlight(c.primary_contact?.contact_name || c.contact_name, query)}</span>` : '-'}</td>
+                <td>${c.phone ? `<span class="sensitive-data">${highlight(c.phone, query)}</span>` : '-'}</td>
+                <td>${c.city ? `<span class="sensitive-data">${highlight(c.city, query)}</span>` : '-'}</td>
                 <td><button class="btn btn-sm btn-secondary" onclick="viewCustomerDetails('${c.customer_id}')">${APP_ICONS.EYE} צפה</button></td>
              </tr>`;
         });
@@ -11920,7 +11953,7 @@ function renderGlobalSearchResults(results, query) {
                      return `
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                         <div style="display: flex; flex-direction: column; line-height: 1.1;">
-                            <span>${phoneDisplay}</span>
+                            <span><span class="sensitive-data">${phoneDisplay}</span></span>
                             ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                         </div>
                         ${isMobileNumber(phone) ? `
@@ -11938,17 +11971,17 @@ function renderGlobalSearchResults(results, query) {
              const emailDisplay = highlight(c.email || '-', query);
              let emailHtml = emailDisplay;
              if (c.email) {
-                 emailHtml = `<a href="mailto:${c.email}" style="color: var(--primary-color); text-decoration: underline;" title="שלח מייל">${emailDisplay}</a>`;
+                 emailHtml = `<a href="mailto:${c.email}" style="color: var(--primary-color); text-decoration: underline;" title="שלח מייל"><span class="sensitive-data">${emailDisplay}</span></a>`;
              }
 
              // Business Name link
-             let businessHtml = highlight(businessName, query);
+             let businessHtml = businessName !== '-' ? `<span class="sensitive-data">${highlight(businessName, query)}</span>` : '-';
              if (c.customer_id) {
-                 businessHtml = `<span onclick="viewCustomerDetails('${c.customer_id}')" style="cursor: pointer; color: var(--primary-color); font-weight: 500; text-decoration: underline;" title="צפה בלקוח">${highlight(businessName, query)}</span>`;
+                 businessHtml = `<span onclick="viewCustomerDetails('${c.customer_id}')" style="cursor: pointer; color: var(--primary-color); font-weight: 500; text-decoration: underline;" title="צפה בלקוח">${businessName !== '-' ? `<span class="sensitive-data">${highlight(businessName, query)}</span>` : '-'}</span>`;
              }
 
              html += `<tr>
-                <td><strong>${highlight(c.contact_name, query)}</strong></td>
+                <td><strong><span class="sensitive-data">${highlight(c.contact_name, query)}</span></strong></td>
                 <td>${businessHtml}</td>
                 <td>${phoneHtml}</td>
                 <td>${emailHtml}</td>
@@ -11990,9 +12023,9 @@ function renderGlobalSearchResults(results, query) {
              html += `<tr>
                 <td>${a.activity_type}</td>
                 <td>${date}</td>
-                <td>${client}</td>
+                <td>${client !== '-' ? `<span class="sensitive-data">${client}</span>` : '-'}</td>
                                  <td>
-                                     <div style="max-width: 50ch; overflow-x: auto; white-space: pre-wrap; direction: rtl;">${highlight(formatActivityText(a.description || '-'), query)}</div>
+                                     <div style="max-width: 50ch; overflow-x: auto; white-space: pre-wrap; direction: rtl;">${a.description ? `<span class="sensitive-data">${highlight(formatActivityText(a.description), query)}</span>` : '-'}</div>
                                  </td>
                 <td>
                     <div style="display: flex; gap: 0.5rem;">
@@ -12016,7 +12049,7 @@ function renderGlobalSearchResults(results, query) {
              const date = new Date(d.created_at).toLocaleDateString('he-IL');
              const client = d.customers?.business_name || '-';
              html += `<tr>
-                <td><strong>${highlight(client, query)}</strong></td>
+                <td><strong>${client !== '-' ? `<span class="sensitive-data">${highlight(client, query)}</span>` : '-'}</strong></td>
                 <td>${date}</td>
                 <td>₪${d.final_amount || 0}</td>
                 <td>${d.deal_status}</td>
@@ -14863,8 +14896,8 @@ function renderMentionSuggestions(deals, orders, suppliers, contacts, query) {
         
         html += `
             <div class="mention-item" onclick="insertMention('Deal', '${deal.deal_id}', '${dealDisplayName}')">
-                <div class="mention-main">${businessName} <span class="mention-type deal">עסקה</span></div>
-                <div class="mention-sub" style="font-size: 0.8rem; color: #64748b;">${dealDisplayName}</div>
+                <div class="mention-main"><span class="sensitive-data">${businessName}</span> <span class="mention-type deal">עסקה</span></div>
+                <div class="mention-sub" style="font-size: 0.8rem; color: #64748b;"><span class="sensitive-data">${dealDisplayName}</span></div>
             </div>
         `;
     });
@@ -14891,8 +14924,8 @@ function renderMentionSuggestions(deals, orders, suppliers, contacts, query) {
         const role = contact.role ? `(${contact.role})` : '';
         html += `
             <div class="mention-item" onclick="insertMention('Contact', '${contact.contact_id}', '${contact.contact_name}')">
-                <div class="mention-main">${contact.contact_name} ${role} <span class="mention-type contact" style="background: #d1fae5; color: #065f46;">איש קשר</span></div>
-                <div class="mention-sub">${customerName}</div>
+                <div class="mention-main"><span class="sensitive-data">${contact.contact_name} ${role}</span> <span class="mention-type contact" style="background: #d1fae5; color: #065f46;">איש קשר</span></div>
+                <div class="mention-sub">${customerName ? `<span class="sensitive-data">${customerName}</span>` : ''}</div>
             </div>
         `;
     });
@@ -15033,20 +15066,24 @@ function formatActivityText(text) {
         const getMentionHtml = (type, id, label) => {
             let onclick = '';
             let color = '';
+            let isSensitive = false;
             if (type === 'Deal') {
                 onclick = `viewDealDetails('${id}')`;
                 color = '#1e40af';
+                isSensitive = true;
             } else if (type === 'Order') {
                 onclick = `viewSupplierOrder('${id}')`;
                 color = '#9d174d';
             } else if (type === 'Contact') {
                 onclick = `viewContactDetails('${id}')`;
                 color = '#065f46';
+                isSensitive = true;
             } else if (type === 'Supplier') {
                 onclick = `viewSupplier('${id}')`;
                 color = '#9d174d';
             }
-            return `<a href="javascript:void(0)" onclick="${onclick}" style="color: ${color}; font-weight: 500; text-decoration: underline; background: #f1f5f9; padding: 0 4px; border-radius: 4px;">${label}</a>`;
+            const displayLabel = isSensitive ? `<span class="sensitive-data">${label}</span>` : label;
+            return `<a href="javascript:void(0)" onclick="${onclick}" style="color: ${color}; font-weight: 500; text-decoration: underline; background: #f1f5f9; padding: 0 4px; border-radius: 4px;">${displayLabel}</a>`;
         };
 
         // If it's a Mention @[Type:ID|Label]
@@ -15117,8 +15154,9 @@ const NAV_SECTIONS = [
     { id: 'inventory', name: 'ניהול מלאי', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>' },
     { id: 'auditlog', name: 'פעולות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>' },
     { id: 'reports', name: 'דוחות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>' },
+    { id: 'notes', name: 'פתקים ורשימות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>' },
     { id: 'search', name: 'חיפוש', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>' },
-    { id: 'settings', name: 'הגדרות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>' },
+    { id: 'settings', name: 'הגדרות', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2 2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>' },
 ];
 
 // Color Management Logic
@@ -15354,6 +15392,7 @@ async function loadSystemSettings() {
         renderAllSystemSettings();
         populateAllDynamicDropdowns();
         loadNotificationSettings(); // Add this
+        loadBlurSensitiveMode(); // Initialize blur sensitive mode status
     } catch (e) {
         console.error('Error loading settings:', e);
     }
@@ -17191,3 +17230,570 @@ async function resetInventoryAndSyncDescriptions() {
         Swal.fire('שגיאה בתהליך', e.message, 'error');
     }
 }
+
+// ==========================================================================
+// Notes & Lists Module JS Logic
+// ==========================================================================
+
+let currentSelectedNoteColor = '#fff9c4';
+
+async function loadNotes() {
+    let dbNotes = [];
+    let dbSuccess = false;
+    try {
+        const { data, error } = await supabaseClient
+            .from('notes')
+            .select('*')
+            .order('is_pinned', { ascending: false })
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        dbNotes = data || [];
+        dbSuccess = true;
+        console.log('✅ Notes loaded successfully from Supabase:', dbNotes.length);
+    } catch (e) {
+        console.error('⚠️ Failed to load notes from Supabase:', e);
+    }
+    
+    // Load local notes
+    let localNotes = [];
+    try {
+        const localNotesData = localStorage.getItem('crm_notes');
+        localNotes = localNotesData ? JSON.parse(localNotesData) : [];
+    } catch (localErr) {
+        console.error('❌ Failed to load notes from localStorage:', localErr);
+    }
+    
+    if (dbSuccess) {
+        // If DB succeeded, our notes are DB notes + any local-only notes that haven't been synced yet
+        // Local-only notes have IDs starting with 'local-'
+        const localOnlyNotes = localNotes.filter(n => String(n.note_id).startsWith('local-'));
+        notes = [...localOnlyNotes, ...dbNotes];
+    } else {
+        // If DB failed, our notes are all local notes
+        notes = localNotes;
+    }
+    
+    // Sort: pinned first, then by date descending
+    notes.sort((a, b) => {
+        if (a.is_pinned && !b.is_pinned) return -1;
+        if (!a.is_pinned && b.is_pinned) return 1;
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+}
+
+async function displayNotes() {
+    const grid = document.getElementById('notes-grid');
+    if (!grid) return;
+    
+    grid.innerHTML = '<div class="spinner"></div>';
+    
+    await loadNotes();
+    filterNotes();
+}
+
+function filterNotes() {
+    const grid = document.getElementById('notes-grid');
+    if (!grid) return;
+    
+    const searchQuery = document.getElementById('note-search-input')?.value.toLowerCase() || '';
+    const filterType = document.getElementById('note-filter-type')?.value || 'all';
+    
+    let filteredNotes = notes.filter(note => {
+        const title = (note.title || '').toLowerCase();
+        const content = (note.content || '').toLowerCase();
+        const itemsText = note.is_list && Array.isArray(note.items) 
+            ? note.items.map(item => (item.text || '').toLowerCase()).join(' ')
+            : '';
+        
+        const matchesSearch = !searchQuery || 
+            title.includes(searchQuery) || 
+            content.includes(searchQuery) ||
+            itemsText.includes(searchQuery);
+            
+        let matchesType = true;
+        if (filterType === 'pinned') {
+            matchesType = note.is_pinned === true;
+        } else if (filterType === 'notes') {
+            matchesType = note.is_list !== true;
+        } else if (filterType === 'checklists') {
+            matchesType = note.is_list === true;
+        }
+        
+        return matchesSearch && matchesType;
+    });
+    
+    if (filteredNotes.length === 0) {
+        grid.innerHTML = '<div class="text-center" style="grid-column: 1 / -1; padding: 3rem; color: var(--text-tertiary);"><p style="font-size: 1.2rem;">אין פתקים או רשימות להצגה</p></div>';
+        return;
+    }
+    
+    grid.innerHTML = filteredNotes.map(note => {
+        const isPinned = note.is_pinned === true;
+        const createdDate = note.created_at ? new Date(note.created_at).toLocaleDateString('he-IL') : '';
+        
+        // Find linked customer & deal if any
+        let relationBadgeHtml = '';
+        if (note.customer_id) {
+            const customer = customers.find(c => c.customer_id === note.customer_id);
+            if (customer) {
+                relationBadgeHtml += `
+                    <div class="note-card-relation-badge" title="לקוח: ${customer.business_name}">
+                        👤 ${customer.business_name}
+                    </div>
+                `;
+            }
+        }
+        if (note.deal_id) {
+            // Find deal and link its customer name
+            const deal = (typeof deals !== 'undefined' ? deals : []).find(d => d.deal_id === note.deal_id);
+            const customerName = deal ? (customers.find(c => c.customer_id === deal.customer_id)?.business_name || 'עסקה') : 'עסקה';
+            relationBadgeHtml += `
+                <div class="note-card-relation-badge" title="עסקה: ${customerName}">
+                    💼 ${customerName}
+                </div>
+            `;
+        }
+        
+        // Render content based on note type (text or list)
+        let bodyHtml = '';
+        if (note.is_list) {
+            const items = Array.isArray(note.items) ? note.items : [];
+            bodyHtml = `
+                <ul class="note-card-list-items">
+                    ${items.map((item, idx) => `
+                        <li class="note-card-list-item ${item.completed ? 'completed' : ''}" onclick="toggleNoteListItem('${note.note_id}', ${idx}, event)">
+                            <input type="checkbox" ${item.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleNoteListItem('${note.note_id}', ${idx}, event)">
+                            <span>${escapeHtml(item.text)}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+        } else {
+            bodyHtml = `
+                <div class="note-card-body">${escapeHtml(note.content || '')}</div>
+            `;
+        }
+        
+        // Use post-it colors with subtle borders
+        const borderStyle = note.color === '#ffffff' ? 'border: 1px solid var(--border-color);' : `border-color: rgba(0,0,0,0.08);`;
+        
+        return `
+            <div class="note-card" style="background: ${note.color || '#fff9c4'}; ${borderStyle}">
+                <div class="note-card-pinned-badge" onclick="togglePinNote('${note.note_id}', event)" title="${isPinned ? 'בטל נעיצה' : 'נעץ בראש הדף'}">
+                    <span style="opacity: ${isPinned ? '1' : '0.25'}">📌</span>
+                </div>
+                <div>
+                    <div class="note-card-title" title="${escapeHtml(note.title)}">${escapeHtml(note.title)}</div>
+                    ${bodyHtml}
+                </div>
+                <div>
+                    <div style="display: flex; gap: 0.25rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                        ${relationBadgeHtml}
+                    </div>
+                    <div class="note-card-footer">
+                        <span>📅 ${createdDate}</span>
+                        <div class="note-card-actions">
+                            <button class="note-card-btn" onclick="openNoteModal('${note.note_id}')" title="ערוך פתק">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"></path></svg>
+                            </button>
+                            <button class="note-card-btn delete" onclick="deleteNote('${note.note_id}')" title="מחק פתק">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+async function openNoteModal(noteId = null) {
+    const modal = document.getElementById('note-modal');
+    const form = document.getElementById('note-form');
+    if (!modal || !form) return;
+    
+    form.reset();
+    
+    // Clear dynamic list items
+    document.getElementById('note-modal-items-list').innerHTML = '';
+    
+    // Populate customer/deal selects
+    await populateNoteModalSelectors();
+    
+    if (noteId) {
+        // Edit mode
+        const note = notes.find(n => n.note_id === noteId);
+        if (!note) return;
+        
+        document.getElementById('note-modal-title-text').innerText = 'עריכת פתק';
+        document.getElementById('note-id-input').value = note.note_id;
+        document.getElementById('note-title-input').value = note.title || '';
+        document.getElementById('note-content-input').value = note.content || '';
+        document.getElementById('note-pinned-input').checked = note.is_pinned === true;
+        document.getElementById('note-customer-input').value = note.customer_id || '';
+        document.getElementById('note-deal-input').value = note.deal_id || '';
+        
+        // Select type radio
+        const typeRadio = form.querySelector(`input[name="note-type"][value="${note.is_list ? 'list' : 'text'}"]`);
+        if (typeRadio) {
+            typeRadio.checked = true;
+        }
+        
+        // Handle color selection
+        selectNoteColor(note.color || '#fff9c4');
+        
+        // Handle list items if checklist
+        if (note.is_list && Array.isArray(note.items)) {
+            note.items.forEach(item => addNoteModalItem(item.text, item.completed));
+        }
+    } else {
+        // Create mode
+        document.getElementById('note-modal-title-text').innerText = 'פתק חדש';
+        document.getElementById('note-id-input').value = '';
+        form.querySelector('input[name="note-type"][value="text"]').checked = true;
+        document.getElementById('note-pinned-input').checked = false;
+        
+        // Default color yellow
+        selectNoteColor('#fff9c4');
+        
+        // Add 2 default empty rows for checklist mode
+        addNoteModalItem('', false);
+        addNoteModalItem('', false);
+    }
+    
+    toggleNoteTypeFields();
+    modal.classList.add('active');
+}
+
+function closeNoteModal() {
+    const modal = document.getElementById('note-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function toggleNoteTypeFields() {
+    const noteType = document.querySelector('input[name="note-type"]:checked')?.value || 'text';
+    const textFields = document.getElementById('note-text-fields-container');
+    const listFields = document.getElementById('note-list-fields-container');
+    
+    if (noteType === 'list') {
+        textFields.style.display = 'none';
+        listFields.style.display = 'block';
+    } else {
+        textFields.style.display = 'block';
+        listFields.style.display = 'none';
+    }
+}
+
+function selectNoteColor(color, element = null) {
+    currentSelectedNoteColor = color;
+    
+    // Update active class on color picker dots
+    const container = document.getElementById('note-color-picker-container');
+    if (!container) return;
+    
+    container.querySelectorAll('.color-dot').forEach(dot => {
+        dot.classList.remove('active');
+        if (dot.getAttribute('data-color') === color) {
+            dot.classList.add('active');
+        }
+    });
+}
+
+function addNoteModalItem(text = '', completed = false) {
+    const listContainer = document.getElementById('note-modal-items-list');
+    if (!listContainer) return;
+    
+    const row = document.createElement('div');
+    row.className = 'note-modal-item-row';
+    row.style.display = 'flex';
+    row.style.gap = '0.5rem';
+    row.style.alignItems = 'center';
+    row.style.marginBottom = '0.4rem';
+    
+    row.innerHTML = `
+        <input type="checkbox" class="note-modal-item-completed" ${completed ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+        <input type="text" class="form-input note-modal-item-text" placeholder="הכנס משימה..." value="${escapeHtml(text)}" style="flex: 1; padding: 0.4rem 0.6rem;">
+        <button type="button" class="btn btn-secondary btn-icon" onclick="removeNoteModalItem(this)" style="padding: 0.3rem 0.5rem; color: var(--danger-color); border: 1px solid var(--border-color); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+    `;
+    
+    listContainer.appendChild(row);
+}
+
+function removeNoteModalItem(button) {
+    const row = button.closest('.note-modal-item-row');
+    if (row) row.remove();
+}
+
+async function populateNoteModalSelectors() {
+    const customerSelect = document.getElementById('note-customer-input');
+    const dealSelect = document.getElementById('note-deal-input');
+    
+    if (customerSelect) {
+        customerSelect.innerHTML = '<option value="">בחר לקוח...</option>';
+        customers.forEach(c => {
+            customerSelect.innerHTML += `<option value="${c.customer_id}">${escapeHtml(c.business_name)}</option>`;
+        });
+    }
+    
+    if (dealSelect) {
+        dealSelect.innerHTML = '<option value="">בחר עסקה...</option>';
+        try {
+            const { data: dbDeals, error } = await supabaseClient
+                .from('deals')
+                .select('deal_id, customer_id, final_amount, created_at')
+                .order('created_at', { ascending: false });
+            
+            const dealsList = dbDeals || [];
+            dealsList.forEach(d => {
+                const customer = customers.find(c => c.customer_id === d.customer_id);
+                const customerName = customer ? customer.business_name : 'לקוח כלשהו';
+                const dealDate = d.created_at ? new Date(d.created_at).toLocaleDateString('he-IL') : '';
+                const amount = d.final_amount ? `(${d.final_amount} ₪)` : '';
+                dealSelect.innerHTML += `<option value="${d.deal_id}">${escapeHtml(customerName)} - ${dealDate} ${amount}</option>`;
+            });
+        } catch (err) {
+            console.error('Failed to load deals for selector:', err);
+        }
+    }
+}
+
+async function saveNoteForm(event) {
+    event.preventDefault();
+    
+    const noteId = document.getElementById('note-id-input').value || null;
+    const title = document.getElementById('note-title-input').value.trim();
+    const noteType = document.querySelector('input[name="note-type"]:checked')?.value || 'text';
+    const isList = noteType === 'list';
+    const isPinned = document.getElementById('note-pinned-input').checked;
+    const customerId = document.getElementById('note-customer-input').value || null;
+    const dealId = document.getElementById('note-deal-input').value || null;
+    
+    if (!title) {
+        showAlert('אנא הזן כותרת', 'warning');
+        return;
+    }
+    
+    let content = '';
+    let items = [];
+    
+    if (isList) {
+        const itemRows = document.querySelectorAll('.note-modal-item-row');
+        itemRows.forEach(row => {
+            const text = row.querySelector('.note-modal-item-text').value.trim();
+            const completed = row.querySelector('.note-modal-item-completed').checked;
+            if (text) {
+                items.push({ text, completed });
+            }
+        });
+    } else {
+        content = document.getElementById('note-content-input').value;
+    }
+    
+    const noteData = {
+        title,
+        content: isList ? null : content,
+        is_list: isList,
+        items: isList ? items : [],
+        color: currentSelectedNoteColor,
+        is_pinned: isPinned,
+        customer_id: customerId,
+        deal_id: dealId,
+        updated_at: new Date().toISOString()
+    };
+    
+    try {
+        if (noteId && !noteId.startsWith('local-')) {
+            // Update
+            const { error } = await supabaseClient
+                .from('notes')
+                .update(noteData)
+                .eq('note_id', noteId);
+                
+            if (error) throw error;
+            showAlert('הפתק עודכן בהצלחה!', 'success');
+        } else if (!noteId) {
+            // Insert
+            noteData.created_at = new Date().toISOString();
+            const { error } = await supabaseClient
+                .from('notes')
+                .insert([noteData]);
+                
+            if (error) throw error;
+            showAlert('הפתק נוסף בהצלחה!', 'success');
+        } else {
+            // Local update fallback directly
+            throw new Error('Local only note update');
+        }
+    } catch (e) {
+        console.warn('⚠️ Supabase save failed, saving to localStorage:', e);
+        
+        // Save in LocalStorage fallback
+        try {
+            const localNotesData = localStorage.getItem('crm_notes');
+            let localNotes = localNotesData ? JSON.parse(localNotesData) : [];
+            
+            if (noteId) {
+                // Update
+                const idx = localNotes.findIndex(n => n.note_id === noteId);
+                if (idx !== -1) {
+                    localNotes[idx] = { ...localNotes[idx], ...noteData, note_id: noteId };
+                }
+            } else {
+                // Insert new
+                const newId = 'local-' + Math.random().toString(36).substr(2, 9);
+                const newNote = {
+                    ...noteData,
+                    note_id: newId,
+                    created_at: new Date().toISOString()
+                };
+                localNotes.push(newNote);
+            }
+            
+            localStorage.setItem('crm_notes', JSON.stringify(localNotes));
+            showAlert('הפתק נשמר בהצלחה (אחסון מקומי)!', 'success');
+        } catch (localErr) {
+            console.error('❌ Failed to save to localStorage:', localErr);
+            showAlert('שגיאה בשמירת הפתק', 'error');
+            return;
+        }
+    }
+    
+    closeNoteModal();
+    displayNotes();
+}
+
+async function deleteNote(noteId) {
+    const result = await Swal.fire({
+        title: 'מחיקת פתק?',
+        text: 'האם אתה בטוח שברצונך למחוק פתק זה לצמיתות?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'כן, מחק',
+        cancelButtonText: 'ביטול',
+        reverseButtons: true
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+        if (!noteId.startsWith('local-')) {
+            const { error } = await supabaseClient
+                .from('notes')
+                .delete()
+                .eq('note_id', noteId);
+                
+            if (error) throw error;
+        } else {
+            throw new Error('Local only note delete');
+        }
+        showAlert('הפתק נמחק בהצלחה', 'success');
+    } catch (e) {
+        console.warn('⚠️ Supabase delete failed/skipped, deleting from localStorage:', e);
+        try {
+            const localNotesData = localStorage.getItem('crm_notes');
+            let localNotes = localNotesData ? JSON.parse(localNotesData) : [];
+            localNotes = localNotes.filter(n => n.note_id !== noteId);
+            localStorage.setItem('crm_notes', JSON.stringify(localNotes));
+            showAlert('הפתק נמחק בהצלחה', 'success');
+        } catch (localErr) {
+            console.error('❌ Failed to delete from localStorage:', localErr);
+            showAlert('שגיאה במחיקת הפתק', 'error');
+        }
+    }
+    
+    displayNotes();
+}
+
+async function togglePinNote(noteId, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    const note = notes.find(n => n.note_id === noteId);
+    if (!note) return;
+    
+    const newPinnedState = !note.is_pinned;
+    
+    try {
+        if (!noteId.startsWith('local-')) {
+            const { error } = await supabaseClient
+                .from('notes')
+                .update({ is_pinned: newPinnedState })
+                .eq('note_id', noteId);
+                
+            if (error) throw error;
+        } else {
+            throw new Error('Local only note pin toggle');
+        }
+    } catch (e) {
+        console.warn('⚠️ Supabase pin toggle failed, updating localStorage:', e);
+        try {
+            const localNotesData = localStorage.getItem('crm_notes');
+            let localNotes = localNotesData ? JSON.parse(localNotesData) : [];
+            const idx = localNotes.findIndex(n => n.note_id === noteId);
+            if (idx !== -1) {
+                localNotes[idx].is_pinned = newPinnedState;
+                localStorage.setItem('crm_notes', JSON.stringify(localNotes));
+            }
+        } catch (localErr) {
+            console.error('❌ Failed to update pin status in localStorage:', localErr);
+        }
+    }
+    
+    displayNotes();
+}
+
+async function toggleNoteListItem(noteId, itemIndex, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    
+    const note = notes.find(n => n.note_id === noteId);
+    if (!note || !note.is_list || !Array.isArray(note.items) || !note.items[itemIndex]) return;
+    
+    note.items[itemIndex].completed = !note.items[itemIndex].completed;
+    
+    try {
+        if (!noteId.startsWith('local-')) {
+            const { error } = await supabaseClient
+                .from('notes')
+                .update({ items: note.items })
+                .eq('note_id', noteId);
+                
+            if (error) throw error;
+        } else {
+            throw new Error('Local only note list item toggle');
+        }
+    } catch (e) {
+        console.warn('⚠️ Supabase list item toggle failed, updating localStorage:', e);
+        try {
+            const localNotesData = localStorage.getItem('crm_notes');
+            let localNotes = localNotesData ? JSON.parse(localNotesData) : [];
+            const idx = localNotes.findIndex(n => n.note_id === noteId);
+            if (idx !== -1) {
+                localNotes[idx].items = note.items;
+                localStorage.setItem('crm_notes', JSON.stringify(localNotes));
+            }
+        } catch (localErr) {
+            console.error('❌ Failed to update list item in localStorage:', localErr);
+        }
+    }
+    
+    displayNotes();
+}
+

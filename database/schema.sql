@@ -275,3 +275,28 @@ INSERT INTO customers (business_name, contact_name, phone, email, city, customer
 -- CREATE POLICY "Users can view all customers" ON customers FOR SELECT USING (true);
 -- CREATE POLICY "Users can insert customers" ON customers FOR INSERT WITH CHECK (true);
 -- CREATE POLICY "Users can update customers" ON customers FOR UPDATE USING (true);
+
+-- ============================================
+-- 9. NOTES & LISTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS notes (
+    note_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    content TEXT,                                     -- For text notes
+    is_list BOOLEAN DEFAULT FALSE,                    -- Is it a checklist?
+    items JSONB DEFAULT '[]'::jsonb,                  -- Checklist items [{"text": "...", "completed": false}]
+    color VARCHAR(50) DEFAULT '#fff9c4',             -- Post-it background color
+    is_pinned BOOLEAN DEFAULT FALSE,                  -- Is pinned to top
+    customer_id UUID REFERENCES customers(customer_id) ON DELETE SET NULL,
+    deal_id UUID REFERENCES deals(deal_id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Disable Row Level Security (consistent with other tables in this database)
+ALTER TABLE notes DISABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(is_pinned DESC);
+CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at DESC);
+
+
