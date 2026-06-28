@@ -8192,7 +8192,7 @@ function togglePostponeDaysRow(buttonElement, activityId) {
     const rowEl = document.createElement('div');
     rowEl.className = 'postpone-days-container';
     
-    let html = `<span class="postpone-days-title">דחה ליום:</span>`;
+    let html = `<span class="postpone-days-title">שנה ליום:</span>`;
     
     remainingDays.forEach(day => {
         const dateStr = day.date.toISOString().split('T')[0]; // 'YYYY-MM-DD'
