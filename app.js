@@ -8094,18 +8094,25 @@ async function postponeActivity(activityId, type) {
             targetDesc = dayName;
         }
         
+        // Check if advanced
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const isAdvanced = newDate < originalDate || newDate < today;
+        const actionVerb = isAdvanced ? 'הוקדמה' : 'נדחתה';
+        const actionNoun = isAdvanced ? 'הקדמת' : 'דחיית';
+        
         const customerName = activity.customers?.business_name || activity.deals?.customers?.business_name;
         const descriptiveName = `${activity.activity_type}${customerName ? ` - ${customerName}` : ''}`;
         
         const logContent = customerName 
-            ? `דחיית פעילות עבור הלקוח ${customerName} ל${targetDesc} (${dateStr})`
-            : `דחיית פעילות`;
+            ? `${actionNoun} פעילות עבור הלקוח ${customerName} ל${targetDesc} (${dateStr})`
+            : `${actionNoun} פעילות`;
 
         logAction('update', 'activity', activityId, descriptiveName, 
             logContent, 
             activity, { activity_date: newDate.toISOString() });
 
-        showAlert(` הפעילות נדחתה ל${targetDesc === 'שבוע' ? 'בעוד שבוע' : targetDesc} (${dateStr})`, 'success');
+        showAlert(` הפעילות ${actionVerb} ל${targetDesc === 'שבוע' ? 'בעוד שבוע' : targetDesc} (${dateStr})`, 'success');
         
         // Refresh the UI
         loadThisWeek();
