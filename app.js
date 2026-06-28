@@ -5803,7 +5803,7 @@ async function loadDealNotes(dealId) {
                                 ${isDone ? APP_ICONS.CHECK_CIRCLE : APP_ICONS.CHECK}
                             </button>
                             ${canPostpone ? `
-                                <button class="btn btn-sm btn-icon" style="background: #fbbf24; color: white;" onclick="postponeActivity('${note.activity_id}', 'tomorrow')" title="דחה ליום העסקים הבא">${APP_ICONS.SUN}</button>
+                                <button class="btn btn-sm btn-icon" style="background: #fbbf24; color: white;" onclick="togglePostponeDaysRow(this, '${note.activity_id}')" title="דחה ליום העסקים הבא">${APP_ICONS.SUN}</button>
                                 <button class="btn btn-sm btn-icon" style="background: #818cf8; color: white;" onclick="postponeActivity('${note.activity_id}', 'next-week')" title="דחה בשבוע">${APP_ICONS.CALENDAR}</button>
                             ` : ''}
                             <button class="btn btn-sm btn-primary btn-icon" onclick="editNote('${note.activity_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
@@ -7935,7 +7935,7 @@ function renderThisWeekActivityCard(activity) {
                     </button>
                     ${canPostpone ? `
                         <button class="btn btn-warning btn-icon" style="width: 32px; height: 32px; background: #fbbf24; border-color: #fbbf24;" 
-                                onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה ליום העסקים הבא">
+                                onclick="togglePostponeDaysRow(this, '${activity.activity_id}')" title="דחה ליום העסקים הבא">
                             ${APP_ICONS.SUN}
                         </button>
                         <button class="btn btn-icon" style="width: 32px; height: 32px; background: #818cf8; border-color: #818cf8; color: white;" 
@@ -8042,19 +8042,31 @@ async function postponeActivity(activityId, type) {
         if (fetchError) throw fetchError;
 
         const originalDate = new Date(activity.activity_date);
-        let newDate = new Date(originalDate); // Start from original activity date for postponement
+        let newDate;
         
-        if (type === 'tomorrow') {
-            newDate.setDate(newDate.getDate() + 1);
+        if (type instanceof Date) {
+            newDate = new Date(type);
+        } else if (typeof type === 'string' && type.match(/^\d{4}-\d{2}-\d{2}/)) {
+            const [y, m, d] = type.split('-').map(Number);
+            newDate = new Date(originalDate);
+            newDate.setFullYear(y);
+            newDate.setMonth(m - 1);
+            newDate.setDate(d);
+        } else {
+            newDate = new Date(originalDate); // Start from original activity date for postponement
             
-            // Skip Friday and Saturday (5 and 6) and move to Sunday (0)
-            if (newDate.getDay() === 5) {
-                newDate.setDate(newDate.getDate() + 2);
-            } else if (newDate.getDay() === 6) {
+            if (type === 'tomorrow') {
                 newDate.setDate(newDate.getDate() + 1);
+                
+                // Skip Friday and Saturday (5 and 6) and move to Sunday (0)
+                if (newDate.getDay() === 5) {
+                    newDate.setDate(newDate.getDate() + 2);
+                } else if (newDate.getDay() === 6) {
+                    newDate.setDate(newDate.getDate() + 1);
+                }
+            } else if (type === 'next-week') {
+                newDate.setDate(newDate.getDate() + 7);
             }
-        } else if (type === 'next-week') {
-            newDate.setDate(newDate.getDate() + 7);
         }
 
         // Keep the original time
@@ -8073,7 +8085,14 @@ async function postponeActivity(activityId, type) {
 
         const dayName = newDate.toLocaleDateString('he-IL', { weekday: 'long' });
         const dateStr = newDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' });
-        const targetDesc = type === 'tomorrow' ? dayName : 'שבוע';
+        let targetDesc;
+        if (type === 'tomorrow') {
+            targetDesc = dayName;
+        } else if (type === 'next-week') {
+            targetDesc = 'שבוע';
+        } else {
+            targetDesc = dayName;
+        }
         
         const customerName = activity.customers?.business_name || activity.deals?.customers?.business_name;
         const descriptiveName = `${activity.activity_type}${customerName ? ` - ${customerName}` : ''}`;
@@ -8104,6 +8123,118 @@ async function postponeActivity(activityId, type) {
         console.error('❌ Error postponing activity:', error);
         showAlert('שגיאה בדחיית הפעילות: ' + error.message, 'error');
     }
+}
+
+function getRemainingDaysOfWeek() {
+    const days = [];
+    const now = new Date();
+    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    // Hebrew day names (0 = Sunday, 1 = Monday, ..., 4 = Thursday)
+    const dayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי'];
+    
+    // If today is Sunday-Wednesday (0-3), we show the remaining days of the CURRENT week
+    if (currentDay >= 0 && currentDay < 4) {
+        for (let d = currentDay + 1; d <= 4; d++) {
+            const targetDate = new Date(now);
+            targetDate.setDate(now.getDate() + (d - currentDay));
+            days.push({
+                name: dayNames[d],
+                date: targetDate,
+                isNextWeek: false
+            });
+        }
+    } else {
+        // If today is Thursday (4), Friday (5), or Saturday (6),
+        // we show the days of the NEXT week (Sunday to Thursday)
+        const daysToSunday = (7 - currentDay) % 7;
+        const nextSunday = new Date(now);
+        nextSunday.setDate(now.getDate() + daysToSunday);
+        
+        for (let d = 0; d <= 4; d++) {
+            const targetDate = new Date(nextSunday);
+            targetDate.setDate(nextSunday.getDate() + d);
+            days.push({
+                name: dayNames[d],
+                date: targetDate,
+                isNextWeek: true
+            });
+        }
+    }
+    return days;
+}
+
+function togglePostponeDaysRow(buttonElement, activityId) {
+    if (event) event.stopPropagation();
+    
+    // Find the target buttons container (direct parent of the button)
+    const parentContainer = buttonElement.parentElement;
+    if (!parentContainer) return;
+    
+    // Check if the container already has an open postpone row
+    const existingRow = parentContainer.querySelector('.postpone-days-container');
+    if (existingRow) {
+        existingRow.remove();
+        return;
+    }
+    
+    // Remove any other open postpone rows on the page to keep it clean
+    document.querySelectorAll('.postpone-days-container').forEach(el => el.remove());
+    
+    // Get the remaining days of the week (Sunday-Thursday)
+    const remainingDays = getRemainingDaysOfWeek();
+    if (remainingDays.length === 0) {
+        postponeActivity(activityId, 'tomorrow');
+        return;
+    }
+    
+    // Create the row element
+    const rowEl = document.createElement('div');
+    rowEl.className = 'postpone-days-container';
+    
+    let html = `<span class="postpone-days-title">דחה ליום:</span>`;
+    
+    remainingDays.forEach(day => {
+        const dateStr = day.date.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+        const displayLabel = day.isNextWeek ? `${day.name} (שבוע הבא)` : day.name;
+        const formattedDate = day.date.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
+        
+        html += `
+            <button class="postpone-day-btn" 
+                    onclick="executePostponeFromRow('${activityId}', '${dateStr}', this)" 
+                    title="דחה ליום ${day.name} (${formattedDate})">
+                ${displayLabel} (${formattedDate})
+            </button>
+        `;
+    });
+    
+    // Add close button
+    html += `
+        <button class="postpone-cancel-btn" onclick="if(event)event.stopPropagation(); this.parentElement.remove()" title="ביטול">
+            ביטול
+        </button>
+    `;
+    
+    rowEl.innerHTML = html;
+    
+    // Set position relative on parent buttons container to position the absolute popover correctly
+    parentContainer.style.position = 'relative';
+    parentContainer.appendChild(rowEl);
+}
+
+async function executePostponeFromRow(activityId, dateStr, btnElement) {
+    if (event) event.stopPropagation();
+    
+    // Disable all buttons in the container to prevent double clicks
+    const container = btnElement.parentElement;
+    const buttons = container.querySelectorAll('button');
+    buttons.forEach(btn => btn.disabled = true);
+    
+    // Show spinner or loading state
+    btnElement.innerHTML = `<span style="display:inline-block; animation: spin 1s linear infinite;">⌛</span> טוען...`;
+    
+    // Call postponeActivity with the selected date
+    await postponeActivity(activityId, dateStr);
 }
 
 async function editActivity(activityId) {
@@ -8667,7 +8798,7 @@ async function loadActivities(preservePage = false) {
                                     <td>
                                         <div style="display: flex; gap: 0.25rem; align-items: center; justify-content: flex-start; flex-wrap: nowrap;">
                                             ${canPostpone ? `
-                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה ליום העסקים הבא">${APP_ICONS.SUN}</button>
+                                                <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #fbbf24; color: white;" onclick="togglePostponeDaysRow(this, '${activity.activity_id}')" title="דחה ליום העסקים הבא">${APP_ICONS.SUN}</button>
                                                 <button class="btn btn-sm" style="padding: 0.3rem 0.5rem; font-size: 0.8rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה בשבוע">${APP_ICONS.CALENDAR}</button>
                                             ` : ''}
                                             ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.3rem 0.5rem; font-size: 0.8rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">${APP_ICONS.BRIEFCASE}</button>` : ''}
@@ -8792,7 +8923,7 @@ async function loadActivities(preservePage = false) {
                             <button class="btn btn-sm btn-info" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewActivityDetails('${activity.activity_id}')" title="צפה בפרטים">${APP_ICONS.EYE}</button>
                             <button class="btn btn-sm btn-secondary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="editActivity('${activity.activity_id}')" title="ערוך">${APP_ICONS.EDIT}</button>
                             ${canPostpone ? `
-                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #fbbf24; color: white;" onclick="postponeActivity('${activity.activity_id}', 'tomorrow')" title="דחה ליום העסקים הבא">${APP_ICONS.SUN}</button>
+                                <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #fbbf24; color: white;" onclick="togglePostponeDaysRow(this, '${activity.activity_id}')" title="דחה ליום העסקים הבא">${APP_ICONS.SUN}</button>
                                 <button class="btn btn-sm" style="padding: 0.2rem 0.4rem; font-size: 0.7rem; background: #818cf8; color: white;" onclick="postponeActivity('${activity.activity_id}', 'next-week')" title="דחה בשבוע">${APP_ICONS.CALENDAR}</button>
                             ` : ''}
                             ${activity.deals ? `<button class="btn btn-sm btn-primary" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" onclick="viewDealDetails('${activity.deal_id}')" title="צפה בעסקה">${APP_ICONS.BRIEFCASE}</button>` : ''}
