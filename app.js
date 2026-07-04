@@ -17864,7 +17864,7 @@ async function saveNoteForm(event) {
             }
             
             localStorage.setItem('crm_notes', JSON.stringify(localNotes));
-            showAlert('הפתק נשמר בהצלחה (אחסון מקומי)!', 'success');
+            showAlert('⚠️ הפתק נשמר מקומית בלבד! הפתק לא יופיע במחשבים אחרים. יש להריץ את שורת ה-SQL ב-Supabase כדי לאפשר סנכרון לענן.', 'warning');
         } catch (localErr) {
             console.error('❌ Failed to save to localStorage:', localErr);
             showAlert('שגיאה בשמירת הפתק', 'error');
