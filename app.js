@@ -7386,6 +7386,11 @@ function goToCurrentWeek() {
 
 async function loadThisWeek() {
     const container = document.getElementById('thisweek-list');
+    
+    // Check if overdue section was open before rendering
+    const overdueEl = document.getElementById('day-activities-overdue');
+    const wasOverdueOpen = overdueEl ? (overdueEl.style.display !== 'none') : false;
+
     container.innerHTML = '<div class="spinner"></div>';
     const nowForOverdue = new Date();
     
@@ -7661,6 +7666,8 @@ async function loadThisWeek() {
         const overdueActivities4Section = filteredOverdue;
         
         if (overdueActivities4Section.length > 0) {
+            const displayStyle = wasOverdueOpen ? 'grid' : 'none';
+            const labelText = wasOverdueOpen ? '▲ לחץ לסגירה' : '▼ לחץ להצגה';
             html += `
                 <div style="margin-bottom: 2rem;">
                     <div style="display: flex; justify-content: flex-start; align-items: center; gap: 1rem; margin-bottom: 1rem; cursor: pointer; padding: 0.5rem; border-radius: 8px; transition: background 0.2s;" 
@@ -7670,9 +7677,9 @@ async function loadThisWeek() {
                         <h4 style="margin: 0; color: #dc2626; display: flex; align-items: center; gap: 0.5rem;">
                             <span>🚨</span> פעילויות באיחור (${overdueActivities4Section.length})
                         </h4>
-                        <span id="label-overdue" style="font-size: 0.8rem; color: var(--primary-color);">▼ לחץ להצגה</span>
+                        <span id="label-overdue" style="font-size: 0.8rem; color: var(--primary-color);">${labelText}</span>
                     </div>
-                    <div id="day-activities-overdue" class="deals-grid" style="display: none; gap: 1rem; border: 1px solid #fee2e2; padding: 1.5rem; border-radius: 12px; background: #fff5f5;">
+                    <div id="day-activities-overdue" class="deals-grid" style="display: ${displayStyle}; gap: 1rem; border: 1px solid #fee2e2; padding: 1.5rem; border-radius: 12px; background: #fff5f5;">
                         ${overdueActivities4Section.map(activity => renderThisWeekActivityCard(activity)).join('')}
                     </div>
                 </div>
@@ -7968,7 +7975,11 @@ function toggleThisWeekDay(dateKey) {
         // Update the arrow/text if desired
         const headerText = container.previousElementSibling.querySelector('span[style*="color: var(--primary-color)"]');
         if (headerText) {
-            headerText.textContent = isHidden ? '▲ לחץ לסגירה' : '▼ לחץ להרחבה';
+            if (dateKey === 'overdue') {
+                headerText.textContent = isHidden ? '▲ לחץ לסגירה' : '▼ לחץ להצגה';
+            } else {
+                headerText.textContent = isHidden ? '▲ לחץ לסגירה' : '▼ לחץ להרחבה';
+            }
         }
     }
 }
