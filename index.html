@@ -1060,10 +1060,15 @@
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                                 ייצא
                             </button>
+                            <button type="button" class="btn btn-warning" onclick="showBatchReleaseModal()" title="הזנת יציאה של מספר מוצרים מהמלאי">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 10H7M22 12A10 10 0 1 1 12 2a10 10 0 0 1 10 10z"></path></svg>
+                                יציאה מהמלאי
+                            </button>
                             <button type="button" class="btn btn-warning" onclick="resetInventoryAndSyncDescriptions()" title="איפוס מלאי וסנכרון מחדש עם תיאורים מלאים">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
                                 איפוס וסנכרון מלא
                             </button>
+
                             <button type="button" class="btn btn-primary" onclick="loadInventory()">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 5px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> 
                                 רענן מלאי
@@ -1110,6 +1115,21 @@
                                 <option value="instock">במלאי</option>
                                 <option value="lowstock">מלאי נמוך</option>
                                 <option value="outofstock">אזל מהמלאי</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="width: 200px; margin-bottom: 0;">
+                            <label class="form-label">מיון</label>
+                            <select id="filter-inventory-sort" class="form-select" onchange="handleSortSelectChange()">
+                                <option value="name-asc" selected>שם מוצר (א-ת)</option>
+                                <option value="name-desc">שם מוצר (ת-א)</option>
+                                <option value="qty-desc">כמות במלאי (מהגבוה לנמוך)</option>
+                                <option value="qty-asc">כמות במלאי (מהנמוך לגבוה)</option>
+                                <option value="date-desc">עדכון אחרון (מהחדש לישן)</option>
+                                <option value="date-asc">עדכון אחרון (מהישן לחדש)</option>
+                                <option value="category-asc">קטגוריה (א-ת)</option>
+                                <option value="category-desc">קטגוריה (ת-א)</option>
+                                <option value="variation-asc">וריאציה (א-ת)</option>
+                                <option value="variation-desc">וריאציה (ת-א)</option>
                             </select>
                         </div>
                     </div>
@@ -2155,6 +2175,57 @@
                     <button type="button" class="btn btn-secondary" onclick="closeInventoryAdjustmentModal()">ביטול</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Batch Release Modal -->
+    <div id="batch-release-modal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>הזנת יציאה מרוכזת מהמלאי</h2>
+                <button class="modal-close" onclick="closeBatchReleaseModal()">&times;</button>
+            </div>
+            <div style="padding: 1.5rem;">
+                <!-- Step 1: Add product to list -->
+                <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1.5rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label class="form-label">בחר מוצר להוספה</label>
+                        <select id="batch-release-product-select" class="form-select">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="addProductToBatchRelease()">הוסף לרשימה</button>
+                </div>
+
+                <!-- Step 2: List of items to release -->
+                <div style="max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem;">
+                    <table class="table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>מוצר</th>
+                                <th>וריאציה</th>
+                                <th>מלאי נוכחי</th>
+                                <th style="width: 120px;">כמות להפחתה</th>
+                                <th style="width: 50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch-release-items-body">
+                            <!-- Items added dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- General Notes -->
+                <div class="form-group">
+                    <label class="form-label">הערות לכלל היציאה</label>
+                    <input type="text" id="batch-release-general-notes" class="form-input" placeholder="לדוגמה: פחת, שימוש עצמי, בלאי...">
+                </div>
+
+                <div class="modal-footer" style="padding: 1.5rem 0 0 0; margin-top: 1.5rem; border-top: 1px solid var(--border-color); display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-danger" onclick="saveBatchRelease()">בצע יציאה מהמלאי</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeBatchReleaseModal()">ביטול</button>
+                </div>
+            </div>
         </div>
     </div>
 

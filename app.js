@@ -16764,6 +16764,8 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 // ============================================
 
 let inventoryData = [];
+let batchReleaseItems = [];
+let currentInventorySort = { field: 'name', asc: true };
 
 async function loadInventory() {
     const container = document.getElementById('inventory-list-container');
@@ -16852,6 +16854,33 @@ function updateInventorySummary(data, transactionsCount) {
     if (transEl) transEl.textContent = transactionsCount;
 }
 
+function handleSortSelectChange() {
+    const val = document.getElementById('filter-inventory-sort')?.value || 'name-asc';
+    const parts = val.split('-');
+    const field = parts[0];
+    const asc = parts[1] === 'asc';
+    
+    currentInventorySort = { field, asc };
+    filterInventory();
+}
+
+function toggleInventorySort(field) {
+    if (currentInventorySort.field === field) {
+        currentInventorySort.asc = !currentInventorySort.asc;
+    } else {
+        currentInventorySort.field = field;
+        currentInventorySort.asc = true;
+    }
+    
+    // Sync dropdown select
+    const select = document.getElementById('filter-inventory-sort');
+    if (select) {
+        select.value = `${currentInventorySort.field}-${currentInventorySort.asc ? 'asc' : 'desc'}`;
+    }
+    
+    filterInventory();
+}
+
 function filterInventory() {
     const searchTerm = document.getElementById('filter-inventory-search')?.value.toLowerCase() || '';
     const category = document.getElementById('filter-inventory-category')?.value || '';
@@ -16873,6 +16902,30 @@ function filterInventory() {
         return matchesSearch && matchesCategory && matchesStatus;
     });
 
+    // Apply Sorting
+    const sortBy = currentInventorySort.field;
+    const asc = currentInventorySort.asc;
+    
+    filtered.sort((a, b) => {
+        let result = 0;
+        if (sortBy === 'name') {
+            result = (a.product_name || '').localeCompare(b.product_name || '', 'he');
+        } else if (sortBy === 'qty') {
+            result = a.stock_quantity - b.stock_quantity;
+        } else if (sortBy === 'date') {
+            const dateA = a.updated_at ? new Date(a.updated_at) : new Date(0);
+            const dateB = b.updated_at ? new Date(b.updated_at) : new Date(0);
+            result = dateA - dateB;
+        } else if (sortBy === 'category') {
+            const catA = a.category || 'אחר';
+            const catB = b.category || 'אחר';
+            result = catA.localeCompare(catB, 'he');
+        } else if (sortBy === 'variation') {
+            result = (a.variation_name || '').localeCompare(b.variation_name || '', 'he');
+        }
+        return asc ? result : -result;
+    });
+
     displayInventoryList(filtered);
 }
 
@@ -16885,15 +16938,20 @@ function displayInventoryList(data) {
         return;
     }
 
+    const getSortArrow = (field) => {
+        if (currentInventorySort.field !== field) return '';
+        return currentInventorySort.asc ? ' ↑' : ' ↓';
+    };
+
     let html = `
         <table class="items-table">
             <thead>
                 <tr>
-                    <th>מוצר</th>
-                    <th>קטגוריה</th>
-                    <th>וריאציה</th>
-                    <th>כמות במלאי</th>
-                    <th>עדכון אחרון</th>
+                    <th onclick="toggleInventorySort('name')" style="cursor: pointer; user-select: none;">מוצר${getSortArrow('name')}</th>
+                    <th onclick="toggleInventorySort('category')" style="cursor: pointer; user-select: none;">קטגוריה${getSortArrow('category')}</th>
+                    <th onclick="toggleInventorySort('variation')" style="cursor: pointer; user-select: none;">וריאציה${getSortArrow('variation')}</th>
+                    <th onclick="toggleInventorySort('qty')" style="cursor: pointer; user-select: none;">כמות במלאי${getSortArrow('qty')}</th>
+                    <th onclick="toggleInventorySort('date')" style="cursor: pointer; user-select: none;">עדכון אחרון${getSortArrow('date')}</th>
                     <th>פעולות</th>
                 </tr>
             </thead>
@@ -17132,7 +17190,8 @@ async function loadInventoryTransactions(productId, variation) {
             const typeLabels = {
                 'adjustment': '🔧 תיקון',
                 'purchase': '📥 רכש',
-                'sale': '📤 מכירה'
+                'sale': '📤 מכירה',
+                'release': '📤 יציאה מהמלאי'
             };
             const amountClass = t.change_amount > 0 ? 'color: var(--success-color); font-weight: 700;' : 'color: var(--error-color); font-weight: 700;';
             const amountPrefix = t.change_amount > 0 ? '+' : '';
@@ -17377,6 +17436,191 @@ async function resetInventoryAndSyncDescriptions() {
     } catch (e) {
         console.error('❌ Reset & Sync failed:', e);
         Swal.fire('שגיאה בתהליך', e.message, 'error');
+    }
+}
+
+
+
+function showBatchReleaseModal() {
+    batchReleaseItems = [];
+    
+    // Populate the dropdown selector with sorted products from inventoryData
+    const select = document.getElementById('batch-release-product-select');
+    if (select) {
+        select.innerHTML = '<option value="">בחר מוצר להוספה...</option>';
+        
+        // Sort inventory data by product name
+        const sortedInventory = [...inventoryData].sort((a, b) => {
+            const nameA = (a.product_name || '').toLowerCase();
+            const nameB = (b.product_name || '').toLowerCase();
+            return nameA.localeCompare(nameB, 'he');
+        });
+        
+        sortedInventory.forEach(item => {
+            const opt = document.createElement('option');
+            // Store unique identifier: product_id and variation_name
+            opt.value = `${item.product_id}|${item.variation_name}`;
+            opt.textContent = `${item.product_name} (${item.variation_name}) [מלאי נוכחי: ${item.stock_quantity}]`;
+            select.appendChild(opt);
+        });
+    }
+    
+    // Clear items table and notes
+    const tbody = document.getElementById('batch-release-items-body');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-tertiary);">לא נוספו מוצרים לרשימה</td></tr>';
+    
+    const notesInput = document.getElementById('batch-release-general-notes');
+    if (notesInput) notesInput.value = '';
+    
+    // Open the modal
+    const modal = document.getElementById('batch-release-modal');
+    if (modal) modal.classList.add('active');
+}
+
+function closeBatchReleaseModal() {
+    const modal = document.getElementById('batch-release-modal');
+    if (modal) modal.classList.remove('active');
+}
+
+function addProductToBatchRelease() {
+    const select = document.getElementById('batch-release-product-select');
+    if (!select || !select.value) {
+        Swal.fire('שים לב', 'נא לבחור מוצר מהרשימה', 'warning');
+        return;
+    }
+    
+    const [productId, variation] = select.value.split('|');
+    
+    // Check if already in the list
+    const alreadyExists = batchReleaseItems.some(item => item.product_id === productId && item.variation_name === variation);
+    if (alreadyExists) {
+        Swal.fire('שים לב', 'מוצר זה כבר התווסף לרשימת היציאה', 'warning');
+        return;
+    }
+    
+    // Find the item in global inventoryData
+    const item = inventoryData.find(i => i.product_id === productId && i.variation_name === variation);
+    if (item) {
+        batchReleaseItems.push({
+            product_id: item.product_id,
+            product_name: item.product_name,
+            variation_name: item.variation_name,
+            stock_quantity: item.stock_quantity
+        });
+        
+        renderBatchReleaseItems();
+        select.value = ''; // Reset select
+    }
+}
+
+function removeProductFromBatchRelease(index) {
+    batchReleaseItems.splice(index, 1);
+    renderBatchReleaseItems();
+}
+
+function renderBatchReleaseItems() {
+    const tbody = document.getElementById('batch-release-items-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (batchReleaseItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-tertiary);">לא נוספו מוצרים לרשימה</td></tr>';
+        return;
+    }
+    
+    batchReleaseItems.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${item.product_name}</td>
+            <td>${item.variation_name}</td>
+            <td>${item.stock_quantity}</td>
+            <td>
+                <input type="number" class="form-input batch-release-qty-input" data-index="${index}" min="0.01" step="0.01" required value="1" style="padding: 0.25rem 0.5rem; height: auto;">
+            </td>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeProductFromBatchRelease(${index})" title="הסר מהרשימה" style="padding: 0.2rem 0.4rem; display: flex; align-items: center; justify-content: center;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function saveBatchRelease() {
+    if (batchReleaseItems.length === 0) {
+        Swal.fire('שים לב', 'נא להוסיף לפחות מוצר אחד לרשימה', 'warning');
+        return;
+    }
+    
+    const qtyInputs = document.querySelectorAll('.batch-release-qty-input');
+    const itemsToSave = [];
+    let isValid = true;
+    
+    qtyInputs.forEach(input => {
+        const index = parseInt(input.getAttribute('data-index'));
+        const qty = parseFloat(input.value);
+        
+        if (isNaN(qty) || qty <= 0) {
+            isValid = false;
+            input.style.borderColor = 'red';
+        } else {
+            input.style.borderColor = '';
+            const item = batchReleaseItems[index];
+            itemsToSave.push({
+                ...item,
+                qtyToRelease: qty
+            });
+        }
+    });
+    
+    if (!isValid) {
+        Swal.fire('שגיאה', 'נא לוודא שכל כמויות ההפחתה שהוזנו הן מספרים חיוביים תקינים', 'error');
+        return;
+    }
+    
+    const generalNotes = document.getElementById('batch-release-general-notes')?.value || 'יציאה מרוכזת מהמלאי';
+    
+    // Show confirmation dialogue
+    const { isConfirmed } = await Swal.fire({
+        title: 'אישור יציאה מהמלאי',
+        text: `האם לרשום יציאה מהמלאי עבור ${itemsToSave.length} מוצרים?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'כן, בצע יציאה',
+        cancelButtonText: 'ביטול'
+    });
+    
+    if (!isConfirmed) return;
+    
+    Swal.fire({
+        title: 'מעדכן מלאי...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        // Execute release for each item in parallel
+        await Promise.all(itemsToSave.map(async item => {
+            // Subtract the quantity (negative amount)
+            await updateInventoryStock(
+                item.product_id,
+                item.variation_name,
+                -item.qtyToRelease,
+                'release',
+                null,
+                generalNotes
+            );
+        }));
+        
+        Swal.fire('הפעולה הושלמה!', 'המוצרים הופחתו מהמלאי בהצלחה.', 'success');
+        closeBatchReleaseModal();
+        await loadInventory();
+        
+    } catch (e) {
+        console.error('❌ Batch release failed:', e);
+        Swal.fire('שגיאה בעדכון המלאי', e.message || 'אירעה שגיאה במהלך הפחתת המוצרים', 'error');
     }
 }
 
