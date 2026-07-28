@@ -1901,7 +1901,7 @@ function displayAccInventory(items) {
                 <td style="text-align:center;">${item.variation}</td>
                 <td style="text-align:center;">
                     <span class="status-badge ${statusClass}" style="font-size: 1.1rem; font-weight: 700;">
-                        ${item.quantity} ${(item.category === 'מברשות') ? "מ'" : "יח'"}
+                        ${item.quantity} ${(item.category === 'מברשות') ? (item.quantity === 1 ? "גליל" : "גלילים") : "יח'"}
                     </span>
                 </td>
             </tr>

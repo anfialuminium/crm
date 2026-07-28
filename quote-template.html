@@ -439,31 +439,31 @@
             const isFin = !!is_fin_brush;
             
             if (isFin) {
-                if (name.includes('צר נמוך')) return 2000;
-                if (name.includes('רחב נמוך')) return 1800;
-                if (name.includes('צר גבוה')) return 1600;
-                if (name.includes('רחב גבוה')) return 1400;
-                return 1500;
+                if (name.includes('צר נמוך')) return 8; // 2000m -> 8 rolls
+                if (name.includes('רחב נמוך')) return 6; // 1800m -> 6 rolls
+                if (name.includes('צר גבוה')) return 8; // 1600m -> 8 rolls
+                if (name.includes('רחב גבוה')) return 7; // 1400m -> 7 rolls
+                return 5; // 1500m -> 5 rolls
             }
             
-            if (name.includes('צר נמוך')) return 1500;
-            if (name.includes('רחב נמוך')) return 1500;
+            if (name.includes('צר נמוך')) return 5; // 1500m -> 5 rolls
+            if (name.includes('רחב נמוך')) return 5; // 1500m -> 5 rolls
             if (name.includes('צר גבוה')) {
-                if (size === '12') return 1000;
-                if (size === '15') return 800;
-                if (size === '20') return 600;
-                return 1000;
+                if (size === '12') return 4; // 1000m -> 4 rolls
+                if (size === '15') return 4; // 800m -> 4 rolls
+                if (size === '20') return 4; // 600m -> 4 rolls
+                return 4;
             }
             if (name.includes('רחב גבוה')) {
-                if (size === '12') return 800;
-                if (size === '15') return 600;
-                if (size === '20') return 400;
-                return 800;
+                if (size === '12') return 4; // 800m -> 4 rolls
+                if (size === '15') return 4; // 600m -> 4 rolls
+                if (size === '20') return 4; // 400m -> 4 rolls
+                return 4;
             }
-            if (name.includes('אינסרט')) return 300;
+            if (name.includes('אינסרט')) return 1; // 300m -> 1 roll
             if (name.includes('הדבקה')) {
-                if (size === '200 מטר') return 800;
-                return 100;
+                if (size === '200 מטר') return 4; // 800m -> 4 rolls
+                return 1; // 100m -> 1 roll
             }
             return 1;
         }
@@ -512,7 +512,7 @@
                     <td>${fixBiDi(item.color) || '-'}</td>
                     <td>
                         ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : ''}
-                        ${item.is_carton ? `${(item.quantity * getBrushCartonMultiplier(item.products_raw, item.size, item.is_fin_brush)).toFixed(0)} מ' (קרטון)` : ''}
+                        ${item.is_carton ? `${(item.quantity * getBrushCartonMultiplier(item.products_raw, item.size, item.is_fin_brush)).toFixed(0)} גלילים (קרטון)` : ''}
                         ${(!item.is_roll && !item.is_carton) ? (fixBiDi(item.size) || '-') : ''}
                     </td>
                     <td>₪${item.total_price.toFixed(2)}</td>
