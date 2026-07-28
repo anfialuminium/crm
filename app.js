@@ -17517,7 +17517,7 @@ async function loadAllInventoryHistory() {
         
         let query = supabaseClient
             .from('inventory_transactions')
-            .select('*, products(product_name, sku, category, unit)')
+            .select('*, products(product_name, sku, category)')
             .order('created_at', { ascending: false });
             
         if (typeFilter) {
