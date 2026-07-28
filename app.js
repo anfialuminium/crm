@@ -17204,14 +17204,33 @@ async function loadInventoryTransactions(productId, variation) {
             const amountClass = t.change_amount > 0 ? 'color: var(--success-color); font-weight: 700;' : 'color: var(--error-color); font-weight: 700;';
             const amountPrefix = t.change_amount > 0 ? '+' : '';
             
-            let notesHtml = t.notes || '-';
+            let notesText = t.notes || '-';
+            let linkHtml = '';
             if (t.reference_id) {
                 if (t.transaction_type === 'purchase') {
-                    notesHtml = `<a href="javascript:void(0)" onclick="viewSupplierOrder('${t.reference_id}')" class="deal-link" style="text-decoration: underline;">${t.notes || 'צפה בהזמנה'}</a>`;
+                    linkHtml = ` <a href="javascript:void(0)" onclick="event.stopPropagation(); viewSupplierOrder('${t.reference_id}')" class="deal-link" style="text-decoration: underline; margin-right: 5px; color: var(--primary-color);">(צפה בהזמנה)</a>`;
                 } else if (t.transaction_type === 'sale') {
-                    notesHtml = `<a href="javascript:void(0)" onclick="viewDealDetails('${t.reference_id}')" class="deal-link" style="text-decoration: underline;">${t.notes || 'צפה בעסקה'}</a>`;
+                    linkHtml = ` <a href="javascript:void(0)" onclick="event.stopPropagation(); viewDealDetails('${t.reference_id}')" class="deal-link" style="text-decoration: underline; margin-right: 5px; color: var(--primary-color);">(צפה בעסקה)</a>`;
                 }
             }
+            
+            const escapedNotes = (t.notes || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const escapedVariation = (t.variation_name || '').replace(/'/g, "\\'");
+            
+            let notesHtml = `
+                <span class="editable-note" 
+                      style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px; border-bottom: 1px dashed #94a3b8; transition: all 0.2s;"
+                      onclick="editInventoryTransactionNote('${t.transaction_id}', '${escapedNotes}', '${t.product_id}', '${escapedVariation}')"
+                      title="לחץ לעריכת ההערה"
+                      onmouseover="this.style.color='var(--primary-color)'; this.style.borderBottomColor='var(--primary-color)';"
+                      onmouseout="this.style.color=''; this.style.borderBottomColor='#94a3b8';">
+                    <span>${notesText}</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.6;">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </span>${linkHtml}
+            `;
             
             html += `
                 <tr>
@@ -17235,6 +17254,36 @@ async function loadInventoryTransactions(productId, variation) {
 
 function closeInventoryTransactionsModal() {
     document.getElementById('inventory-transactions-modal').classList.remove('active');
+}
+
+async function editInventoryTransactionNote(transactionId, currentNotes, productId, variation) {
+    const { value: newNotes } = await Swal.fire({
+        title: 'עריכת הערה לעדכון מלאי',
+        input: 'textarea',
+        inputValue: currentNotes,
+        inputPlaceholder: 'הקלד הערה חדשה...',
+        showCancelButton: true,
+        confirmButtonText: 'שמור',
+        cancelButtonText: 'ביטול',
+        confirmButtonColor: '#10b981'
+    });
+
+    if (newNotes !== undefined) {
+        try {
+            const { error } = await supabaseClient
+                .from('inventory_transactions')
+                .update({ notes: newNotes })
+                .eq('transaction_id', transactionId);
+
+            if (error) throw error;
+
+            showAlert('ההערה עודכנה בהצלחה', 'success');
+            loadInventoryTransactions(productId, variation);
+        } catch (error) {
+            console.error('Error updating transaction note:', error);
+            showAlert('שגיאה בעדכון ההערה: ' + error.message, 'error');
+        }
+    }
 }
 
 async function promptAddVariation(productId, productName) {

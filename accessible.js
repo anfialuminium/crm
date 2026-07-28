@@ -1952,14 +1952,27 @@ async function openAccInventoryTransactions(productId, variation) {
                 const prefix = t.change_amount > 0 ? '+' : '-';
                 const absAmount = Math.abs(t.change_amount);
                 
-                let notesHtml = t.notes || '-';
+                let notesText = t.notes || '-';
+                let btnHtml = '';
                 if (t.reference_id) {
                     if (t.transaction_type === 'purchase') {
-                        notesHtml = `<button onclick="closeAccModal(); viewOrderDetails('${t.reference_id}')" class="btn-big btn-outline" style="font-size:0.8rem; padding: 4px 8px; width:auto;">📄 הזמנה</button>`;
+                        btnHtml = ` <button onclick="event.stopPropagation(); closeAccModal(); viewOrderDetails('${t.reference_id}')" class="btn-big btn-outline" style="font-size:0.8rem; padding: 4px 8px; width:auto; display:inline-block; margin-right:5px;">📄 הזמנה</button>`;
                     } else if (t.transaction_type === 'sale') {
-                        notesHtml = `<button onclick="closeAccModal(); viewDealDetails('${t.reference_id}')" class="btn-big btn-outline" style="font-size:0.8rem; padding: 4px 8px; width:auto;">💰 עסקה</button>`;
+                        btnHtml = ` <button onclick="event.stopPropagation(); closeAccModal(); viewDealDetails('${t.reference_id}')" class="btn-big btn-outline" style="font-size:0.8rem; padding: 4px 8px; width:auto; display:inline-block; margin-right:5px;">💰 עסקה</button>`;
                     }
                 }
+
+                const escapedNotes = (t.notes || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                const escapedVariation = (t.variation_name || '').replace(/'/g, "\\'");
+
+                let notesHtml = `
+                    <span class="editable-note" 
+                          style="cursor: pointer; text-decoration: underline dashed; text-underline-offset: 3px;"
+                          onclick="editAccInventoryTransactionNote('${t.transaction_id}', '${escapedNotes}', '${t.product_id}', '${escapedVariation}')"
+                          title="לחץ לעריכת ההערה">
+                        ${notesText} ✏️
+                     </span>${btnHtml}
+                `;
 
                 html += `
                     <tr>
@@ -1977,6 +1990,27 @@ async function openAccInventoryTransactions(productId, variation) {
     } catch (err) {
         console.error('Error loading transactions:', err);
         modalBody.innerHTML = '<p style="color:red; text-align:center;">שגיאה בטעינת ההיסטוריה</p>';
+    }
+}
+
+async function editAccInventoryTransactionNote(transactionId, currentNotes, productId, variation) {
+    const newNotes = prompt('עריכת הערה לעדכון מלאי:', currentNotes);
+    
+    if (newNotes !== null) {
+        try {
+            const { error } = await supabaseClient
+                .from('inventory_transactions')
+                .update({ notes: newNotes })
+                .eq('transaction_id', transactionId);
+
+            if (error) throw error;
+
+            alert('ההערה עודכנה בהצלחה');
+            openAccInventoryTransactions(productId, variation);
+        } catch (error) {
+            console.error('Error updating transaction note:', error);
+            alert('שגיאה בעדכון ההערה: ' + error.message);
+        }
     }
 }
 
