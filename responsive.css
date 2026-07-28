@@ -417,5 +417,142 @@
         align-self: flex-end;
         margin-top: 0.25rem;
     }
+
+    /* --- Inventory Management Mobile Responsiveness --- */
+    
+    /* Search & Filters row */
+    .inventory-filters-row {
+        gap: 0.75rem !important;
+    }
+    
+    .inventory-filters-row .form-group {
+        width: 100% !important;
+        min-width: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    /* Convert main inventory list table to Cards */
+    #inventory-list-container .table-responsive {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+        overflow-x: visible !important;
+    }
+
+    #inventory-list-container .items-table {
+        min-width: 100% !important;
+        display: block !important;
+        background: transparent !important;
+    }
+
+    #inventory-list-container .items-table thead {
+        display: none !important; /* Hide headers on mobile */
+    }
+
+    #inventory-list-container .items-table tbody {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem !important;
+    }
+
+    #inventory-list-container .items-table tr {
+        display: grid !important;
+        grid-template-areas: 
+            "product qty"
+            "category variation"
+            "updated updated"
+            "actions actions" !important;
+        grid-template-columns: 1fr auto !important;
+        gap: 0.75rem !important;
+        background: white !important;
+        padding: 1.25rem !important;
+        border-radius: var(--radius-lg) !important;
+        box-shadow: var(--shadow-sm) !important;
+        border: 1px solid var(--border-color) !important;
+        position: relative !important;
+    }
+
+    #inventory-list-container .items-table td {
+        display: block !important;
+        padding: 0 !important;
+        border: none !important;
+        height: auto !important;
+        min-height: auto !important;
+        white-space: normal !important;
+    }
+
+    #inventory-list-container .items-table td:nth-child(1) { 
+        grid-area: product; 
+    }
+    
+    #inventory-list-container .items-table td:nth-child(2) { 
+        grid-area: category; 
+        display: flex !important;
+        align-items: center !important;
+    }
+    
+    #inventory-list-container .items-table td:nth-child(3) { 
+        grid-area: variation; 
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        font-size: 0.9rem !important;
+    }
+    
+    #inventory-list-container .items-table td:nth-child(4) { 
+        grid-area: qty; 
+        display: flex !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+    }
+    
+    #inventory-list-container .items-table td:nth-child(5) { 
+        grid-area: updated; 
+        font-size: 0.8rem !important;
+        color: var(--text-tertiary) !important;
+        border-top: 1px dashed var(--border-color) !important;
+        padding-top: 0.5rem !important;
+        margin-top: 0.25rem !important;
+    }
+    
+    #inventory-list-container .items-table td:nth-child(5)::before { 
+        content: 'עדכון אחרון: ' !important; 
+    }
+    
+    #inventory-list-container .items-table td:nth-child(6) { 
+        grid-area: actions; 
+        display: flex !important; 
+        gap: 0.5rem !important; 
+        margin-top: 0.25rem !important;
+        padding-top: 0.75rem !important;
+        border-top: 1px solid var(--border-color) !important;
+    }
+    
+    #inventory-list-container .items-table td:nth-child(6) button {
+        flex: 1 !important;
+        height: 38px !important;
+        display: inline-flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+
+    /* Inventory Adjustment Modal stack columns */
+    #inventory-adjustment-modal .form-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    /* Batch Release Modal Add Row */
+    .batch-release-add-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
+    }
+    
+    .batch-release-add-row button {
+        width: 100% !important;
+    }
 }
 

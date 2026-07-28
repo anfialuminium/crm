@@ -1093,7 +1093,7 @@
                     </div>
                     
                     <!-- Search and Filters -->
-                    <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <div class="inventory-filters-row" style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
                         <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
                             <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem;">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -2194,7 +2194,7 @@
             </div>
             <div style="padding: 1.5rem;">
                 <!-- Step 1: Add product to list -->
-                <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1.5rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div class="batch-release-add-row" style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1.5rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
                     <div class="form-group" style="flex: 1; margin-bottom: 0; position: relative;">
                         <label class="form-label">בחר מוצר להוספה</label>
                         <div class="searchable-select" id="batch-release-product-search-container">
@@ -2207,7 +2207,7 @@
                 </div>
 
                 <!-- Step 2: List of items to release -->
-                <div style="max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem;">
+                <div class="table-responsive" style="max-height: 300px; overflow: auto; margin-bottom: 1.5rem;">
                     <table class="table" style="width: 100%;">
                         <thead>
                             <tr>

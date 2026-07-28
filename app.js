@@ -16991,7 +16991,8 @@ function displayInventoryList(data) {
     };
 
     let html = `
-        <table class="items-table">
+        <div class="table-responsive">
+            <table class="items-table">
             <thead>
                 <tr>
                     <th onclick="toggleInventorySort('name')" style="cursor: pointer; user-select: none;">מוצר${getSortArrow('name')}</th>
@@ -17037,7 +17038,7 @@ function displayInventoryList(data) {
         `;
     });
 
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     container.innerHTML = html;
 }
 
@@ -17219,7 +17220,8 @@ async function loadInventoryTransactions(productId, variation) {
         }
 
         let html = `
-            <table class="items-table" style="font-size: 0.9rem;">
+            <div class="table-responsive">
+                <table class="items-table" style="font-size: 0.9rem;">
                 <thead>
                     <tr>
                         <th>תאריך</th>
@@ -17282,7 +17284,7 @@ async function loadInventoryTransactions(productId, variation) {
             `;
         });
 
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
         list.innerHTML = html;
 
     } catch (error) {
