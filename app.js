@@ -17452,28 +17452,196 @@ async function resetInventoryAndSyncDescriptions() {
 
 
 
+let batchReleaseProductSearchInitialized = false;
+
+function setupBatchReleaseProductSearch() {
+    const searchInput = document.getElementById('batch-release-product-search-input');
+    const resultsContainer = document.getElementById('batch-release-product-search-results');
+    const hiddenInput = document.getElementById('batch-release-product-select');
+    
+    if (!searchInput || !resultsContainer || !hiddenInput) return;
+    
+    let activeIndex = -1;
+    let filteredItems = [];
+
+    function renderResults() {
+        resultsContainer.innerHTML = '';
+        if (filteredItems.length === 0) {
+            resultsContainer.innerHTML = '<div class="search-result-empty" style="padding: 10px; text-align: center; color: var(--text-tertiary);">לא נמצאו מוצרים תואמים</div>';
+            return;
+        }
+
+        filteredItems.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'search-result-item';
+            div.style.padding = '8px 12px';
+            div.style.cursor = 'pointer';
+            div.style.borderBottom = '1px solid var(--border-color)';
+            
+            if (index === activeIndex) {
+                div.style.backgroundColor = 'var(--bg-tertiary)';
+            }
+            
+            // Highlight matching search query
+            const query = searchInput.value.trim().toLowerCase();
+            let nameHTML = item.product_name || '';
+            let variationHTML = item.variation_name || '';
+            
+            if (query) {
+                const nameIdx = nameHTML.toLowerCase().indexOf(query);
+                if (nameIdx !== -1) {
+                    nameHTML = nameHTML.substring(0, nameIdx) + 
+                               '<strong>' + nameHTML.substring(nameIdx, nameIdx + query.length) + '</strong>' + 
+                               nameHTML.substring(nameIdx + query.length);
+                }
+                const varIdx = variationHTML.toLowerCase().indexOf(query);
+                if (varIdx !== -1) {
+                    variationHTML = variationHTML.substring(0, varIdx) + 
+                                    '<strong>' + variationHTML.substring(varIdx, varIdx + query.length) + '</strong>' + 
+                                    variationHTML.substring(varIdx + query.length);
+                }
+            }
+
+            const stockText = `[מלאי נוכחי: ${item.stock_quantity}]`;
+            const isOut = item.stock_quantity <= 0;
+            
+            div.innerHTML = `
+                <div style="font-weight: 500; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                    <span>${nameHTML}</span>
+                    <span style="font-size: 0.85rem; color: ${isOut ? 'var(--danger-color, #ef4444)' : 'var(--text-secondary)'}; font-weight: ${isOut ? 'bold' : 'normal'}; white-space: nowrap;">
+                        ${stockText}
+                    </span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                    וריאציה: ${variationHTML || 'כללי'}
+                </div>
+            `;
+            
+            div.onmousedown = (e) => {
+                // Prevent input blur before click handler fires
+                e.preventDefault();
+            };
+            
+            div.onclick = () => {
+                selectProduct(item);
+            };
+            
+            resultsContainer.appendChild(div);
+        });
+    }
+
+    function selectProduct(item) {
+        hiddenInput.value = `${item.product_id}|${item.variation_name}`;
+        searchInput.value = `${item.product_name} (${item.variation_name || 'כללי'})`;
+        resultsContainer.classList.add('hidden');
+        activeIndex = -1;
+        
+        // Auto-add product when selected
+        addProductToBatchRelease();
+    }
+
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase().trim();
+        activeIndex = -1;
+        
+        if (query.length === 0) {
+            // Show all or first 30 products
+            filteredItems = [...inventoryData].sort((a, b) => {
+                const nameA = (a.product_name || '').toLowerCase();
+                const nameB = (b.product_name || '').toLowerCase();
+                return nameA.localeCompare(nameB, 'he');
+            }).slice(0, 30);
+        } else {
+            // Filter by name or variation
+            filteredItems = inventoryData.filter(item => {
+                return (item.product_name || '').toLowerCase().includes(query) || 
+                       (item.variation_name || '').toLowerCase().includes(query);
+            }).sort((a, b) => {
+                const nameA = (a.product_name || '').toLowerCase();
+                const nameB = (b.product_name || '').toLowerCase();
+                return nameA.localeCompare(nameB, 'he');
+            });
+        }
+        
+        renderResults();
+        resultsContainer.classList.remove('hidden');
+    });
+
+    searchInput.addEventListener('focus', () => {
+        // Trigger input event to show list of products
+        searchInput.dispatchEvent(new Event('input'));
+    });
+
+    searchInput.addEventListener('blur', () => {
+        resultsContainer.classList.add('hidden');
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+        if (resultsContainer.classList.contains('hidden')) {
+            if (e.key === 'ArrowDown') {
+                resultsContainer.classList.remove('hidden');
+                searchInput.dispatchEvent(new Event('input'));
+                e.preventDefault();
+            }
+            return;
+        }
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (filteredItems.length > 0) {
+                activeIndex = (activeIndex + 1) % filteredItems.length;
+                renderResults();
+                scrollActiveIntoView();
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (filteredItems.length > 0) {
+                activeIndex = (activeIndex - 1 + filteredItems.length) % filteredItems.length;
+                renderResults();
+                scrollActiveIntoView();
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIndex >= 0 && activeIndex < filteredItems.length) {
+                selectProduct(filteredItems[activeIndex]);
+            } else if (filteredItems.length > 0) {
+                // Select the first item if none is active
+                selectProduct(filteredItems[0]);
+            }
+        } else if (e.key === 'Escape') {
+            resultsContainer.classList.add('hidden');
+            activeIndex = -1;
+        }
+    });
+
+    function scrollActiveIntoView() {
+        const activeElem = resultsContainer.children[activeIndex];
+        if (activeElem) {
+            activeElem.scrollIntoView({ block: 'nearest' });
+        }
+    }
+}
+
 function showBatchReleaseModal() {
     batchReleaseItems = [];
     
-    // Populate the dropdown selector with sorted products from inventoryData
-    const select = document.getElementById('batch-release-product-select');
-    if (select) {
-        select.innerHTML = '<option value="">בחר מוצר להוספה...</option>';
-        
-        // Sort inventory data by product name
-        const sortedInventory = [...inventoryData].sort((a, b) => {
-            const nameA = (a.product_name || '').toLowerCase();
-            const nameB = (b.product_name || '').toLowerCase();
-            return nameA.localeCompare(nameB, 'he');
-        });
-        
-        sortedInventory.forEach(item => {
-            const opt = document.createElement('option');
-            // Store unique identifier: product_id and variation_name
-            opt.value = `${item.product_id}|${item.variation_name}`;
-            opt.textContent = `${item.product_name} (${item.variation_name}) [מלאי נוכחי: ${item.stock_quantity}]`;
-            select.appendChild(opt);
-        });
+    // Initialize search if not initialized yet
+    if (!batchReleaseProductSearchInitialized) {
+        setupBatchReleaseProductSearch();
+        batchReleaseProductSearchInitialized = true;
+    }
+    
+    // Clear search inputs
+    const searchInput = document.getElementById('batch-release-product-search-input');
+    if (searchInput) searchInput.value = '';
+    
+    const hiddenSelect = document.getElementById('batch-release-product-select');
+    if (hiddenSelect) hiddenSelect.value = '';
+    
+    const searchResults = document.getElementById('batch-release-product-search-results');
+    if (searchResults) {
+        searchResults.innerHTML = '';
+        searchResults.classList.add('hidden');
     }
     
     // Clear items table and notes
@@ -17486,6 +17654,11 @@ function showBatchReleaseModal() {
     // Open the modal
     const modal = document.getElementById('batch-release-modal');
     if (modal) modal.classList.add('active');
+    
+    // Focus search input on open
+    setTimeout(() => {
+        if (searchInput) searchInput.focus();
+    }, 100);
 }
 
 function closeBatchReleaseModal() {
@@ -17506,6 +17679,11 @@ function addProductToBatchRelease() {
     const alreadyExists = batchReleaseItems.some(item => item.product_id === productId && item.variation_name === variation);
     if (alreadyExists) {
         Swal.fire('שים לב', 'מוצר זה כבר התווסף לרשימת היציאה', 'warning');
+        
+        // Reset select & input
+        select.value = '';
+        const searchInput = document.getElementById('batch-release-product-search-input');
+        if (searchInput) searchInput.value = '';
         return;
     }
     
@@ -17516,11 +17694,15 @@ function addProductToBatchRelease() {
             product_id: item.product_id,
             product_name: item.product_name,
             variation_name: item.variation_name,
-            stock_quantity: item.stock_quantity
+            stock_quantity: item.stock_quantity,
+            qty: 1
         });
         
-        renderBatchReleaseItems();
+        renderBatchReleaseItems(true); // Focus the newly added input
+        
         select.value = ''; // Reset select
+        const searchInput = document.getElementById('batch-release-product-search-input');
+        if (searchInput) searchInput.value = '';
     }
 }
 
@@ -17529,7 +17711,7 @@ function removeProductFromBatchRelease(index) {
     renderBatchReleaseItems();
 }
 
-function renderBatchReleaseItems() {
+function renderBatchReleaseItems(focusLast = false) {
     const tbody = document.getElementById('batch-release-items-body');
     if (!tbody) return;
     
@@ -17542,12 +17724,23 @@ function renderBatchReleaseItems() {
     
     batchReleaseItems.forEach((item, index) => {
         const tr = document.createElement('tr');
+        
+        const isNegativeStockPotential = item.stock_quantity - (item.qty || 1) < 0;
+        const stockStyle = item.stock_quantity <= 0 ? 'color: var(--danger-color, #ef4444); font-weight: 600;' : '';
+        const inputStyle = isNegativeStockPotential 
+            ? 'border-color: #f59e0b; background-color: #fffbeb;' 
+            : '';
+        const warningTooltip = isNegativeStockPotential 
+            ? '<span class="stock-warning-badge" style="color: #d97706; font-size: 0.75rem; display: block; margin-top: 4px;">⚠️ חריגה מהמלאי הזמין</span>' 
+            : '';
+
         tr.innerHTML = `
-            <td>${item.product_name}</td>
-            <td>${item.variation_name}</td>
-            <td>${item.stock_quantity}</td>
+            <td><strong style="color: var(--primary-color);">${item.product_name}</strong></td>
+            <td><span class="badge" style="background: var(--bg-tertiary); color: var(--text-secondary);">${item.variation_name}</span></td>
+            <td><span style="${stockStyle}">${item.stock_quantity}</span></td>
             <td>
-                <input type="number" class="form-input batch-release-qty-input" data-index="${index}" min="0.01" step="0.01" required value="1" style="padding: 0.25rem 0.5rem; height: auto;">
+                <input type="number" class="form-input batch-release-qty-input" data-index="${index}" min="0.01" step="0.01" required value="${item.qty || 1}" style="padding: 0.25rem 0.5rem; height: auto; max-width: 100px; ${inputStyle}">
+                ${warningTooltip}
             </td>
             <td>
                 <button type="button" class="btn btn-danger btn-sm" onclick="removeProductFromBatchRelease(${index})" title="הסר מהרשימה" style="padding: 0.2rem 0.4rem; display: flex; align-items: center; justify-content: center;">
@@ -17557,6 +17750,66 @@ function renderBatchReleaseItems() {
         `;
         tbody.appendChild(tr);
     });
+
+    // Add event listeners to input elements to update the array in real-time
+    const qtyInputs = tbody.querySelectorAll('.batch-release-qty-input');
+    qtyInputs.forEach(input => {
+        input.addEventListener('input', (e) => {
+            const idx = parseInt(input.getAttribute('data-index'));
+            const val = parseFloat(input.value);
+            if (!isNaN(val) && val > 0) {
+                batchReleaseItems[idx].qty = val;
+                
+                // Real-time warning feedback
+                const isNeg = batchReleaseItems[idx].stock_quantity - val < 0;
+                if (isNeg) {
+                    input.style.borderColor = '#f59e0b';
+                    input.style.backgroundColor = '#fffbeb';
+                    let warningSpan = input.parentNode.querySelector('.stock-warning-badge');
+                    if (!warningSpan) {
+                        warningSpan = document.createElement('span');
+                        warningSpan.className = 'stock-warning-badge';
+                        warningSpan.style.color = '#d97706';
+                        warningSpan.style.fontSize = '0.75rem';
+                        warningSpan.style.display = 'block';
+                        warningSpan.style.marginTop = '4px';
+                        warningSpan.textContent = '⚠️ חריגה מהמלאי הזמין';
+                        input.parentNode.appendChild(warningSpan);
+                    }
+                } else {
+                    input.style.borderColor = '';
+                    input.style.backgroundColor = '';
+                    const warningSpan = input.parentNode.querySelector('.stock-warning-badge');
+                    if (warningSpan) warningSpan.remove();
+                }
+            } else {
+                input.style.borderColor = 'red';
+            }
+        });
+
+        // Keydown listener to handle Enter key (focuses back to search input)
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const searchInput = document.getElementById('batch-release-product-search-input');
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                }
+            }
+        });
+    });
+
+    // Auto-focus last input if specified
+    if (focusLast && batchReleaseItems.length > 0) {
+        const lastInput = tbody.querySelector(`.batch-release-qty-input[data-index="${batchReleaseItems.length - 1}"]`);
+        if (lastInput) {
+            setTimeout(() => {
+                lastInput.focus();
+                lastInput.select();
+            }, 50);
+        }
+    }
 }
 
 async function saveBatchRelease() {
@@ -17593,11 +17846,24 @@ async function saveBatchRelease() {
     
     const generalNotes = document.getElementById('batch-release-general-notes')?.value || 'יציאה מרוכזת מהמלאי';
     
+    // Check for potential negative stocks
+    let negativeStockCount = 0;
+    itemsToSave.forEach(item => {
+        if (item.stock_quantity - item.qtyToRelease < 0) {
+            negativeStockCount++;
+        }
+    });
+
+    let warningText = `האם לרשום יציאה מהמלאי עבור ${itemsToSave.length} מוצרים?`;
+    if (negativeStockCount > 0) {
+        warningText += `\n\n⚠️ שים לב: עבור ${negativeStockCount} מוצרים, כמות היציאה גדולה מהמלאי הקים והמלאי שלהם יהפוך לשלילי!`;
+    }
+    
     // Show confirmation dialogue
     const { isConfirmed } = await Swal.fire({
         title: 'אישור יציאה מהמלאי',
-        text: `האם לרשום יציאה מהמלאי עבור ${itemsToSave.length} מוצרים?`,
-        icon: 'question',
+        text: warningText,
+        icon: negativeStockCount > 0 ? 'warning' : 'question',
         showCancelButton: true,
         confirmButtonText: 'כן, בצע יציאה',
         cancelButtonText: 'ביטול'

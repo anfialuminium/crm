@@ -2188,11 +2188,13 @@
             <div style="padding: 1.5rem;">
                 <!-- Step 1: Add product to list -->
                 <div style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1.5rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
-                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0; position: relative;">
                         <label class="form-label">בחר מוצר להוספה</label>
-                        <select id="batch-release-product-select" class="form-select">
-                            <!-- Populated dynamically -->
-                        </select>
+                        <div class="searchable-select" id="batch-release-product-search-container">
+                            <input type="text" id="batch-release-product-search-input" class="form-input" placeholder="חפש מוצר לפי שם או וריאציה..." autocomplete="off">
+                            <div id="batch-release-product-search-results" class="search-results hidden"></div>
+                            <input type="hidden" id="batch-release-product-select">
+                        </div>
                     </div>
                     <button type="button" class="btn btn-primary" onclick="addProductToBatchRelease()">הוסף לרשימה</button>
                 </div>
