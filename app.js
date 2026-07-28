@@ -16838,6 +16838,9 @@ async function loadInventory() {
         // 4. Display
         filterInventory();
 
+        // 5. Load History
+        loadAllInventoryHistory();
+
     } catch (error) {
         console.error('❌ Error loading inventory:', error);
         if (container) container.innerHTML = '<div class="alert alert-error">שגיאה בטעינת נתוני מלאי. וודא שטבלאות המלאי קיימות במסד הנתונים.</div>';
@@ -17276,6 +17279,7 @@ async function editInventoryTransactionNote(transactionId, currentNotes, product
 
             showAlert('ההערה עודכנה בהצלחה', 'success');
             loadInventoryTransactions(productId, variation);
+            loadAllInventoryHistory();
         } catch (error) {
             console.error('Error updating transaction note:', error);
             showAlert('שגיאה בעדכון ההערה: ' + error.message, 'error');
@@ -17491,6 +17495,270 @@ async function resetInventoryAndSyncDescriptions() {
         console.error('❌ Reset & Sync failed:', e);
         Swal.fire('שגיאה בתהליך', e.message, 'error');
     }
+}
+
+// ============================================
+// Inventory History Logic
+// ============================================
+
+let inventoryHistoryData = [];
+
+async function loadAllInventoryHistory() {
+    const container = document.getElementById('inventory-history-container');
+    if (!container) return;
+    
+    if (!container.innerHTML || container.innerHTML.includes('spinner') || container.innerHTML.includes('alert')) {
+        container.innerHTML = '<div class="spinner"></div>';
+    }
+
+    try {
+        const typeFilter = document.getElementById('filter-inventory-history-type')?.value || '';
+        const dateFilter = document.getElementById('filter-inventory-history-date')?.value || '';
+        
+        let query = supabaseClient
+            .from('inventory_transactions')
+            .select('*, products(product_name, sku, category, unit)')
+            .order('created_at', { ascending: false });
+            
+        if (typeFilter) {
+            query = query.eq('transaction_type', typeFilter);
+        }
+        
+        if (dateFilter) {
+            const now = new Date();
+            let startDate;
+            if (dateFilter === 'today') {
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            } else if (dateFilter === 'week') {
+                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            } else if (dateFilter === 'month') {
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            } else if (dateFilter === '3months') {
+                startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            }
+            if (startDate) {
+                query = query.gte('created_at', startDate.toISOString());
+            }
+        }
+        
+        query = query.limit(500);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        inventoryHistoryData = data || [];
+        displayInventoryHistory();
+    } catch (error) {
+        console.error('Error loading inventory history:', error);
+        container.innerHTML = '<div class="alert alert-error">שגיאה בטעינת היסטוריית תנועות המלאי</div>';
+    }
+}
+
+function filterInventoryHistory() {
+    displayInventoryHistory();
+}
+
+function displayInventoryHistory() {
+    const container = document.getElementById('inventory-history-container');
+    if (!container) return;
+
+    const searchTerm = document.getElementById('filter-inventory-history-search')?.value.toLowerCase() || '';
+
+    const filtered = inventoryHistoryData.filter(t => {
+        const productName = t.products?.product_name || '';
+        const sku = t.products?.sku || '';
+        const variation = t.variation_name || '';
+        const notes = t.notes || '';
+        const createdBy = t.created_by || '';
+        
+        return !searchTerm || 
+            productName.toLowerCase().includes(searchTerm) ||
+            sku.toLowerCase().includes(searchTerm) ||
+            variation.toLowerCase().includes(searchTerm) ||
+            notes.toLowerCase().includes(searchTerm) ||
+            createdBy.toLowerCase().includes(searchTerm);
+    });
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div class="text-center" style="padding: 3rem; color: var(--text-tertiary);">לא נמצאו תנועות מלאי תואמות לסינון</div>';
+        return;
+    }
+
+    let html = `
+        <div class="table-responsive">
+            <table class="items-table" style="font-size: 0.9rem;">
+            <thead>
+                <tr>
+                    <th>תאריך</th>
+                    <th>מוצר</th>
+                    <th>קטגוריה</th>
+                    <th>וריאציה</th>
+                    <th>סוג</th>
+                    <th>כמות שינוי</th>
+                    <th>מבצע</th>
+                    <th>הערות</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    filtered.forEach(t => {
+        const date = new Date(t.created_at).toLocaleString('he-IL', {day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit'});
+        const productName = t.products ? t.products.product_name : '<span style="color: var(--text-tertiary);">מוצר לא נמצא</span>';
+        const sku = t.products?.sku ? `מקט: ${t.products.sku}` : '-';
+        const category = t.products?.category || 'אחר';
+        const unit = t.products?.unit || "יח'";
+        const variation = t.variation_name || 'כללי';
+        
+        const typeLabels = {
+            'adjustment': '🔧 תיקון',
+            'purchase': '📥 רכש',
+            'sale': '📤 מכירה',
+            'release': '📤 יציאה מהמלאי'
+        };
+        
+        const amountClass = t.change_amount > 0 ? 'color: var(--success-color); font-weight: 700;' : 'color: var(--error-color); font-weight: 700;';
+        const amountPrefix = t.change_amount > 0 ? '+' : '';
+        
+        let notesText = t.notes || '-';
+        let linkHtml = '';
+        if (t.reference_id) {
+            if (t.transaction_type === 'purchase') {
+                linkHtml = ` <a href="javascript:void(0)" onclick="event.stopPropagation(); viewSupplierOrder('${t.reference_id}')" class="deal-link" style="text-decoration: underline; margin-right: 5px; color: var(--primary-color);">(צפה בהזמנה)</a>`;
+            } else if (t.transaction_type === 'sale') {
+                linkHtml = ` <a href="javascript:void(0)" onclick="event.stopPropagation(); viewDealDetails('${t.reference_id}')" class="deal-link" style="text-decoration: underline; margin-right: 5px; color: var(--primary-color);">(צפה בעסקה)</a>`;
+            }
+        }
+        
+        const escapedNotes = (t.notes || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        
+        let notesHtml = `
+            <span class="editable-note" 
+                  style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px; border-bottom: 1px dashed #94a3b8; transition: all 0.2s;"
+                  onclick="editInventoryTransactionNoteFromList('${t.transaction_id}', '${escapedNotes}')"
+                  title="לחץ לעריכת ההערה"
+                  onmouseover="this.style.color='var(--primary-color)'; this.style.borderBottomColor='var(--primary-color)';"
+                  onmouseout="this.style.color=''; this.style.borderBottomColor='#94a3b8';">
+                <span>${notesText}</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.6;">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+            </span>${linkHtml}
+        `;
+
+        html += `
+            <tr>
+                <td style="font-size: 0.85rem; color: var(--text-tertiary);">${date}</td>
+                <td>
+                    <div style="font-weight: 600;">${productName}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-tertiary);">${sku}</div>
+                </td>
+                <td><span class="badge badge-secondary">${category}</span></td>
+                <td><span style="color: var(--text-secondary);">${variation}</span></td>
+                <td>${typeLabels[t.transaction_type] || t.transaction_type}</td>
+                <td style="${amountClass} direction: ltr; text-align: right;">${Math.abs(t.change_amount)}${amountPrefix} ${category === 'מברשות' ? (t.change_amount === 1 || t.change_amount === -1 ? 'קרטון' : 'קרטונים') : unit}</td>
+                <td>${t.created_by || '-'}</td>
+                <td style="font-size: 0.8rem;">${notesHtml}</td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+async function editInventoryTransactionNoteFromList(transactionId, currentNotes) {
+    const { value: newNotes } = await Swal.fire({
+        title: 'עריכת הערה לעדכון מלאי',
+        input: 'textarea',
+        inputValue: currentNotes,
+        inputPlaceholder: 'הקלד הערה חדשה...',
+        showCancelButton: true,
+        confirmButtonText: 'שמור',
+        cancelButtonText: 'ביטול',
+        confirmButtonColor: '#10b981'
+    });
+
+    if (newNotes !== undefined) {
+        try {
+            const { error } = await supabaseClient
+                .from('inventory_transactions')
+                .update({ notes: newNotes })
+                .eq('transaction_id', transactionId);
+
+            if (error) throw error;
+
+            showAlert('ההערה עודכנה בהצלחה', 'success');
+            loadAllInventoryHistory();
+        } catch (error) {
+            console.error('Error updating transaction note:', error);
+            showAlert('שגיאה בעדכון ההערה: ' + error.message, 'error');
+        }
+    }
+}
+
+function exportInventoryHistory() {
+    const searchTerm = document.getElementById('filter-inventory-history-search')?.value.toLowerCase() || '';
+    
+    const filtered = inventoryHistoryData.filter(t => {
+        const productName = t.products?.product_name || '';
+        const sku = t.products?.sku || '';
+        const variation = t.variation_name || '';
+        const notes = t.notes || '';
+        const createdBy = t.created_by || '';
+        
+        return !searchTerm || 
+            productName.toLowerCase().includes(searchTerm) ||
+            sku.toLowerCase().includes(searchTerm) ||
+            variation.toLowerCase().includes(searchTerm) ||
+            notes.toLowerCase().includes(searchTerm) ||
+            createdBy.toLowerCase().includes(searchTerm);
+    });
+
+    if (filtered.length === 0) {
+        showAlert('אין נתונים לייצוא', 'warning');
+        return;
+    }
+    
+    const ws_data = [
+        ['תאריך', 'מוצר', 'מקט', 'קטגוריה', 'וריאציה', 'סוג תנועה', 'כמות שינוי', 'יחידה', 'מבצע', 'הערות']
+    ];
+    
+    const typeLabels = {
+        'adjustment': 'תיקון',
+        'purchase': 'רכש',
+        'sale': 'מכירה',
+        'release': 'יציאה מהמלאי'
+    };
+
+    filtered.forEach(t => {
+        const date = new Date(t.created_at).toLocaleString('he-IL');
+        const productName = t.products ? t.products.product_name : 'מוצר לא נמצא';
+        const sku = t.products?.sku || '';
+        const category = t.products?.category || 'אחר';
+        const unit = t.products?.unit || "יח'";
+        const variation = t.variation_name || 'כללי';
+        const type = typeLabels[t.transaction_type] || t.transaction_type;
+        
+        ws_data.push([
+            date,
+            productName,
+            sku,
+            category,
+            variation,
+            type,
+            t.change_amount,
+            category === 'מברשות' ? (t.change_amount === 1 || t.change_amount === -1 ? 'קרטון' : 'קרטונים') : unit,
+            t.created_by || '',
+            t.notes || ''
+        ]);
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Inventory History");
+    XLSX.writeFile(wb, `inventory_history_export_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
 

@@ -554,5 +554,118 @@
     .batch-release-add-row button {
         width: 100% !important;
     }
+
+    /* Convert inventory history table to Cards on Mobile */
+    #inventory-history-container .table-responsive {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+        overflow-x: visible !important;
+    }
+
+    #inventory-history-container .items-table {
+        min-width: 100% !important;
+        display: block !important;
+        background: transparent !important;
+    }
+
+    #inventory-history-container .items-table thead {
+        display: none !important; /* Hide headers on mobile */
+    }
+
+    #inventory-history-container .items-table tbody {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1rem !important;
+    }
+
+    #inventory-history-container .items-table tr {
+        display: grid !important;
+        grid-template-areas: 
+            "product change"
+            "date type"
+            "category variation"
+            "notes notes"
+            "user user" !important;
+        grid-template-columns: 1fr auto !important;
+        gap: 0.75rem !important;
+        background: white !important;
+        padding: 1.25rem !important;
+        border-radius: var(--radius-lg) !important;
+        box-shadow: var(--shadow-sm) !important;
+        border: 1px solid var(--border-color) !important;
+        position: relative !important;
+    }
+
+    #inventory-history-container .items-table td {
+        display: block !important;
+        padding: 0 !important;
+        border: none !important;
+        height: auto !important;
+        min-height: auto !important;
+        white-space: normal !important;
+    }
+
+    #inventory-history-container .items-table td:nth-child(1) { 
+        grid-area: date; 
+        font-size: 0.8rem !important;
+        color: var(--text-tertiary) !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+    
+    #inventory-history-container .items-table td:nth-child(2) { 
+        grid-area: product; 
+    }
+    
+    #inventory-history-container .items-table td:nth-child(3) { 
+        grid-area: category; 
+        display: flex !important;
+        align-items: center !important;
+    }
+    
+    #inventory-history-container .items-table td:nth-child(4) { 
+        grid-area: variation; 
+        display: flex !important;
+        align-items: center !important;
+        font-size: 0.9rem !important;
+    }
+    
+    #inventory-history-container .items-table td:nth-child(5) { 
+        grid-area: type; 
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+    }
+    
+    #inventory-history-container .items-table td:nth-child(6) { 
+        grid-area: change; 
+        display: flex !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+    }
+    
+    #inventory-history-container .items-table td:nth-child(7) { 
+        grid-area: user; 
+        font-size: 0.8rem !important;
+        color: var(--text-tertiary) !important;
+        border-top: 1px dashed var(--border-color) !important;
+        padding-top: 0.5rem !important;
+        margin-top: 0.25rem !important;
+    }
+    
+    #inventory-history-container .items-table td:nth-child(7)::before { 
+        content: 'בוצע ע"י: ' !important; 
+    }
+    
+    #inventory-history-container .items-table td:nth-child(8) { 
+        grid-area: notes; 
+        border-top: 1px dashed var(--border-color) !important;
+        padding-top: 0.5rem !important;
+        margin-top: 0.25rem !important;
+        font-size: 0.85rem !important;
+    }
 }
 

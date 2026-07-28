@@ -1137,6 +1137,60 @@
                     <div id="inventory-list-container">
                         <div class="spinner"></div>
                     </div>
+
+                    <!-- Inventory History Section -->
+                    <div class="form-section" style="margin-top: 2rem;">
+                        <div class="action-header" style="margin-bottom: 1.5rem;">
+                            <h2 class="section-title" style="margin-bottom: 0;">
+                                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                                </svg>
+                                היסטוריית תנועות מלאי
+                            </h2>
+                            <div class="action-buttons">
+                                <button type="button" class="btn btn-success btn-compact" onclick="exportInventoryHistory()" title="ייצוא היסטוריה ל-Excel">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    ייצוא היסטוריה
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- History Search and Filters -->
+                        <div class="inventory-filters-row" style="display: flex; gap: 1rem; align-items: flex-end; margin-bottom: 1rem; flex-wrap: wrap;">
+                            <div class="form-group" style="flex: 1; min-width: 250px; margin-bottom: 0;">
+                                <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    חיפוש בתנועות מלאי
+                                </label>
+                                <input type="text" id="filter-inventory-history-search" class="form-input" 
+                                       placeholder="שם מוצר, מק״ט, וריאציה או הערה..." onkeyup="filterInventoryHistory()">
+                            </div>
+                            <div class="form-group" style="width: 200px; margin-bottom: 0;">
+                                <label class="form-label">סוג תנועה</label>
+                                <select id="filter-inventory-history-type" class="form-select" onchange="loadAllInventoryHistory()">
+                                    <option value="">כל הסוגים</option>
+                                    <option value="purchase">📥 רכש (קניות)</option>
+                                    <option value="sale">📤 מכירה (הזמנות)</option>
+                                    <option value="release">📤 יציאה מהמלאי (מרוכזת/אחר)</option>
+                                    <option value="adjustment">🔧 תיקון (ידני)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="width: 200px; margin-bottom: 0;">
+                                <label class="form-label">טווח תאריכים</label>
+                                <select id="filter-inventory-history-date" class="form-select" onchange="loadAllInventoryHistory()">
+                                    <option value="">כל הזמן</option>
+                                    <option value="today">היום</option>
+                                    <option value="week">השבוע</option>
+                                    <option value="month" selected>החודש</option>
+                                    <option value="3months">3 חודשים אחרונים</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="inventory-history-container">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
