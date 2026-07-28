@@ -16,6 +16,7 @@ let currentDealItems = [];
 let itemCounter = 0;
 let orderColors = []; // Supplier order colors
 let globalAccCategories = [];
+let selectedAccInventoryCategory = 'all';
 let isAccDataLoaded = false;
 
 // Initialize
@@ -202,6 +203,7 @@ function showScreen(screenId) {
 
     if (screenId === 'inventory') {
         document.getElementById('acc-inventory-search').value = '';
+        selectedAccInventoryCategory = 'all';
         loadAccInventory();
     }
 }
@@ -305,7 +307,7 @@ function addAccItem() {
             <div id="color-container-${id}" class="hidden color-field" style="margin-bottom: 12px;"></div>
             <div id="fin-container-${id}" class="hidden fin-field" style="margin: 16px 0; padding: 16px; background: #eff6ff; border-radius: 12px; border: 2px solid #bfdbfe;"></div>
             <div id="carton-container-${id}" class="hidden carton-field" style="margin: 16px 0; padding: 16px; background: #fffbeb; border-radius: 12px; border: 2px solid #fde68a;"></div>
-            <div style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 20px;">
+            <div class="item-grid">
                 <div>
                     <label style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 8px; display: block;">כמות:</label>
                     <div class="stepper-container">
@@ -1864,6 +1866,7 @@ async function loadAccInventory() {
         }).flat();
 
         window.accInventoryData = inventory;
+        renderAccInventoryCategoryFilters();
         displayAccInventory(inventory);
     } catch (err) {
         console.error('Error loading inventory:', err);
@@ -2018,11 +2021,42 @@ function filterAccInventory() {
     const query = document.getElementById('acc-inventory-search').value.toLowerCase();
     if (!window.accInventoryData) return;
 
-    const filtered = window.accInventoryData.filter(item => 
-        item.product_name.toLowerCase().includes(query) || 
-        item.sku.toLowerCase().includes(query) || 
-        item.variation.toLowerCase().includes(query)
-    );
+    const filtered = window.accInventoryData.filter(item => {
+        const matchesCategory = (selectedAccInventoryCategory === 'all') || (item.category === selectedAccInventoryCategory);
+        const matchesQuery = !query || 
+            item.product_name.toLowerCase().includes(query) || 
+            item.sku.toLowerCase().includes(query) || 
+            item.variation.toLowerCase().includes(query);
+        return matchesCategory && matchesQuery;
+    });
 
     displayAccInventory(filtered);
+}
+
+function renderAccInventoryCategoryFilters() {
+    const container = document.getElementById('acc-inventory-categories');
+    if (!container) return;
+
+    // Get unique categories from current products loaded
+    const uniqueCategories = [...new Set(window.accInventoryData.map(item => item.category).filter(Boolean))];
+    const categories = ['הכול', ...uniqueCategories];
+
+    container.innerHTML = '';
+    categories.forEach(cat => {
+        const pill = document.createElement('button');
+        pill.type = 'button';
+        pill.className = 'acc-category-pill';
+        const isSelected = (cat === 'הכול' && selectedAccInventoryCategory === 'all') || (cat === selectedAccInventoryCategory);
+        if (isSelected) {
+            pill.classList.add('active');
+        }
+        pill.textContent = cat;
+        pill.onclick = () => {
+            container.querySelectorAll('.acc-category-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            selectedAccInventoryCategory = (cat === 'הכול') ? 'all' : cat;
+            filterAccInventory();
+        };
+        container.appendChild(pill);
+    });
 }

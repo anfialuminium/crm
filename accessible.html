@@ -42,7 +42,7 @@
         <!-- New Deal Screen -->
         <div id="screen-new-deal" class="hidden">
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div class="screen-header">
                     <h2 class="section-title" style="margin-bottom: 0;">עסקה חדשה</h2>
                     <button onclick="showScreen('main')" class="btn-big btn-outline" style="width: auto; padding: 10px 20px; font-size: 1rem;">❌ ביטול וחזרה</button>
                 </div>
@@ -104,7 +104,7 @@
         <!-- History & Search Screen -->
         <div id="screen-history" class="hidden">
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div class="screen-header">
                     <h2 class="section-title" style="margin-bottom: 0;">📋 עסקאות וחיפוש</h2>
                     <button onclick="showScreen('main')" class="btn-big btn-outline" style="width: auto; padding: 10px 20px; font-size: 1rem;">🏠 חזור</button>
                 </div>
@@ -114,7 +114,7 @@
                     <input type="text" id="acc-history-search" class="input-big" placeholder="שם הלקוח..." onkeyup="loadAccDeals('acc-deals-list', this.value, document.getElementById('acc-history-month').value, document.getElementById('acc-history-year').value)">
                 </div>
 
-                <div class="filters-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                <div class="filters-container">
                     <div>
                         <label style="font-size: 0.9rem; color: var(--text-secondary);">חודש:</label>
                         <select id="acc-history-month" class="input-big" style="padding: 10px; height: auto;" onchange="loadAccDeals('acc-deals-list', document.getElementById('acc-history-search').value, this.value, document.getElementById('acc-history-year').value)">
@@ -150,7 +150,7 @@
         <!-- Supplier Orders Screen -->
         <div id="screen-orders" class="hidden">
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div class="screen-header">
                     <h2 class="section-title" style="margin-bottom: 0;">📦 הזמנות רכש</h2>
                     <button onclick="showScreen('main')" class="btn-big btn-outline" style="width: auto; padding: 10px 20px; font-size: 1rem;">🏠 חזור</button>
                 </div>
@@ -169,7 +169,7 @@
         <!-- Inventory Screen -->
         <div id="screen-inventory" class="hidden">
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div class="screen-header">
                     <h2 class="section-title" style="margin-bottom: 0;">📊 צפייה במלאי</h2>
                     <button onclick="showScreen('main')" class="btn-big btn-outline" style="width: auto; padding: 10px 20px; font-size: 1rem;">🏠 חזור</button>
                 </div>
@@ -177,6 +177,10 @@
                 <div class="form-group">
                     <label style="font-size: 0.9rem; color: var(--text-secondary);">חיפוש מוצר:</label>
                     <input type="text" id="acc-inventory-search" class="input-big" placeholder="שם מוצר, מק״ט או מידה..." onkeyup="filterAccInventory()">
+                </div>
+
+                <div id="acc-inventory-categories" class="acc-category-pills" style="margin-bottom: 20px;">
+                    <!-- Category pills will be loaded here -->
                 </div>
 
                 <div id="acc-inventory-list">
