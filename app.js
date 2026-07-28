@@ -229,6 +229,7 @@ function formatDateWithDay(date, options = {}) {
 
 // Global state
 let products = [];
+let hasShowInInventoryColumn = false;
 let customers = [];
 let contacts = [];
 let suppliers = [];
@@ -702,6 +703,10 @@ async function loadProducts() {
         
         if (error) throw error;
         
+        if (data && data.length > 0) {
+            hasShowInInventoryColumn = 'show_in_inventory' in data[0];
+        }
+
         products = (data || []).map(p => {
             let category = p.category ? p.category.trim() : '';
             const productName = p.product_name ? p.product_name.trim() : '';
@@ -719,10 +724,18 @@ async function loadProducts() {
                 imageUrl = `https://anfialuminium.github.io/catalog/${cleanPath}`;
             }
             
+            let showInInventory = true;
+            if (p.show_in_inventory !== undefined && p.show_in_inventory !== null) {
+                showInInventory = p.show_in_inventory;
+            } else if (p.description && p.description.includes('[HIDE_IN_INVENTORY]')) {
+                showInInventory = false;
+            }
+            
             return {
                 ...p,
                 category: category || 'אחר',
-                image_url: imageUrl
+                image_url: imageUrl,
+                show_in_inventory: showInInventory
             };
         });
         
@@ -4952,6 +4965,7 @@ function openProductModal(product = null) {
         document.getElementById('product-image').value = product.image_url || '';
         document.getElementById('product-requires-color').checked = product.requires_color || false;
         document.getElementById('product-requires-size').checked = product.requires_size || false;
+        document.getElementById('product-show-in-inventory').checked = product.show_in_inventory !== false;
         
         // Populate size prices
         const list = document.getElementById('size-prices-list');
@@ -4968,6 +4982,7 @@ function openProductModal(product = null) {
         document.getElementById('edit-product-id').value = '';
         document.getElementById('size-prices-list').innerHTML = '';
         toggleSizePricesSection(false);
+        document.getElementById('product-show-in-inventory').checked = true;
     }
     
     modal.classList.add('active');
@@ -5061,17 +5076,33 @@ async function saveProduct(event) {
     
     try {
         const productId = document.getElementById('edit-product-id').value;
+        const productDescription = document.getElementById('product-description').value || '';
+        const showInInventory = document.getElementById('product-show-in-inventory').checked;
+        
+        let finalDescription = productDescription;
+        if (!hasShowInInventoryColumn) {
+            // strip existing tag
+            finalDescription = finalDescription.replace(/\s*\[HIDE_IN_INVENTORY\]/g, '').trim();
+            if (!showInInventory) {
+                finalDescription = finalDescription + '\n[HIDE_IN_INVENTORY]';
+            }
+        }
+
         const productData = {
             product_name: document.getElementById('product-name').value,
             category: document.getElementById('product-category').value || null,
             sku: document.getElementById('product-sku').value || null,
             price: parseFloat(document.getElementById('product-price').value) || null,
-            description: document.getElementById('product-description').value || null,
+            description: finalDescription || null,
             image_url: document.getElementById('product-image').value || null,
             requires_color: document.getElementById('product-requires-color').checked,
             requires_size: document.getElementById('product-requires-size').checked,
             active: true
         };
+
+        if (hasShowInInventoryColumn) {
+            productData.show_in_inventory = showInInventory;
+        }
         
         // Collect size-specific prices
         const sizePrices = [];
@@ -16796,7 +16827,15 @@ async function loadInventory() {
             console.warn('⚠️ Inventory transactions table not found or inaccessible. Have you run the SQL?', transRes.error);
         }
 
-        const allProducts = productsRes.data || [];
+        const allProducts = (productsRes.data || []).filter(product => {
+            let showInInventory = true;
+            if (product.show_in_inventory !== undefined && product.show_in_inventory !== null) {
+                showInInventory = product.show_in_inventory;
+            } else if (product.description && product.description.includes('[HIDE_IN_INVENTORY]')) {
+                showInInventory = false;
+            }
+            return showInInventory;
+        });
         const allStock = stockRes.data || [];
         const recentTransactionsCount = (transRes.data || []).length;
 

@@ -88,7 +88,19 @@ async function loadData() {
             if (category === 'אביזרים') {
                 category = 'מוצרים נוספים';
             }
-            return { ...p, category: category || 'אחר' };
+            
+            let showInInventory = true;
+            if (p.show_in_inventory !== undefined && p.show_in_inventory !== null) {
+                showInInventory = p.show_in_inventory;
+            } else if (p.description && p.description.includes('[HIDE_IN_INVENTORY]')) {
+                showInInventory = false;
+            }
+
+            return { 
+                ...p, 
+                category: category || 'אחר',
+                show_in_inventory: showInInventory
+            };
         });
         
         globalAccCategories = [...new Set(products.map(p => p.category))];
@@ -1857,7 +1869,8 @@ async function loadAccInventory() {
         if (stockError) throw stockError;
 
         // Map products and stock
-        const inventory = products.map(p => {
+        const visibleProducts = products.filter(p => p.show_in_inventory !== false);
+        const inventory = visibleProducts.map(p => {
             const pStock = stock.filter(s => s.product_id === p.product_id);
             if (pStock.length === 0) {
                 return { ...p, variation: 'כללי', quantity: 0 };
