@@ -1373,35 +1373,7 @@ function createItemRow(item, index, hasAnyColor = true) {
         quantityCell.appendChild(rollDiv);
     }
 
-    // Carton Option for Brushes (under quantity)
-    if (isBrushRow) {
-        const cartonDiv = document.createElement('div');
-        cartonDiv.style.marginTop = '0.5rem';
-        cartonDiv.style.display = 'flex';
-        cartonDiv.style.alignItems = 'center';
-        cartonDiv.style.gap = '0.5rem';
-        cartonDiv.style.fontSize = '0.82rem';
-        
-        const cartonCheckbox = document.createElement('input');
-        cartonCheckbox.type = 'checkbox';
-        cartonCheckbox.id = `carton-brush-${item.id}`;
-        cartonCheckbox.checked = !!item.is_carton;
-        cartonCheckbox.addEventListener('change', (e) => {
-            item.is_carton = e.target.checked;
-            renderDealItems(); // Re-render to update total price and size
-        });
-        
-        const cartonLabel = document.createElement('label');
-        cartonLabel.htmlFor = `carton-brush-${item.id}`;
-        cartonLabel.innerHTML = `${APP_ICONS.PACKAGE} קרטון`;
-        cartonLabel.style.fontWeight = '600';
-        cartonLabel.style.color = '#d97706';
-        cartonLabel.style.cursor = 'pointer';
-        
-        cartonDiv.appendChild(cartonCheckbox);
-        cartonDiv.appendChild(cartonLabel);
-        quantityCell.appendChild(cartonDiv);
-    }
+    // Brushes are always sold/tracked strictly by the carton, no checkbox needed
     
     // Unit Price Stepper
     const isBrushProduct = product && (
@@ -1476,7 +1448,7 @@ function createItemRow(item, index, hasAnyColor = true) {
     
     if (isBrushProduct) {
         const perMeterNote = document.createElement('div');
-        perMeterNote.textContent = '(מחיר לגליל)';
+        perMeterNote.textContent = '(מחיר לקרטון)';
         perMeterNote.style.fontSize = '0.75rem';
         perMeterNote.style.color = 'var(--text-tertiary)';
         perMeterNote.style.marginTop = '4px';
@@ -1704,10 +1676,6 @@ function createItemRow(item, index, hasAnyColor = true) {
                     quantityMultiplier = lengthVal;
                 }
             }
-        } else if (product && (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות')))) {
-            if (item.is_carton) {
-                quantityMultiplier = getBrushCartonMultiplier(product, item.size, item.is_fin_brush);
-            }
         }
         
         const total = (parseFloat(item.quantity) || 0) * quantityMultiplier * (parseFloat(item.unit_price) || 0);
@@ -1777,31 +1745,31 @@ function getBrushCartonMultiplier(product, size, isFin) {
     const name = product.product_name || '';
     
     if (isFin) {
-        if (name.includes('צר נמוך')) return 8; // 2000m -> 8 rolls
-        if (name.includes('רחב נמוך')) return 6; // 1800m -> 6 rolls
-        if (name.includes('צר גבוה')) return 8; // 1600m -> 8 rolls
-        if (name.includes('רחב גבוה')) return 7; // 1400m -> 7 rolls
-        return 5; // 1500m -> 5 rolls
+        if (name.includes('צר נמוך')) return 2000;
+        if (name.includes('רחב נמוך')) return 1800;
+        if (name.includes('צר גבוה')) return 1600;
+        if (name.includes('רחב גבוה')) return 1400;
+        return 1500;
     }
     
-    if (name.includes('צר נמוך')) return 5; // 1500m -> 5 rolls
-    if (name.includes('רחב נמוך')) return 5; // 1500m -> 5 rolls
+    if (name.includes('צר נמוך')) return 1500;
+    if (name.includes('רחב נמוך')) return 1500;
     if (name.includes('צר גבוה')) {
-        if (size === '12') return 4; // 1000m -> 4 rolls
-        if (size === '15') return 4; // 800m -> 4 rolls
-        if (size === '20') return 4; // 600m -> 4 rolls
-        return 4;
+        if (size === '12') return 1000;
+        if (size === '15') return 800;
+        if (size === '20') return 600;
+        return 1000;
     }
     if (name.includes('רחב גבוה')) {
-        if (size === '12') return 4; // 800m -> 4 rolls
-        if (size === '15') return 4; // 600m -> 4 rolls
-        if (size === '20') return 4; // 400m -> 4 rolls
-        return 4;
+        if (size === '12') return 800;
+        if (size === '15') return 600;
+        if (size === '20') return 400;
+        return 800;
     }
-    if (name.includes('אינסרט')) return 1; // 300m -> 1 roll
+    if (name.includes('אינסרט')) return 300;
     if (name.includes('הדבקה')) {
-        if (size === '200 מטר') return 4; // 800m -> 4 rolls
-        return 1; // 100m -> 1 roll
+        if (size === '200 מטר') return 800;
+        return 100;
     }
     return 1;
 }
@@ -1832,10 +1800,6 @@ function calculateTotal() {
                 if (!isNaN(lengthVal) && lengthVal > 0) {
                     quantityMultiplier = lengthVal;
                 }
-            }
-        } else if (product && (product.product_name.includes('מברשת') || (product.category && product.category.includes('מברשות')))) {
-            if (item.is_carton) {
-                quantityMultiplier = getBrushCartonMultiplier(product, item.size, item.is_fin_brush);
             }
         }
         
@@ -1984,11 +1948,7 @@ async function saveDeal(status = null) {
             if (dealStatus === 'זכייה' && oldDealData.deal_status !== 'זכייה') {
                 for (const item of dealItems) {
                     const variation = (item.color || item.size) ? `${item.color || ''} ${item.size || ''}`.trim() : 'כללי';
-                    const product = products.find(p => p.product_id === item.product_id);
-                    const isBrush = product && (product.category === 'מברשות' || product.product_name.includes('מברשת'));
-                    const qtyMultiplier = isBrush ? (item.is_carton ? getBrushCartonMultiplier(product, item.size, item.is_fin_brush) : 1) : 1;
-                    const qtyToSubtract = item.quantity * qtyMultiplier;
-                    await updateInventoryStock(item.product_id, variation, -qtyToSubtract, 'sale', editDealId, `זכייה בעסקה #${editDealId.slice(0,6)}`);
+                    await updateInventoryStock(item.product_id, variation, -item.quantity, 'sale', editDealId, `זכייה בעסקה #${editDealId.slice(0,6)}`);
                 }
             }
             
@@ -2165,11 +2125,7 @@ async function saveDeal(status = null) {
             if (dealStatus === 'זכייה') {
                 for (const item of dealItems) {
                     const variation = (item.color || item.size) ? `${item.color || ''} ${item.size || ''}`.trim() : 'כללי';
-                    const product = products.find(p => p.product_id === item.product_id);
-                    const isBrush = product && (product.category === 'מברשות' || product.product_name.includes('מברשת'));
-                    const qtyMultiplier = isBrush ? (item.is_carton ? getBrushCartonMultiplier(product, item.size, item.is_fin_brush) : 1) : 1;
-                    const qtyToSubtract = item.quantity * qtyMultiplier;
-                    await updateInventoryStock(item.product_id, variation, -qtyToSubtract, 'sale', dealData.deal_id, `זכייה בעסקה חדשה #${dealData.deal_id.slice(0,6)}`);
+                    await updateInventoryStock(item.product_id, variation, -item.quantity, 'sale', dealData.deal_id, `זכייה בעסקה חדשה #${dealData.deal_id.slice(0,6)}`);
                 }
             }
             
@@ -5703,11 +5659,11 @@ async function viewDealDetails(dealId) {
                                         ${item.notes ? `<div style="margin-top: 4px; padding: 4px 8px; background: #f1f5f9; border-radius: 4px; font-size: 0.8rem; color: #475569; border-right: 2px solid #cbd5e1; white-space: pre-wrap;">${formatActivityText(item.notes)}</div>` : ''}
                                     </td>
                                     <td>${item.quantity}</td>
-                                    <td>₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(לגליל)</small>' : ''}</td>
+                                    <td>₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(לקרטון)</small>' : ''}</td>
                                     <td>${item.color || '-'}</td>
                                     <td>
                                         ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : ''}
-                                        ${item.is_carton ? `${(item.quantity * getBrushCartonMultiplier(item.products, item.size, item.is_fin_brush)).toFixed(0)} גלילים (קרטון)` : ''}
+                                        ${item.is_carton ? `${(item.quantity * getBrushCartonMultiplier(item.products, item.size, item.is_fin_brush)).toFixed(0)} קרטונים` : ''}
                                         ${(!item.is_roll && !item.is_carton) ? (item.size || '-') : ''}
                                         ${item.is_fin_brush ? '<br><span class="badge badge-success" style="font-size: 0.75rem; margin-top: 0.25rem;">מברשת סנפיר</span>' : ''}
                                         ${item.is_roll ? '<br><span class="badge badge-primary" style="font-size: 0.75rem; margin-top: 0.25rem;">גליל רשת</span>' : ''}
@@ -9273,11 +9229,11 @@ async function generateQuotePDF(specificDealId = null) {
                                     ${item.notes ? `<div style="margin-top: 6px; padding: 6px 10px; background: #fffbeb; border-right: 4px solid #facc15; border-radius: 4px; font-size: 0.82rem; color: #4b5563; line-height: 1.5;">${fixBiDi(item.notes)}</div>` : ''}
                                 </td>
                                 <td style="padding: 1rem;">${item.quantity}</td>
-                                <td style="padding: 1rem;">₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(לגליל)</small>' : ''}</td>
+                                <td style="padding: 1rem;">₪${item.unit_price.toFixed(2)}${(item.products.product_name.includes('מברשת') || (item.products.category && item.products.category.includes('מברשות'))) ? ' <small>(לקרטון)</small>' : ''}</td>
                                 <td style="padding: 1rem;">${fixBiDi(item.color) || '-'}</td>
                                 <td style="padding: 1rem;">
                                     ${item.is_roll ? `${(item.quantity * 30).toFixed(0)} מ' (גליל)` : ''}
-                                    ${item.is_carton ? `${(item.quantity * getBrushCartonMultiplier(item.products, item.size, item.is_fin_brush)).toFixed(0)} גלילים (קרטון)` : ''}
+                                    ${item.is_carton ? `${(item.quantity * getBrushCartonMultiplier(item.products, item.size, item.is_fin_brush)).toFixed(0)} קרטונים` : ''}
                                     ${(!item.is_roll && !item.is_carton) ? (fixBiDi(item.size) || '-') : ''}
                                     ${item.is_fin_brush ? '<br><span style="color: #059669; font-size: 0.8rem; font-weight: 600;">מברשת סנפיר</span>' : ''}
                                     ${item.is_roll ? '<br><span style="color: #2563eb; font-size: 0.8rem; font-weight: 600;">גליל רשת (30 מ\')</span>' : ''}
@@ -9324,7 +9280,7 @@ async function generateQuotePDF(specificDealId = null) {
                     <li>תוקף ההצעה: 30 יום מתאריך ההנפקה</li>
                     <li>תנאי תשלום: ${paymentTerms}</li>
                     <li>משלוח: עד 7 ימי עסקים</li>
-                    ${items.some(item => (item.products.category && item.products.category.includes('מברשות')) || item.products.product_name.includes('מברשת')) ? '<li>עבור מברשות המחיר הינו לגליל אחד</li>' : ''}
+                    ${items.some(item => (item.products.category && item.products.category.includes('מברשות')) || item.products.product_name.includes('מברשת')) ? '<li>עבור מברשות המחיר הינו לקרטון אחד</li>' : ''}
                 </ul>
                 
                 ${deal.notes ? `
@@ -17020,7 +16976,7 @@ function displayInventoryList(data) {
                 <td><span style="color: var(--text-secondary);">${item.variation_name}</span></td>
                 <td>
                     <span class="badge ${stockStatusClass}" style="font-size: 1.1rem; padding: 0.5rem 1rem; min-width: 60px; text-align: center;">
-                        ${item.stock_quantity.toLocaleString()} ${(item.category === 'מברשות') ? (item.stock_quantity === 1 ? "גליל" : "גלילים") : (item.unit || "יח'")}
+                        ${item.stock_quantity.toLocaleString()} ${(item.category === 'מברשות') ? (item.stock_quantity === 1 ? "קרטון" : "קרטונים") : (item.unit || "יח'")}
                     </span>
                 </td>
                 <td style="font-size: 0.85rem; color: var(--text-tertiary);">${lastUpdate}</td>
@@ -17374,7 +17330,7 @@ function exportInventory() {
             item.category || '',
             item.variation_name,
             item.stock_quantity,
-            item.category === 'מברשות' ? 'גליל' : (item.unit || 'יח\''),
+            item.category === 'מברשות' ? 'קרטון' : (item.unit || 'יח\''),
             item.updated_at ? new Date(item.updated_at).toLocaleDateString('he-IL') : ''
         ]);
     });
@@ -17520,10 +17476,7 @@ async function resetInventoryAndSyncDescriptions() {
                             const variation = item.variation_name || 'כללי';
                             const saleDate = new Date(deal.created_at).toLocaleDateString('he-IL');
                             const customerName = deal.customers?.business_name || 'לקוח';
-                            const isBrush = product.category === 'מברשות' || product.product_name.includes('מברשת');
-                            const qtyMultiplier = isBrush ? (item.is_carton ? getBrushCartonMultiplier(product, item.size, item.is_fin_brush) : 1) : 1;
-                            const qtyToSubtract = parseFloat(item.quantity || 0) * qtyMultiplier;
-                            await updateInventoryStock(product.product_id, variation, -qtyToSubtract, 'sale', deal.deal_id, `מכירה בתאריך ${saleDate}, עבור ${customerName}`);
+                            await updateInventoryStock(product.product_id, variation, -parseFloat(item.quantity || 0), 'sale', deal.deal_id, `מכירה בתאריך ${saleDate}, עבור ${customerName}`);
                         }
                     }
                 }
