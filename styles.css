@@ -1851,8 +1851,13 @@ a[href^="tel:"] {
 
     #password {
         font-size: 2.5rem !important;
-        padding: 1.5rem !important;
+        padding: 1.5rem 3.5rem !important;
         border-radius: 16px !important;
+    }
+
+    #toggle-password-btn:hover {
+        color: var(--primary-color) !important;
+        background-color: rgba(0, 0, 0, 0.05);
     }
 
     #login-modal .btn {

@@ -103,6 +103,21 @@ async function handleLogin(event) {
     }
 }
 
+function togglePasswordVisibility() {
+    const passwordInput = document.getElementById('password');
+    const eyeIcon = document.getElementById('eye-icon');
+    const eyeOffIcon = document.getElementById('eye-off-icon');
+    
+    if (passwordInput) {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        if (eyeIcon && eyeOffIcon) {
+            eyeIcon.style.display = isPassword ? 'none' : 'block';
+            eyeOffIcon.style.display = isPassword ? 'block' : 'none';
+        }
+    }
+}
+
 function handleLogout() {
     sessionStorage.removeItem('isLoggedIn');
     localStorage.removeItem('isLoggedIn');
