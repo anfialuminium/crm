@@ -17728,7 +17728,6 @@ function printInventoryBalances() {
             </div>
             <div class="meta-info">
                 <div>תאריך הפקה: <strong>${currentDate}</strong> בשעה <strong>${currentTime}</strong></div>
-                <div>סה״כ פריטים במלאי: <strong>${itemsToPrint.length}</strong></div>
             </div>
         </div>
 
