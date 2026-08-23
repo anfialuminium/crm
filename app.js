@@ -17471,7 +17471,7 @@ function printInventoryBalances() {
         if (statusVal === 'instock') return item.stock_quantity > 0;
         if (statusVal === 'lowstock') return item.stock_quantity > 0 && item.stock_quantity < 5;
         if (statusVal === 'outofstock') return item.stock_quantity <= 0;
-        return item.stock_quantity > 0; // Default: show existing stock (> 0)
+        return true; // Show all items (including stock = 0)
     });
 
     if (searchVal) {
@@ -17486,21 +17486,29 @@ function printInventoryBalances() {
     }
 
     if (itemsToPrint.length === 0) {
-        // Fallback: if search/filter returned nothing, print all items with stock > 0
-        itemsToPrint = inventoryData.filter(item => item.stock_quantity > 0);
+        // Fallback: if search/filter returned nothing, print all inventory items
+        itemsToPrint = [...inventoryData];
     }
 
     if (itemsToPrint.length === 0) {
         if (typeof Swal !== 'undefined') {
-            Swal.fire('אין מלאי קיים', 'לא נמצאו פריטים עם יתרת מלאי חיובית להדפסה', 'info');
+            Swal.fire('אין נתונים', 'לא נמצאו פריטים להדפסה', 'info');
         } else {
-            alert('לא נמצאו פריטים עם יתרת מלאי חיובית להדפסה');
+            alert('לא נמצאו פריטים להדפסה');
         }
         return;
     }
 
-    // Sort items by Category, then Product Name, then Variation
+    // Sort items: In-stock items (> 0) first, Out-of-stock items (<= 0) at the bottom.
+    // Within each group, sort by Category, then Product Name, then Variation.
     itemsToPrint.sort((a, b) => {
+        const isAvailableA = (a.stock_quantity || 0) > 0 ? 1 : 0;
+        const isAvailableB = (b.stock_quantity || 0) > 0 ? 1 : 0;
+        
+        if (isAvailableA !== isAvailableB) {
+            return isAvailableB - isAvailableA; // 1 before 0
+        }
+
         const catA = a.category || 'אחר';
         const catB = b.category || 'אחר';
         const catCompare = catA.localeCompare(catB, 'he');
@@ -17518,15 +17526,20 @@ function printInventoryBalances() {
     const rowsHtml = itemsToPrint.map((item, idx) => {
         const qty = parseFloat(item.stock_quantity || 0);
         const unitText = item.category === 'מברשות' ? (qty === 1 ? 'קרטון' : 'קרטונים') : (item.unit || 'יח\'');
+        const isOut = qty <= 0;
+        const qtyDisplay = isOut 
+            ? `<span style="color: #dc2626; font-weight: 700;">0 ${unitText}</span>` 
+            : `${qty.toLocaleString()} ${unitText}`;
+        const rowBg = isOut ? 'style="background-color: #fef2f2;"' : '';
         
         return `
-            <tr>
+            <tr ${rowBg}>
                 <td style="text-align: center; color: #64748b; font-size: 10px;">${idx + 1}</td>
                 <td style="font-weight: 600;">${item.product_name || '-'}</td>
                 <td style="font-family: monospace; font-size: 11px;">${item.sku || '-'}</td>
                 <td><span class="badge-cat">${item.category || 'אחר'}</span></td>
                 <td>${item.variation_name || 'כללי'}</td>
-                <td class="qty-cell">${qty.toLocaleString()} ${unitText}</td>
+                <td class="qty-cell">${qtyDisplay}</td>
             </tr>
         `;
     }).join('');
