@@ -17453,6 +17453,335 @@ function exportInventory() {
     XLSX.writeFile(wb, `inventory_export_${new Date().toISOString().split('T')[0]}.xlsx`);
 }
 
+function printInventoryBalances() {
+    if (!inventoryData || inventoryData.length === 0) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('אין נתונים', 'לא נמצאו נתוני מלאי להדפסה', 'warning');
+        } else {
+            alert('לא נמצאו נתוני מלאי להדפסה');
+        }
+        return;
+    }
+
+    const searchVal = document.getElementById('filter-inventory-search')?.value?.trim().toLowerCase();
+    const catVal = document.getElementById('filter-inventory-category')?.value;
+    const statusVal = document.getElementById('filter-inventory-status')?.value;
+
+    let itemsToPrint = inventoryData.filter(item => {
+        if (statusVal === 'instock') return item.stock_quantity > 0;
+        if (statusVal === 'lowstock') return item.stock_quantity > 0 && item.stock_quantity < 5;
+        if (statusVal === 'outofstock') return item.stock_quantity <= 0;
+        return item.stock_quantity > 0; // Default: show existing stock (> 0)
+    });
+
+    if (searchVal) {
+        itemsToPrint = itemsToPrint.filter(item => 
+            (item.product_name || '').toLowerCase().includes(searchVal) ||
+            (item.sku || '').toLowerCase().includes(searchVal) ||
+            (item.variation_name || '').toLowerCase().includes(searchVal)
+        );
+    }
+    if (catVal) {
+        itemsToPrint = itemsToPrint.filter(item => item.category === catVal);
+    }
+
+    if (itemsToPrint.length === 0) {
+        // Fallback: if search/filter returned nothing, print all items with stock > 0
+        itemsToPrint = inventoryData.filter(item => item.stock_quantity > 0);
+    }
+
+    if (itemsToPrint.length === 0) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('אין מלאי קיים', 'לא נמצאו פריטים עם יתרת מלאי חיובית להדפסה', 'info');
+        } else {
+            alert('לא נמצאו פריטים עם יתרת מלאי חיובית להדפסה');
+        }
+        return;
+    }
+
+    // Sort items by Category, then Product Name, then Variation
+    itemsToPrint.sort((a, b) => {
+        const catA = a.category || 'אחר';
+        const catB = b.category || 'אחר';
+        const catCompare = catA.localeCompare(catB, 'he');
+        if (catCompare !== 0) return catCompare;
+
+        const nameCompare = (a.product_name || '').localeCompare(b.product_name || '', 'he');
+        if (nameCompare !== 0) return nameCompare;
+
+        return (a.variation_name || '').localeCompare(b.variation_name || '', 'he');
+    });
+
+    const currentDate = new Date().toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const currentTime = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+
+    let totalQtySum = 0;
+    const rowsHtml = itemsToPrint.map((item, idx) => {
+        const qty = parseFloat(item.stock_quantity || 0);
+        totalQtySum += qty;
+        const unitText = item.category === 'מברשות' ? (qty === 1 ? 'קרטון' : 'קרטונים') : (item.unit || 'יח\'');
+        
+        return `
+            <tr>
+                <td style="text-align: center; color: #64748b; font-size: 10px;">${idx + 1}</td>
+                <td style="font-weight: 600;">${item.product_name || '-'}</td>
+                <td style="font-family: monospace; font-size: 11px;">${item.sku || '-'}</td>
+                <td><span class="badge-cat">${item.category || 'אחר'}</span></td>
+                <td>${item.variation_name || 'כללי'}</td>
+                <td class="qty-cell">${qty.toLocaleString()} ${unitText}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>דו״ח יתרות מלאי - אנפי אלומיניום</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 8mm 10mm 8mm 10mm;
+        }
+        :root {
+            --primary: #1e40af;
+            --primary-light: #eff6ff;
+            --border-color: #cbd5e1;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 16px;
+            color: var(--text-dark);
+            background-color: #f8fafc;
+            direction: rtl;
+            font-size: 11.5px;
+            line-height: 1.3;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .no-print-actions {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 9999;
+            display: flex;
+            gap: 10px;
+        }
+        .btn-print {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .btn-close {
+            background: #64748b;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 0;
+                max-width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+        }
+        .company-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 0 0 2px 0;
+        }
+        .report-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+            font-weight: 600;
+        }
+        .meta-info {
+            text-align: left;
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+        .meta-info strong {
+            color: var(--text-dark);
+        }
+        .summary-bar {
+            display: flex;
+            gap: 20px;
+            background: var(--primary-light);
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+            padding: 6px 12px;
+            margin-bottom: 12px;
+            font-size: 11.5px;
+            font-weight: 600;
+        }
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .summary-item span.val {
+            color: var(--primary);
+            font-weight: 800;
+            font-size: 13px;
+        }
+        table.inventory-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        table.inventory-table th {
+            background-color: var(--primary);
+            color: #ffffff;
+            padding: 6px 8px;
+            text-align: right;
+            font-weight: 700;
+            font-size: 11px;
+            border: 1px solid var(--primary);
+        }
+        table.inventory-table td {
+            padding: 5px 8px;
+            border-bottom: 1px solid var(--border-color);
+            border-left: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+        table.inventory-table tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+        .badge-cat {
+            background: #e2e8f0;
+            color: #334155;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .qty-cell {
+            font-weight: 800;
+            font-size: 11.5px;
+            text-align: center;
+            color: #0f172a;
+        }
+        .report-footer {
+            margin-top: 16px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-actions no-print">
+        <button class="btn-print" onclick="window.print()">🖨️ הדפס / שמור כ-PDF</button>
+        <button class="btn-close" onclick="window.close()">❌ סגור</button>
+    </div>
+
+    <div class="container">
+        <div class="report-header">
+            <div>
+                <h1 class="company-title">אנפי אלומיניום</h1>
+                <p class="report-subtitle">דו״ח יתרות מלאי קיים</p>
+            </div>
+            <div class="meta-info">
+                <div>תאריך הפקה: <strong>${currentDate}</strong> בשעה <strong>${currentTime}</strong></div>
+                <div>סה״כ שורות מלאי: <strong>${itemsToPrint.length}</strong></div>
+            </div>
+        </div>
+
+        <div class="summary-bar">
+            <div class="summary-item">
+                <span>סה״כ פריטים במלאי הקיים:</span>
+                <span class="val">${itemsToPrint.length}</span>
+            </div>
+            <div class="summary-item" style="margin-right: auto;">
+                <span>כמות פריטים כוללת:</span>
+                <span class="val">${totalQtySum.toLocaleString()}</span>
+            </div>
+        </div>
+
+        <table class="inventory-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%; text-align: center;">#</th>
+                    <th style="width: 32%;">שם מוצר</th>
+                    <th style="width: 15%;">מק״ט</th>
+                    <th style="width: 18%;">קטגוריה</th>
+                    <th style="width: 15%;">וריאציה</th>
+                    <th style="width: 15%; text-align: center;">כמות במלאי</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rowsHtml}
+            </tbody>
+        </table>
+
+        <div class="report-footer">
+            <span>מערכת CRM - אנפי אלומיניום</span>
+            <span>דוח יתרות מלאי מרוכז</span>
+        </div>
+    </div>
+</body>
+</html>`;
+
+    const printWin = window.open('', '_blank');
+    if (printWin) {
+        printWin.document.write(htmlContent);
+        printWin.document.close();
+    } else {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('חוסם חלונות קופצים', 'אנא אפשר חלונות קופצים בדפדפן על מנת לצפות בדוח המודפס', 'warning');
+        } else {
+            alert('אנא אפשר חלונות קופצים בדפדפן על מנת לצפות בדוח המודפס');
+        }
+    }
+}
+
 async function retroactiveInventorySync() {
     try {
         const { isConfirmed } = await Swal.fire({
