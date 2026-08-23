@@ -17515,10 +17515,8 @@ function printInventoryBalances() {
     const currentDate = new Date().toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const currentTime = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
 
-    let totalQtySum = 0;
     const rowsHtml = itemsToPrint.map((item, idx) => {
         const qty = parseFloat(item.stock_quantity || 0);
-        totalQtySum += qty;
         const unitText = item.category === 'מברשות' ? (qty === 1 ? 'קרטון' : 'קרטונים') : (item.unit || 'יח\'');
         
         return `
@@ -17730,18 +17728,7 @@ function printInventoryBalances() {
             </div>
             <div class="meta-info">
                 <div>תאריך הפקה: <strong>${currentDate}</strong> בשעה <strong>${currentTime}</strong></div>
-                <div>סה״כ שורות מלאי: <strong>${itemsToPrint.length}</strong></div>
-            </div>
-        </div>
-
-        <div class="summary-bar">
-            <div class="summary-item">
-                <span>סה״כ פריטים במלאי הקיים:</span>
-                <span class="val">${itemsToPrint.length}</span>
-            </div>
-            <div class="summary-item" style="margin-right: auto;">
-                <span>כמות פריטים כוללת:</span>
-                <span class="val">${totalQtySum.toLocaleString()}</span>
+                <div>סה״כ פריטים במלאי: <strong>${itemsToPrint.length}</strong></div>
             </div>
         </div>
 
