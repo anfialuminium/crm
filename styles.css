@@ -933,6 +933,12 @@ input[inputmode="decimal"]::placeholder {
     color: #92400e;
 }
 
+.badge-reschedule {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
 /* ============================================
    Loading Spinner
    ============================================ */
@@ -2297,6 +2303,7 @@ html, body {
 
 .audit-item.action-create { border-right-color: var(--success-color); }
 .audit-item.action-update { border-right-color: var(--warning-color); }
+.audit-item.action-reschedule { border-right-color: #f59e0b; }
 .audit-item.action-delete { border-right-color: var(--error-color); }
 
 .audit-item-icon {

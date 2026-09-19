@@ -8125,13 +8125,15 @@ async function postponeActivity(activityId, type) {
         const customerName = activity.customers?.business_name || activity.deals?.customers?.business_name;
         const descriptiveName = `${activity.activity_type}${customerName ? ` - ${customerName}` : ''}`;
         
+        const descSuffix = activity.description ? ` ("${activity.description}")` : '';
         const logContent = customerName 
-            ? `${actionNoun} פעילות עבור הלקוח ${customerName} ל${targetDesc} (${dateStr})`
-            : `${actionNoun} פעילות`;
+            ? `${actionNoun} פעילות${descSuffix} עבור הלקוח ${customerName} ל${targetDesc} (${dateStr})`
+            : `${actionNoun} פעילות${descSuffix} ל${targetDesc} (${dateStr})`;
 
         logAction('update', 'activity', activityId, descriptiveName, 
             logContent, 
-            activity, { activity_date: newDate.toISOString() });
+            { activity_date: originalDate.toISOString() }, 
+            { activity_date: newDate.toISOString() });
 
         showAlert(` הפעילות ${actionVerb} ל${targetDesc === 'שבוע' ? 'בעוד שבוע' : targetDesc} (${dateStr})`, 'success');
         
@@ -9646,10 +9648,10 @@ async function executeBulkPostpone(targetDateStr) {
         const count = selectedActivityIds.size;
         const [y, m, d] = targetDateStr.split('-').map(Number);
         
-        // Fetch existing activity dates to preserve original hours & minutes
+        // Fetch existing activity details to preserve original hours & minutes and for detailed audit logging
         const { data: activities, error: fetchErr } = await supabaseClient
             .from('activities')
-            .select('activity_id, activity_date')
+            .select('activity_id, activity_date, activity_type, description, customers(business_name), deals(customers(business_name))')
             .in('activity_id', Array.from(selectedActivityIds));
             
         if (fetchErr) throw fetchErr;
@@ -9680,7 +9682,40 @@ async function executeBulkPostpone(targetDateStr) {
         const targetDateObj = new Date(y, m - 1, d);
         const formattedDate = targetDateObj.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
         
-        logAction('update', 'activity', 'bulk', `דחיית ${count} פעילויות`, `דחיית ${count} פעילויות ליום ${formattedDate}`);
+        // Log individual date changes for the audit log
+        for (const act of (activities || [])) {
+            const origDate = act.activity_date ? new Date(act.activity_date) : null;
+            const newDate = new Date(y, m - 1, d);
+            if (origDate && !isNaN(origDate.getTime())) {
+                newDate.setHours(origDate.getHours(), origDate.getMinutes(), 0, 0);
+            } else {
+                newDate.setHours(9, 0, 0, 0);
+            }
+
+            const customerName = act.customers?.business_name || act.deals?.customers?.business_name || '';
+            const actType = act.activity_type || 'פעילות';
+            const descriptiveName = `${actType}${customerName ? ` - ${customerName}` : ''}`;
+            const desc = act.description ? ` ("${act.description}")` : '';
+
+            const origDateStr = origDate 
+                ? origDate.toLocaleDateString('he-IL', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })
+                : 'ללא תאריך';
+            const newDateFormatted = newDate.toLocaleDateString('he-IL', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            const logContent = customerName
+                ? `דחיית פעילות${desc} עבור הלקוח ${customerName} ל-${newDateFormatted}`
+                : `דחיית פעילות${desc} ל-${newDateFormatted}`;
+
+            logAction(
+                'update',
+                'activity',
+                act.activity_id,
+                descriptiveName,
+                logContent,
+                { activity_date: origDate ? origDate.toISOString() : null },
+                { activity_date: newDate.toISOString() }
+            );
+        }
         
         Swal.close();
         showAlert(`${count} פעילויות נדחו בהצלחה ל-${formattedDate}`, 'success');
@@ -10188,11 +10223,13 @@ window.CRM = {
 async function logAction(actionType, entityType, entityId, entityName, description, oldValue = null, newValue = null) {
     try {
         const performedBy = localStorage.getItem('crm_username') || 'משתמש מערכת';
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const validEntityId = (entityId && typeof entityId === 'string' && uuidRegex.test(entityId)) ? entityId : null;
         
         const record = {
             action_type: actionType,
             entity_type: entityType,
-            entity_id: entityId,
+            entity_id: validEntityId,
             entity_name: entityName,
             description: description,
             old_value: oldValue,
@@ -10200,9 +10237,13 @@ async function logAction(actionType, entityType, entityId, entityName, descripti
             performed_by: performedBy
         };
 
-        await supabaseClient
+        const { error: insertErr } = await supabaseClient
             .from('audit_log')
             .insert(record);
+            
+        if (insertErr) {
+            console.error('❌ Error inserting audit log record:', insertErr);
+        }
             
         // Handle Email Notification
         const notifyEmail = localStorage.getItem('crm_notification_email');
@@ -10324,6 +10365,7 @@ async function sendNotificationEmail(action, email, url) {
             'create': 'יצירת',
             'update': 'עדכון',
             'delete': 'מחיקת',
+            'reschedule': 'שינוי מועד',
             'login': 'התחברות',
             'export': 'ייצוּא'
         };
@@ -10360,7 +10402,8 @@ async function sendNotificationEmail(action, email, url) {
             'discount_percentage': 'אחוז הנחה',
             'role': 'תפקיד',
             'sku': 'מק"ט',
-            'active': 'פעיל'
+            'active': 'פעיל',
+            'activity_date': 'תאריך פעילות'
         };
 
         const actionHeb = actionTranslations[action.action_type] || action.action_type;
@@ -10371,6 +10414,12 @@ async function sendNotificationEmail(action, email, url) {
         const formatVal = (val) => {
             if (val === null || val === undefined) return '-';
             if (typeof val === 'boolean') return val ? 'כן' : 'לא';
+            if (typeof val === 'string' && val.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/)) {
+                const d = new Date(val);
+                if (!isNaN(d.getTime())) {
+                    return `${d.toLocaleDateString('he-IL', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })} ${d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`;
+                }
+            }
             if (typeof val === 'object') return JSON.stringify(val);
             return val;
         };
@@ -10888,7 +10937,11 @@ async function loadAuditLog() {
         
         // Apply filters
         if (actionFilter) {
-            query = query.eq('action_type', actionFilter);
+            if (actionFilter === 'reschedule') {
+                query = query.or('action_type.eq.reschedule,entity_type.eq.activity');
+            } else {
+                query = query.eq('action_type', actionFilter);
+            }
         }
         
         if (entityFilter) {
@@ -10943,6 +10996,20 @@ async function loadAuditLog() {
             });
         }
         
+        // Helper to check if an audit log entry is an activity date change / reschedule
+        const isAuditDateChange = (log) => {
+            if (!log) return false;
+            if (log.action_type === 'reschedule') return true;
+            if (log.entity_type !== 'activity') return false;
+            
+            const oldDate = log.old_value?.activity_date;
+            const newDate = log.new_value?.activity_date;
+            if (newDate && (!oldDate || oldDate !== newDate)) return true;
+            
+            const desc = log.description || '';
+            return desc.includes('דחיי') || desc.includes('הקדמ') || desc.includes('שינוי מועד') || desc.includes('מועד') || desc.includes('לשבוע הבא');
+        };
+
         // Filter by search (client-side)
         let filteredLogs = logs || [];
         if (searchFilter) {
@@ -10954,6 +11021,11 @@ async function loadAuditLog() {
                        desc.includes(searchFilter) || 
                        performer.includes(searchFilter);
             });
+        }
+
+        // Filter by action if reschedule (client-side precision)
+        if (actionFilter === 'reschedule') {
+            filteredLogs = filteredLogs.filter(log => isAuditDateChange(log));
         }
         
         if (filteredLogs.length === 0) {
@@ -10970,7 +11042,8 @@ async function loadAuditLog() {
         const actionLabels = {
             'create': { icon: APP_ICONS.PLUS, label: 'יצירה', class: 'badge-won' },
             'update': { icon: APP_ICONS.EDIT, label: 'עדכון', class: 'badge-pending' },
-            'delete': { icon: APP_ICONS.TRASH, label: 'מחיקה', class: 'badge-lost' }
+            'delete': { icon: APP_ICONS.TRASH, label: 'מחיקה', class: 'badge-lost' },
+            'reschedule': { icon: APP_ICONS.CALENDAR, label: 'שינוי מועד', class: 'badge-reschedule' }
         };
         
         // Entity type labels
@@ -11033,7 +11106,9 @@ async function loadAuditLog() {
             `;
             
             groupedByDate[dateKey].forEach(log => {
-                const action = actionLabels[log.action_type] || { icon: '📌', label: log.action_type, class: 'badge-new' };
+                const isDateChange = isAuditDateChange(log);
+                const effectiveActionType = isDateChange ? 'reschedule' : log.action_type;
+                const action = actionLabels[effectiveActionType] || { icon: '📌', label: log.action_type, class: 'badge-new' };
                 const entity = entityLabels[log.entity_type] || log.entity_type;
                 const time = new Date(log.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
                 
@@ -11057,8 +11132,8 @@ async function loadAuditLog() {
                         </div>
                     `;
                 } 
-                // Case 2: Generic old/new value comparison for update
-                else if (log.action_type === 'update' && log.old_value && log.new_value) {
+                // Case 2: Generic old/new value comparison for update or reschedule
+                else if ((log.action_type === 'update' || effectiveActionType === 'reschedule') && (log.old_value || log.new_value)) {
                     const changes = [];
                     const fieldLabels = {
                         'status': 'סטטוס',
@@ -11105,20 +11180,30 @@ async function loadAuditLog() {
                         if (v === null || v === undefined || v === '') return '-';
                         
                         // Check if it's an ISO date string
-                        if (typeof v === 'string' && v.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
+                        if (typeof v === 'string' && v.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/)) {
                             const d = new Date(v);
                             if (!isNaN(d.getTime())) {
-                                return d.toLocaleDateString('he-IL', {
+                                const weekday = d.toLocaleDateString('he-IL', { weekday: 'long' });
+                                const dateStr = d.toLocaleDateString('he-IL', {
                                     day: '2-digit',
                                     month: '2-digit',
                                     year: 'numeric'
                                 });
+                                const timeStr = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+                                return `${weekday}, ${dateStr} ${timeStr}`;
                             }
                         }
                         
                         // Check for YYYY-MM-DD
                         if (typeof v === 'string' && v.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                            const [y, m, d] = v.split('-');
+                            const [y, m, d] = v.split('-').map(Number);
+                            const dt = new Date(y, m - 1, d);
+                            if (!isNaN(dt.getTime())) {
+                                const weekday = dt.toLocaleDateString('he-IL', { weekday: 'long' });
+                                const dStr = String(d).padStart(2, '0');
+                                const mStr = String(m).padStart(2, '0');
+                                return `${weekday}, ${dStr}/${mStr}/${y}`;
+                            }
                             return `${d}/${m}/${y}`;
                         }
 
@@ -11128,7 +11213,7 @@ async function loadAuditLog() {
                         }
 
                         // Check if it's a string that looks like a number
-                        if (typeof v === 'string' && v.trim() !== '' && !isNaN(v) && !v.startsWith('0') || v === '0') {
+                        if (typeof v === 'string' && v.trim() !== '' && !isNaN(v) && (!v.startsWith('0') || v === '0')) {
                              const n = parseFloat(v);
                              return n.toLocaleString('he-IL', { maximumFractionDigits: 2 });
                         }
@@ -11136,11 +11221,15 @@ async function loadAuditLog() {
                         return v;
                     };
 
-                    for (const key in log.new_value) {
-                        if (['itemChanges', 'items', 'updated_at', 'created_at', 'created_by', 'edited_at', 'edited_by', 'performed_by', 'active', 'customer_id', 'product_id', 'order_id', 'activity_id'].includes(key)) continue;
+                    const oldObj = (log.old_value && typeof log.old_value === 'object') ? log.old_value : {};
+                    const newObj = (log.new_value && typeof log.new_value === 'object') ? log.new_value : {};
+                    const combinedKeys = new Set([...Object.keys(oldObj), ...Object.keys(newObj)]);
+
+                    for (const key of combinedKeys) {
+                        if (['itemChanges', 'items', 'updated_at', 'created_at', 'created_by', 'edited_at', 'edited_by', 'performed_by', 'active', 'customer_id', 'product_id', 'order_id', 'activity_id', 'id'].includes(key)) continue;
                         
-                        let oldVal = log.old_value[key];
-                        let newVal = log.new_value[key];
+                        let oldVal = oldObj[key];
+                        let newVal = newObj[key];
                         
                         // Handle Notes with Extended Data
                         if (key === 'notes' && typeof extractExtendedData === 'function') {
@@ -11236,7 +11325,7 @@ async function loadAuditLog() {
                 }
                 
                 html += `
-                    <div class="audit-item action-${log.action_type || 'update'}">
+                    <div class="audit-item action-${effectiveActionType || 'update'}">
                         <div class="audit-item-icon">
                             ${action.icon}
                         </div>
@@ -12189,7 +12278,13 @@ async function exportAuditLog() {
         .order('created_at', { ascending: false })
         .limit(1000); // Reasonable limit for export
 
-    if (actionFilter) query = query.eq('action_type', actionFilter);
+    if (actionFilter) {
+        if (actionFilter === 'reschedule') {
+            query = query.or('action_type.eq.reschedule,entity_type.eq.activity');
+        } else {
+            query = query.eq('action_type', actionFilter);
+        }
+    }
     if (entityFilter) query = query.eq('entity_type', entityFilter);
     if (performerFilter) query = query.eq('performed_by', performerFilter);
     
@@ -12202,12 +12297,27 @@ async function exportAuditLog() {
         return;
     }
 
+    const isAuditDateChange = (log) => {
+        if (!log) return false;
+        if (log.action_type === 'reschedule') return true;
+        if (log.entity_type !== 'activity') return false;
+        const oldDate = log.old_value?.activity_date;
+        const newDate = log.new_value?.activity_date;
+        if (newDate && (!oldDate || oldDate !== newDate)) return true;
+        const desc = log.description || '';
+        return desc.includes('דחיי') || desc.includes('הקדמ') || desc.includes('שינוי מועד') || desc.includes('מועד') || desc.includes('לשבוע הבא');
+    };
+
     let filtered = data;
     if (searchFilter) {
         filtered = data.filter(log => 
             (log.description && log.description.toLowerCase().includes(searchFilter)) ||
             (log.entity_name && log.entity_name.toLowerCase().includes(searchFilter))
         );
+    }
+
+    if (actionFilter === 'reschedule') {
+        filtered = filtered.filter(log => isAuditDateChange(log));
     }
     
     // Filter by date if needed (client side for simplicity or replicate getQueryDateRange)
@@ -12244,7 +12354,8 @@ async function exportAuditLog() {
     const actionMap = {
         'create': 'יצירה',
         'update': 'עדכון',
-        'delete': 'מחיקה'
+        'delete': 'מחיקה',
+        'reschedule': 'שינוי מועד'
     };
     
     const entityMap = {
@@ -12255,12 +12366,15 @@ async function exportAuditLog() {
         'contact': 'איש קשר'
     };
 
-    const processedData = filtered.map(log => ({
-        ...log,
-        created_at: new Date(log.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        action_type: actionMap[log.action_type] || log.action_type,
-        entity_type: entityMap[log.entity_type] || log.entity_type
-    }));
+    const processedData = filtered.map(log => {
+        const isDateChange = isAuditDateChange(log);
+        return {
+            ...log,
+            created_at: new Date(log.created_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+            action_type: isDateChange ? 'שינוי מועד' : (actionMap[log.action_type] || log.action_type),
+            entity_type: entityMap[log.entity_type] || log.entity_type
+        };
+    });
 
     exportToExcel(processedData, headers, 'יומן_פעולות');
 }
