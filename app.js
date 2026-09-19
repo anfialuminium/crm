@@ -9344,77 +9344,288 @@ async function bulkPostponeActivitiesPrompt() {
     }
     
     const count = selectedActivityIds.size;
-    
-    // Calculate tomorrow / next business day (Skip Fri/Sat to Sun)
     const now = new Date();
-    let tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    if (tomorrow.getDay() === 5) tomorrow.setDate(tomorrow.getDate() + 2);
-    else if (tomorrow.getDay() === 6) tomorrow.setDate(tomorrow.getDate() + 1);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    const y = tomorrow.getFullYear();
-    const m = String(tomorrow.getMonth() + 1).padStart(2, '0');
-    const d = String(tomorrow.getDate()).padStart(2, '0');
-    const tomorrowStr = `${y}-${m}-${d}`;
-    const tomorrowLabel = `מחר / יום עסקים הבא (${tomorrow.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric' })})`;
+    // Calculate Next Business Day
+    const dayOfWeek = today.getDay();
+    let addDays = 1;
+    if (dayOfWeek === 4) addDays = 3; // Thu -> Sun
+    else if (dayOfWeek === 5) addDays = 2; // Fri -> Sun
+    else if (dayOfWeek === 6) addDays = 1; // Sat -> Sun
+    const nextBizDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + addDays);
+    const nextBizDateStr = `${nextBizDate.getFullYear()}-${String(nextBizDate.getMonth() + 1).padStart(2, '0')}-${String(nextBizDate.getDate()).padStart(2, '0')}`;
+    const nextBizDayName = nextBizDate.toLocaleDateString('he-IL', { weekday: 'long' });
+    const nextBizFormatted = `${nextBizDate.getDate()}/${nextBizDate.getMonth() + 1}`;
     
-    // Calculate in a week
-    let nextWeek = new Date(now);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    const ny = nextWeek.getFullYear();
-    const nm = String(nextWeek.getMonth() + 1).padStart(2, '0');
-    const nd = String(nextWeek.getDate()).padStart(2, '0');
-    const nextWeekStr = `${ny}-${nm}-${nd}`;
-    const nextWeekLabel = `בעוד שבוע (${nextWeek.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric' })})`;
+    // Calculate Days of Next Week (Sunday to Thursday)
+    const daysToNextSunday = 7 - dayOfWeek;
+    const nextSunday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + daysToNextSunday);
+    const nextWeekDayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי'];
+    const nextWeekDays = [];
+    for (let i = 0; i < 5; i++) {
+        const d = new Date(nextSunday.getFullYear(), nextSunday.getMonth(), nextSunday.getDate() + i);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const dayNum = String(d.getDate()).padStart(2, '0');
+        nextWeekDays.push({
+            name: nextWeekDayNames[i],
+            date: d,
+            dateStr: `${y}-${m}-${dayNum}`,
+            formatted: `${d.getDate()}/${d.getMonth() + 1}`
+        });
+    }
+
+    // Default selection: next business day
+    let selectedDateStr = nextBizDateStr;
+    let calYear = nextBizDate.getFullYear();
+    let calMonth = nextBizDate.getMonth(); // 0-indexed
     
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const hebrewMonths = [
+        'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+        'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+    ];
+    
+    function formatSelectedLabel(dateStr) {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const dateObj = new Date(y, m - 1, d);
+        return dateObj.toLocaleDateString('he-IL', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    }
+    
+    const chipsHtml = nextWeekDays.map(day => `
+        <button type="button" class="next-week-day-chip ${day.dateStr === selectedDateStr ? 'active' : ''}" data-date="${day.dateStr}">
+            <span class="chip-day">${day.name}</span>
+            <span class="chip-date">${day.formatted}</span>
+        </button>
+    `).join('');
     
     const result = await Swal.fire({
-        title: `דחיית ${count} פעילויות נבחרות`,
+        title: count === 1 ? 'דחיית פעילות נבחרת' : `דחיית ${count} פעילויות נבחרות`,
+        width: '500px',
         html: `
-            <div style="text-align: right; direction: rtl; display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.95rem;">
-                <p style="margin-bottom: 0.5rem; color: var(--text-secondary);">בחר לאיזה מועד תרצה לדחות את ${count} הפעילויות המסומנות:</p>
-                <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
-                        <input type="radio" name="bulk-postpone-choice" value="${tomorrowStr}" checked onchange="document.getElementById('bulk-custom-date-wrap').style.display='none'">
-                        <span>☀️ <strong>${tomorrowLabel}</strong></span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
-                        <input type="radio" name="bulk-postpone-choice" value="${nextWeekStr}" onchange="document.getElementById('bulk-custom-date-wrap').style.display='none'">
-                        <span>📅 <strong>${nextWeekLabel}</strong></span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
-                        <input type="radio" name="bulk-postpone-choice" value="custom" onchange="document.getElementById('bulk-custom-date-wrap').style.display='block'; document.getElementById('bulk-custom-date-input').focus()">
-                        <span>🗓️ <strong>תאריך ספציפי אחר...</strong></span>
-                    </label>
+            <div class="postpone-modal-content">
+                <!-- Section 1: Quick Next Business Day -->
+                <div>
+                    <div class="postpone-section-title">
+                        <span>☀️</span> יום העסקים הבא
+                    </div>
+                    <button type="button" class="next-business-day-btn ${nextBizDateStr === selectedDateStr ? 'active' : ''}" id="btn-quick-next-biz" data-date="${nextBizDateStr}">
+                        <span style="font-size: 1.3rem;">☀️</span>
+                        <div style="flex: 1; text-align: right;">
+                            <div style="font-weight: 700; font-size: 0.95rem;">${nextBizDayName} (${nextBizFormatted})</div>
+                            <div class="next-biz-sub" style="font-size: 0.78rem; color: #b45309;">המועד המהיר הקרוב ביותר</div>
+                        </div>
+                        <span style="font-size: 0.8rem; font-weight: 600;">בחר ❯</span>
+                    </button>
                 </div>
-                <div id="bulk-custom-date-wrap" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #f1f5f9; border-radius: 8px;">
-                    <label style="display: block; font-weight: 500; margin-bottom: 0.35rem; color: var(--text-primary);">בחר תאריך יעד:</label>
-                    <input type="date" id="bulk-custom-date-input" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box; height: 42px; font-size: 1rem;" value="${tomorrowStr}" min="${todayStr}">
+                
+                <!-- Section 2: Choose day of Next Week -->
+                <div>
+                    <div class="postpone-section-title">
+                        <span>📅</span> בחר יום בשבוע הבא
+                    </div>
+                    <div class="next-week-chips-grid">
+                        ${chipsHtml}
+                    </div>
+                </div>
+                
+                <!-- Section 3: Interactive Custom Calendar -->
+                <div>
+                    <div class="postpone-section-title">
+                        <span>🗓️</span> בחירת תאריך ספציפי בלוח שנה
+                    </div>
+                    <div class="crm-calendar-widget">
+                        <div class="crm-cal-header">
+                            <div class="crm-cal-title" id="crm-cal-title-label"></div>
+                            <div class="crm-cal-nav">
+                                <button type="button" class="crm-cal-today-btn" id="crm-cal-btn-today" title="קפוץ להיום">היום</button>
+                                <button type="button" class="crm-cal-nav-btn" id="crm-cal-btn-prev" title="חודש קודם">›</button>
+                                <button type="button" class="crm-cal-nav-btn" id="crm-cal-btn-next" title="חודש הבא">‹</button>
+                            </div>
+                        </div>
+                        <div class="crm-cal-weekdays">
+                            <div>א׳</div>
+                            <div>ב׳</div>
+                            <div>ג׳</div>
+                            <div>ד׳</div>
+                            <div>ה׳</div>
+                            <div>ו׳</div>
+                            <div>ש׳</div>
+                        </div>
+                        <div class="crm-cal-grid" id="crm-cal-grid"></div>
+                    </div>
+                </div>
+                
+                <!-- Section 4: Selection Confirmation Banner -->
+                <div class="postpone-selected-banner">
+                    <div>
+                        <span style="opacity: 0.85;">מועד יעד שנבחר: </span>
+                        <strong id="crm-cal-selected-display">${formatSelectedLabel(selectedDateStr)}</strong>
+                    </div>
+                    <span style="font-size: 1.1rem;">✓</span>
                 </div>
             </div>
         `,
         showCancelButton: true,
         confirmButtonColor: '#f59e0b',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'דחה פעילויות',
+        confirmButtonText: 'דחה פעילויות לתאריך זה',
         cancelButtonText: 'ביטול',
         reverseButtons: true,
+        didOpen: (popup) => {
+            const gridEl = popup.querySelector('#crm-cal-grid');
+            const titleEl = popup.querySelector('#crm-cal-title-label');
+            const displayEl = popup.querySelector('#crm-cal-selected-display');
+            const prevBtn = popup.querySelector('#crm-cal-btn-prev');
+            const nextBtn = popup.querySelector('#crm-cal-btn-next');
+            const todayBtn = popup.querySelector('#crm-cal-btn-today');
+            const nextBizBtn = popup.querySelector('#btn-quick-next-biz');
+            const nextWeekChips = popup.querySelectorAll('.next-week-day-chip');
+            
+            function renderCalendar() {
+                titleEl.textContent = `${hebrewMonths[calMonth]} ${calYear}`;
+                
+                // Disable prev button if viewing current or past month
+                const isCurrentMonthOrPast = (calYear < today.getFullYear()) || 
+                    (calYear === today.getFullYear() && calMonth <= today.getMonth());
+                prevBtn.disabled = isCurrentMonthOrPast;
+                
+                // Calculate month details
+                const firstDayIndex = new Date(calYear, calMonth, 1).getDay(); // 0 = Sun
+                const totalDaysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+                const totalDaysInPrevMonth = new Date(calYear, calMonth, 0).getDate();
+                
+                let cellsHtml = '';
+                
+                // Previous month padding cells
+                for (let p = firstDayIndex - 1; p >= 0; p--) {
+                    const prevDateNum = totalDaysInPrevMonth - p;
+                    cellsHtml += `<div class="crm-cal-day crm-cal-other-month crm-cal-disabled">${prevDateNum}</div>`;
+                }
+                
+                // Current month days
+                for (let d = 1; d <= totalDaysInMonth; d++) {
+                    const dateObj = new Date(calYear, calMonth, d);
+                    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const isPast = dateObj < today;
+                    const isToday = dateObj.getTime() === today.getTime();
+                    const isWeekend = dateObj.getDay() === 5 || dateObj.getDay() === 6; // Fri / Sat
+                    const isSelected = (dateStr === selectedDateStr);
+                    
+                    let classNames = ['crm-cal-day'];
+                    if (isPast) classNames.push('crm-cal-disabled');
+                    if (isToday) classNames.push('crm-cal-today');
+                    if (isWeekend) classNames.push('crm-cal-weekend');
+                    if (isSelected) classNames.push('crm-cal-selected');
+                    
+                    cellsHtml += `
+                        <div class="${classNames.join(' ')}" data-date="${dateStr}">
+                            ${d}
+                        </div>
+                    `;
+                }
+                
+                // Next month padding cells to complete final row
+                const totalRendered = firstDayIndex + totalDaysInMonth;
+                const nextMonthPadding = (7 - (totalRendered % 7)) % 7;
+                for (let n = 1; n <= nextMonthPadding; n++) {
+                    cellsHtml += `<div class="crm-cal-day crm-cal-other-month crm-cal-disabled">${n}</div>`;
+                }
+                
+                gridEl.innerHTML = cellsHtml;
+                
+                // Attach click handlers to active days
+                gridEl.querySelectorAll('.crm-cal-day:not(.crm-cal-disabled)').forEach(dayEl => {
+                    dayEl.addEventListener('click', () => {
+                        const dateVal = dayEl.getAttribute('data-date');
+                        if (dateVal) selectDate(dateVal);
+                    });
+                });
+            }
+            
+            function selectDate(dateVal) {
+                selectedDateStr = dateVal;
+                displayEl.textContent = formatSelectedLabel(dateVal);
+                
+                // Sync next business day button
+                if (nextBizBtn) {
+                    if (dateVal === nextBizDateStr) nextBizBtn.classList.add('active');
+                    else nextBizBtn.classList.remove('active');
+                }
+                
+                // Sync next week chips
+                nextWeekChips.forEach(chip => {
+                    if (chip.getAttribute('data-date') === dateVal) {
+                        chip.classList.add('active');
+                    } else {
+                        chip.classList.remove('active');
+                    }
+                });
+                
+                // Sync calendar month if date is in different month
+                const [y, m] = dateVal.split('-').map(Number);
+                if (calYear !== y || calMonth !== m - 1) {
+                    calYear = y;
+                    calMonth = m - 1;
+                }
+                
+                renderCalendar();
+            }
+            
+            // Event listeners
+            if (nextBizBtn) {
+                nextBizBtn.addEventListener('click', () => {
+                    selectDate(nextBizDateStr);
+                });
+            }
+            
+            nextWeekChips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    const dateVal = chip.getAttribute('data-date');
+                    if (dateVal) selectDate(dateVal);
+                });
+            });
+            
+            prevBtn.addEventListener('click', () => {
+                if (calMonth === 0) {
+                    calMonth = 11;
+                    calYear--;
+                } else {
+                    calMonth--;
+                }
+                renderCalendar();
+            });
+            
+            nextBtn.addEventListener('click', () => {
+                if (calMonth === 11) {
+                    calMonth = 0;
+                    calYear++;
+                } else {
+                    calMonth++;
+                }
+                renderCalendar();
+            });
+            
+            todayBtn.addEventListener('click', () => {
+                calYear = today.getFullYear();
+                calMonth = today.getMonth();
+                selectDate(nextBizDateStr);
+            });
+            
+            // Initial render
+            renderCalendar();
+        },
         preConfirm: () => {
-            const selected = document.querySelector('input[name="bulk-postpone-choice"]:checked')?.value;
-            if (!selected) {
-                Swal.showValidationMessage('נא לבחור מועד לדחייה');
+            if (!selectedDateStr) {
+                Swal.showValidationMessage('נא לבחור תאריך יעד');
                 return false;
             }
-            if (selected === 'custom') {
-                const customVal = document.getElementById('bulk-custom-date-input')?.value;
-                if (!customVal) {
-                    Swal.showValidationMessage('נא לבחור תאריך יעד');
-                    return false;
-                }
-                return customVal;
-            }
-            return selected;
+            return selectedDateStr;
         }
     });
     

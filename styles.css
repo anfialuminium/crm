@@ -3649,6 +3649,271 @@ body.blur-sensitive-data #global-search-input::placeholder {
     }
 }
 
+/* ============================================
+   Postpone Modal & Custom Calendar Styles
+   ============================================ */
+.postpone-modal-content {
+    text-align: right;
+    direction: rtl;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    font-size: 0.9rem;
+}
+
+.postpone-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.35rem;
+}
+
+.next-business-day-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.6rem 0.9rem;
+    background: #fffbeb;
+    border: 1.5px solid #fde68a;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #92400e;
+    text-align: right;
+}
+
+.next-business-day-btn:hover {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    transform: translateY(-1px);
+}
+
+.next-business-day-btn.active {
+    background: #f59e0b;
+    border-color: #d97706;
+    color: white;
+    box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);
+}
+
+.next-business-day-btn.active .next-biz-sub {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.next-week-chips-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.4rem;
+}
+
+.next-week-day-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.25rem;
+    background: var(--bg-secondary);
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    color: var(--text-primary);
+}
+
+.next-week-day-chip:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    transform: translateY(-1px);
+}
+
+.next-week-day-chip.active {
+    background: #2563eb;
+    border-color: #1d4ed8;
+    color: white;
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);
+    transform: translateY(-1px);
+}
+
+.next-week-day-chip .chip-day {
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.next-week-day-chip .chip-date {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+}
+
+.next-week-day-chip.active .chip-date {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* Custom Calendar Widget */
+.crm-calendar-widget {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.85rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.crm-cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.crm-cal-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.crm-cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.crm-cal-nav-btn {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+    line-height: 1;
+}
+
+.crm-cal-nav-btn:hover:not(:disabled) {
+    background: #e2e8f0;
+    color: var(--text-primary);
+}
+
+.crm-cal-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.crm-cal-today-btn {
+    padding: 0 0.5rem;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+}
+
+.crm-cal-today-btn:hover {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+}
+
+.crm-cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 0.35rem;
+}
+
+.crm-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+
+.crm-cal-day {
+    aspect-ratio: 1;
+    max-height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    color: var(--text-primary);
+    position: relative;
+}
+
+.crm-cal-day:hover:not(.crm-cal-disabled) {
+    background: #eff6ff;
+    color: #2563eb;
+    transform: scale(1.06);
+}
+
+.crm-cal-day.crm-cal-other-month {
+    opacity: 0.3;
+}
+
+.crm-cal-day.crm-cal-weekend {
+    color: #94a3b8;
+}
+
+.crm-cal-day.crm-cal-today {
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1.5px #3b82f6;
+}
+
+.crm-cal-day.crm-cal-selected {
+    background: #2563eb !important;
+    color: white !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4) !important;
+    transform: scale(1.08) !important;
+    z-index: 2;
+}
+
+.crm-cal-day.crm-cal-disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+    pointer-events: none;
+    background: transparent;
+}
+
+/* Selected Date Summary Banner */
+.postpone-selected-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.85rem;
+    color: #166534;
+}
+
+.postpone-selected-banner strong {
+    color: #15803d;
+    font-weight: 700;
+}
+
+
 
 
 
