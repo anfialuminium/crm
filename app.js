@@ -8642,7 +8642,14 @@ function copyToClipboard(text) {
     });
 }
 
+// Activities Multi-Select State
+const selectedActivityIds = new Set();
+let currentDisplayedActivityIds = [];
+
 async function loadActivities(preservePage = false) {
+    if (!preservePage) {
+        selectedActivityIds.clear();
+    }
     const container = document.getElementById('activities-list');
     container.innerHTML = '<div class="spinner"></div>';
     
@@ -8785,6 +8792,8 @@ async function loadActivities(preservePage = false) {
 
         // Display activities
         if (filteredActivities.length === 0) {
+            currentDisplayedActivityIds = [];
+            if (typeof updateActivitiesBulkToolbar === 'function') updateActivitiesBulkToolbar();
             container.innerHTML = `
                 <div class="text-center" style="padding: 3rem; color: var(--text-tertiary);">
                     <div style="font-size: 3rem; margin-bottom: 1rem;">${APP_ICONS.NOTE}</div>
@@ -8824,6 +8833,7 @@ async function loadActivities(preservePage = false) {
         const limit = paginationState.activities.limit || 10;
         const start = (page - 1) * limit;
         const pagedActivities = filteredActivities.slice(start, start + limit);
+        currentDisplayedActivityIds = pagedActivities.map(a => a.activity_id);
         
         // Render based on view mode
         if (viewState.activities === 'table') {
@@ -8834,6 +8844,9 @@ async function loadActivities(preservePage = false) {
                 <table class="items-table" style="width: 100%; min-width: 800px;">
                     <thead>
                         <tr>
+                            <th style="width: 40px; text-align: center;">
+                                <input type="checkbox" id="activity-select-all-header" class="activity-select-checkbox" onchange="toggleSelectAllActivities(this.checked)" title="בחר הכל בעמוד">
+                            </th>
                             <th style="width: 80px;">סוג</th>
                             <th style="width: 80px;">סטטוס</th>
                             <th>תיאור</th>
@@ -8886,9 +8899,14 @@ async function loadActivities(preservePage = false) {
                             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                             const activityDay = new Date(activityDateObj.getFullYear(), activityDateObj.getMonth(), activityDateObj.getDate());
                             const canPostpone = !activity.completed;
+                            const isSelected = selectedActivityIds.has(activity.activity_id);
+                            const selectedRowClass = isSelected ? ' activity-row-selected' : '';
 
                             return `
-                                <tr style="${rowStyle}">
+                                <tr class="${selectedRowClass}" style="${rowStyle}" id="activity-row-${activity.activity_id}">
+                                    <td style="text-align: center; vertical-align: middle; width: 40px;">
+                                        <input type="checkbox" class="activity-select-checkbox" value="${activity.activity_id}" ${isSelected ? 'checked' : ''} onchange="toggleActivitySelection('${activity.activity_id}', this.checked, event)" onclick="event.stopPropagation();" title="סמן פעילות">
+                                    </td>
                                     <td>${icon} ${activity.activity_type}</td>
                                     <td>
                                         ${activity.completed 
@@ -8945,8 +8963,10 @@ async function loadActivities(preservePage = false) {
             activitiesGrid.className = 'deals-grid';
             
             pagedActivities.forEach(activity => {
+                const isSelected = selectedActivityIds.has(activity.activity_id);
                 const card = document.createElement('div');
-                card.className = 'deal-card';
+                card.className = `deal-card${isSelected ? ' activity-card-selected' : ''}`;
+                card.id = `activity-card-${activity.activity_id}`;
                 
                 // Add completed styling
                 if (activity.completed) {
@@ -9029,6 +9049,7 @@ async function loadActivities(preservePage = false) {
                 card.innerHTML = `
                     <div class="deal-card-header" style="padding: 0.5rem 0.75rem;">
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+                            <input type="checkbox" class="activity-select-checkbox" value="${activity.activity_id}" ${isSelected ? 'checked' : ''} onchange="toggleActivitySelection('${activity.activity_id}', this.checked, event)" onclick="event.stopPropagation();" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary-color);" title="סמן פעילות">
                             <span style="font-size: 1rem;">${icon}</span>
                             <span style="font-weight: 600; font-size: 0.9rem;">${activity.activity_type}</span>
                             ${activity.completed 
@@ -9091,6 +9112,7 @@ async function loadActivities(preservePage = false) {
         }
 
         container.innerHTML += renderPagination(filteredActivities.length, page, 'activities');
+        if (typeof updateActivitiesBulkToolbar === 'function') updateActivitiesBulkToolbar();
         
     } catch (error) {
         console.error('❌ Error loading activities:', error);
@@ -9099,6 +9121,366 @@ async function loadActivities(preservePage = false) {
                 שגיאה בטעינת פעילויות: ${error.message}
             </div>
         `;
+        if (typeof updateActivitiesBulkToolbar === 'function') updateActivitiesBulkToolbar();
+    }
+}
+
+// ============================================
+// Activities Bulk Operations & Selection
+// ============================================
+
+function updateActivitiesBulkToolbar() {
+    const toolbar = document.getElementById('activities-bulk-toolbar');
+    const countEl = document.getElementById('activities-selected-count');
+    const masterCheckbox = document.getElementById('activities-master-checkbox');
+    const tableHeaderCheckbox = document.getElementById('activity-select-all-header');
+    
+    const count = selectedActivityIds.size;
+    if (countEl) countEl.textContent = count;
+    
+    // Check current page selection state
+    const allPageSelected = currentDisplayedActivityIds.length > 0 && 
+        currentDisplayedActivityIds.every(id => selectedActivityIds.has(id));
+    const somePageSelected = currentDisplayedActivityIds.length > 0 && 
+        currentDisplayedActivityIds.some(id => selectedActivityIds.has(id));
+        
+    [masterCheckbox, tableHeaderCheckbox].forEach(cb => {
+        if (!cb) return;
+        cb.checked = allPageSelected;
+        cb.indeterminate = !allPageSelected && somePageSelected;
+    });
+    
+    if (toolbar) {
+        if (count > 0) {
+            toolbar.style.display = 'flex';
+        } else {
+            toolbar.style.display = 'none';
+        }
+    }
+}
+
+function toggleActivitySelection(activityId, isChecked, event) {
+    if (event) event.stopPropagation();
+    
+    if (isChecked) {
+        selectedActivityIds.add(activityId);
+    } else {
+        selectedActivityIds.delete(activityId);
+    }
+    
+    // Update visual highlighting on row/card
+    const row = document.getElementById(`activity-row-${activityId}`);
+    if (row) {
+        if (isChecked) row.classList.add('activity-row-selected');
+        else row.classList.remove('activity-row-selected');
+    }
+    
+    const card = document.getElementById(`activity-card-${activityId}`);
+    if (card) {
+        if (isChecked) card.classList.add('activity-card-selected');
+        else card.classList.remove('activity-card-selected');
+    }
+    
+    updateActivitiesBulkToolbar();
+}
+
+function toggleSelectAllActivities(checked) {
+    if (currentDisplayedActivityIds.length === 0) return;
+    
+    currentDisplayedActivityIds.forEach(id => {
+        if (checked) {
+            selectedActivityIds.add(id);
+        } else {
+            selectedActivityIds.delete(id);
+        }
+        
+        // Update checkboxes
+        document.querySelectorAll(`.activity-select-checkbox[value="${id}"]`).forEach(cb => {
+            cb.checked = checked;
+        });
+        
+        // Update styling
+        const row = document.getElementById(`activity-row-${id}`);
+        if (row) {
+            if (checked) row.classList.add('activity-row-selected');
+            else row.classList.remove('activity-row-selected');
+        }
+        const card = document.getElementById(`activity-card-${id}`);
+        if (card) {
+            if (checked) card.classList.add('activity-card-selected');
+            else card.classList.remove('activity-card-selected');
+        }
+    });
+    
+    updateActivitiesBulkToolbar();
+}
+
+function clearSelectedActivities() {
+    selectedActivityIds.clear();
+    
+    document.querySelectorAll('.activity-select-checkbox').forEach(cb => {
+        cb.checked = false;
+    });
+    document.querySelectorAll('.activity-row-selected').forEach(el => {
+        el.classList.remove('activity-row-selected');
+    });
+    document.querySelectorAll('.activity-card-selected').forEach(el => {
+        el.classList.remove('activity-card-selected');
+    });
+    
+    updateActivitiesBulkToolbar();
+}
+
+async function bulkCompleteActivities() {
+    if (selectedActivityIds.size === 0) {
+        showAlert('נא לסמן פעילות אחת לפחות', 'info');
+        return;
+    }
+    
+    const count = selectedActivityIds.size;
+    const result = await Swal.fire({
+        title: `השלמת ${count} פעילויות`,
+        text: `האם ברצונך לסמן ${count} פעילויות שנבחרו כהושלמו?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'כן, סמן כבוצע',
+        cancelButtonText: 'ביטול',
+        reverseButtons: true
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+        Swal.fire({
+            title: 'מעדכן פעילויות...',
+            text: 'אנא המתן',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+        
+        const nowIso = new Date().toISOString();
+        const { error } = await supabaseClient
+            .from('activities')
+            .update({
+                completed: true,
+                completed_at: nowIso
+            })
+            .in('activity_id', Array.from(selectedActivityIds));
+            
+        if (error) throw error;
+        
+        logAction('update', 'activity', 'bulk', `השלמת ${count} פעילויות`, `סימון ${count} פעילויות נבחרות כהושלמו`);
+        
+        Swal.close();
+        showAlert(`${count} פעילויות סומנו כבוצעו בהצלחה!`, 'success');
+        
+        selectedActivityIds.clear();
+        await loadActivities(true);
+        if (typeof loadThisWeek === 'function') loadThisWeek();
+    } catch (err) {
+        console.error('❌ Error in bulk complete activities:', err);
+        Swal.close();
+        showAlert('שגיאה בסימון הפעילויות: ' + err.message, 'error');
+    }
+}
+
+async function bulkDeleteActivities() {
+    if (selectedActivityIds.size === 0) {
+        showAlert('נא לסמן פעילות אחת לפחות', 'info');
+        return;
+    }
+    
+    const count = selectedActivityIds.size;
+    const result = await Swal.fire({
+        title: `מחיקת ${count} פעילויות`,
+        text: `האם אתה בטוח שברצונך למחוק ${count} פעילויות שנבחרו? פעולה זו אינה ניתנת לביטול!`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'כן, מחק פעילויות',
+        cancelButtonText: 'ביטול',
+        reverseButtons: true
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    try {
+        Swal.fire({
+            title: 'מוחק פעילויות...',
+            text: 'אנא המתן',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+        
+        const { error } = await supabaseClient
+            .from('activities')
+            .delete()
+            .in('activity_id', Array.from(selectedActivityIds));
+            
+        if (error) throw error;
+        
+        logAction('delete', 'activity', 'bulk', `מחיקת ${count} פעילויות`, `מחיקת ${count} פעילויות נבחרות מהמערכת`);
+        
+        Swal.close();
+        showAlert(`${count} פעילויות נמחקו בהצלחה`, 'success');
+        
+        selectedActivityIds.clear();
+        await loadActivities(true);
+        if (typeof loadThisWeek === 'function') loadThisWeek();
+    } catch (err) {
+        console.error('❌ Error in bulk delete activities:', err);
+        Swal.close();
+        showAlert('שגיאה במחיקת הפעילויות: ' + err.message, 'error');
+    }
+}
+
+async function bulkPostponeActivitiesPrompt() {
+    if (selectedActivityIds.size === 0) {
+        showAlert('נא לסמן פעילות אחת לפחות', 'info');
+        return;
+    }
+    
+    const count = selectedActivityIds.size;
+    
+    // Calculate tomorrow / next business day (Skip Fri/Sat to Sun)
+    const now = new Date();
+    let tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (tomorrow.getDay() === 5) tomorrow.setDate(tomorrow.getDate() + 2);
+    else if (tomorrow.getDay() === 6) tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const y = tomorrow.getFullYear();
+    const m = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const d = String(tomorrow.getDate()).padStart(2, '0');
+    const tomorrowStr = `${y}-${m}-${d}`;
+    const tomorrowLabel = `מחר / יום עסקים הבא (${tomorrow.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric' })})`;
+    
+    // Calculate in a week
+    let nextWeek = new Date(now);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const ny = nextWeek.getFullYear();
+    const nm = String(nextWeek.getMonth() + 1).padStart(2, '0');
+    const nd = String(nextWeek.getDate()).padStart(2, '0');
+    const nextWeekStr = `${ny}-${nm}-${nd}`;
+    const nextWeekLabel = `בעוד שבוע (${nextWeek.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric' })})`;
+    
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    const result = await Swal.fire({
+        title: `דחיית ${count} פעילויות נבחרות`,
+        html: `
+            <div style="text-align: right; direction: rtl; display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.95rem;">
+                <p style="margin-bottom: 0.5rem; color: var(--text-secondary);">בחר לאיזה מועד תרצה לדחות את ${count} הפעילויות המסומנות:</p>
+                <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+                        <input type="radio" name="bulk-postpone-choice" value="${tomorrowStr}" checked onchange="document.getElementById('bulk-custom-date-wrap').style.display='none'">
+                        <span>☀️ <strong>${tomorrowLabel}</strong></span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+                        <input type="radio" name="bulk-postpone-choice" value="${nextWeekStr}" onchange="document.getElementById('bulk-custom-date-wrap').style.display='none'">
+                        <span>📅 <strong>${nextWeekLabel}</strong></span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; padding: 0.6rem 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary);">
+                        <input type="radio" name="bulk-postpone-choice" value="custom" onchange="document.getElementById('bulk-custom-date-wrap').style.display='block'; document.getElementById('bulk-custom-date-input').focus()">
+                        <span>🗓️ <strong>תאריך ספציפי אחר...</strong></span>
+                    </label>
+                </div>
+                <div id="bulk-custom-date-wrap" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #f1f5f9; border-radius: 8px;">
+                    <label style="display: block; font-weight: 500; margin-bottom: 0.35rem; color: var(--text-primary);">בחר תאריך יעד:</label>
+                    <input type="date" id="bulk-custom-date-input" class="swal2-input" style="width: 100%; margin: 0; box-sizing: border-box; height: 42px; font-size: 1rem;" value="${tomorrowStr}" min="${todayStr}">
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#f59e0b',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'דחה פעילויות',
+        cancelButtonText: 'ביטול',
+        reverseButtons: true,
+        preConfirm: () => {
+            const selected = document.querySelector('input[name="bulk-postpone-choice"]:checked')?.value;
+            if (!selected) {
+                Swal.showValidationMessage('נא לבחור מועד לדחייה');
+                return false;
+            }
+            if (selected === 'custom') {
+                const customVal = document.getElementById('bulk-custom-date-input')?.value;
+                if (!customVal) {
+                    Swal.showValidationMessage('נא לבחור תאריך יעד');
+                    return false;
+                }
+                return customVal;
+            }
+            return selected;
+        }
+    });
+    
+    if (!result.isConfirmed || !result.value) return;
+    
+    await executeBulkPostpone(result.value);
+}
+
+async function executeBulkPostpone(targetDateStr) {
+    try {
+        Swal.fire({
+            title: 'מעדכן תאריכי פעילויות...',
+            text: 'אנא המתן',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+        
+        const count = selectedActivityIds.size;
+        const [y, m, d] = targetDateStr.split('-').map(Number);
+        
+        // Fetch existing activity dates to preserve original hours & minutes
+        const { data: activities, error: fetchErr } = await supabaseClient
+            .from('activities')
+            .select('activity_id, activity_date')
+            .in('activity_id', Array.from(selectedActivityIds));
+            
+        if (fetchErr) throw fetchErr;
+        
+        const updatePromises = (activities || []).map(act => {
+            const origDate = act.activity_date ? new Date(act.activity_date) : null;
+            const newDate = new Date(y, m - 1, d);
+            if (origDate && !isNaN(origDate.getTime())) {
+                newDate.setHours(origDate.getHours(), origDate.getMinutes(), 0, 0);
+            } else {
+                newDate.setHours(9, 0, 0, 0);
+            }
+            
+            return supabaseClient
+                .from('activities')
+                .update({
+                    activity_date: newDate.toISOString(),
+                    completed: false,
+                    completed_at: null
+                })
+                .eq('activity_id', act.activity_id);
+        });
+        
+        const results = await Promise.all(updatePromises);
+        const hasError = results.find(r => r.error);
+        if (hasError) throw hasError.error;
+        
+        const targetDateObj = new Date(y, m - 1, d);
+        const formattedDate = targetDateObj.toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
+        
+        logAction('update', 'activity', 'bulk', `דחיית ${count} פעילויות`, `דחיית ${count} פעילויות ליום ${formattedDate}`);
+        
+        Swal.close();
+        showAlert(`${count} פעילויות נדחו בהצלחה ל-${formattedDate}`, 'success');
+        
+        selectedActivityIds.clear();
+        await loadActivities(true);
+        if (typeof loadThisWeek === 'function') loadThisWeek();
+    } catch (err) {
+        console.error('❌ Error executing bulk postpone:', err);
+        Swal.close();
+        showAlert('שגיאה בדחיית הפעילויות: ' + err.message, 'error');
     }
 }
 
