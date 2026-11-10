@@ -2653,7 +2653,7 @@ function filterCustomers(preservePage = false) {
                             ${contactPhone !== '-' ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <span style="color: var(--text-primary);"><span class="sensitive-data">${contactPhone}</span></span>
-                                    <a href="tel:${contactPhone}" title="התקשר">
+                                    <a href="tel:${contactPhone}" title="התקשר" data-customer-name="${(customer.business_name || '').replace(/"/g, '&quot;')}" data-contact-name="${(contactName !== 'ללא איש קשר' ? contactName : '').replace(/"/g, '&quot;')}">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
                                     ${isMobileNumber(contactPhone) ? `
@@ -3104,7 +3104,7 @@ async function viewCustomerDetails(customerId) {
                                          
                                          return `
                                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; flex-wrap: wrap;">
-                                                <a href="tel:${cleanNum}" style="word-break: break-all;"><span class="sensitive-data">${num}</span></a>
+                                                <a href="tel:${cleanNum}" style="word-break: break-all;" data-customer-name="${(customer.business_name || '').replace(/"/g, '&quot;')}" data-contact-name="${(customer.primary_contact?.contact_name || '').replace(/"/g, '&quot;')}"><span class="sensitive-data">${num}</span></a>
                                                 ${isMobile ? `
                                                 <a href="https://wa.me/${waNum}" target="_blank" title="ווטסאפ" style="flex-shrink: 0;">
                                                     <img src="images/whatsapp.png" style="width: 16px; height: 16px; display: block;">
@@ -3143,7 +3143,7 @@ async function viewCustomerDetails(customerId) {
                             ${customer.phone ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <span style="color: var(--text-primary);"><span class="sensitive-data">${customer.phone}</span></span>
-                                    <a href="tel:${customer.phone}" title="התקשר">
+                                    <a href="tel:${customer.phone}" title="התקשר" data-customer-name="${(customer.business_name || '').replace(/"/g, '&quot;')}" data-contact-name="${(customer.contact_name || '').replace(/"/g, '&quot;')}">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
                                 </div>
@@ -3922,7 +3922,7 @@ function filterContacts(preservePage = false) {
                                             ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                                         </div>
                                         <div style="display: flex; gap: 0.5rem;">
-                                            <a href="tel:${cleanNumber}" title="התקשר" style="text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                                            <a href="tel:${cleanNumber}" title="התקשר" data-customer-name="${(contact.customers?.business_name || '').replace(/"/g, '&quot;')}" data-contact-name="${(contact.contact_name || '').replace(/"/g, '&quot;')}" style="text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
                                                 <img src="images/call.png" alt="Call" style="width: 20px; height: 20px; vertical-align: middle;">
                                             </a>
                                             ${isMobile ? `
@@ -3997,7 +3997,7 @@ function filterContacts(preservePage = false) {
                                         ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                                     </div>
                                     <div style="display: flex; gap: 0.5rem;">
-                                        <a href="tel:${cleanNumber}" title="התקשר" style="text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                                        <a href="tel:${cleanNumber}" title="התקשר" data-customer-name="${(contact.customers?.business_name || '').replace(/"/g, '&quot;')}" data-contact-name="${(contact.contact_name || '').replace(/"/g, '&quot;')}" style="text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
                                             <img src="images/call.png" alt="Call" style="width: 20px; height: 20px; vertical-align: middle;">
                                         </a>
                                         ${isMobileNumber(phone) ? `
@@ -4406,7 +4406,7 @@ async function viewContactDetails(contactId) {
                                         ${type ? `<span style="font-size: 0.75rem; color: var(--text-tertiary);">${type}</span>` : ''}
                                     </div>
                                     <div style="display: flex; gap: 0.5rem;">
-                                        <a href="tel:${cleanNumber}" title="התקשר">
+                                        <a href="tel:${cleanNumber}" title="התקשר" data-customer-name="${(contact.customers?.business_name || '').replace(/"/g, '&quot;')}" data-contact-name="${(contact.contact_name || '').replace(/"/g, '&quot;')}">
                                             <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                         </a>
                                         ${isMobile ? `
@@ -5382,6 +5382,7 @@ function createDealCard(deal) {
     const contactName = displayContact.contact_name || deal.customers?.contact_name || '-';
     const phone = displayContact.phone || deal.customers?.phone || '-';
     const contactId = deal.contact_id || deal.customers?.primary_contact_id;
+    const customerName = deal.customers?.business_name || '';
 
     card.innerHTML = `
         <div class="deal-card-header">
@@ -5411,7 +5412,7 @@ function createDealCard(deal) {
                     ${phone !== '-' ? `
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <span style="color: var(--text-primary);"><span class="sensitive-data">${phone}</span></span>
-                            <a href="tel:${phone}" title="התקשר">
+                            <a href="tel:${phone}" title="התקשר" data-customer-name="${(customerName !== 'ללא לקוח' ? customerName : '').replace(/"/g, '&quot;')}" data-contact-name="${(contactName || '').replace(/"/g, '&quot;')}">
                                 <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                             </a>
                             ${isMobileNumber(phone) ? `
@@ -5589,7 +5590,7 @@ async function viewDealDetails(dealId) {
                             ${phone ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <span style="color: var(--text-primary); direction: ltr;"><span class="sensitive-data">${phone}</span></span>
-                                    <a href="tel:${phone}" title="התקשר">
+                                    <a href="tel:${phone}" title="התקשר" data-customer-name="${(deal.customers?.business_name || '').replace(/"/g, '&quot;')}" data-contact-name="${(displayContact.contact_name || deal.customers?.contact_name || '').replace(/"/g, '&quot;')}">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
                                     ${isMobileNumber(phone) ? `
@@ -7912,7 +7913,7 @@ function renderThisWeekActivityCard(activity) {
                     ${phone ? `
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                             <span style="color: var(--text-primary);"><span class="sensitive-data">${phone}</span></span>
-                            <a href="tel:${phone}" title="התקשר">
+                            <a href="tel:${phone}" title="התקשר" data-customer-name="${(customerName !== 'ללא לקוח' ? customerName : '').replace(/"/g, '&quot;')}" data-contact-name="${(contactName || '').replace(/"/g, '&quot;')}">
                                 <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                             </a>
                             ${isMobileNumber(phone) ? `
@@ -8552,7 +8553,7 @@ async function viewActivityDetails(activityId) {
                             ${customer?.phone || linkedContact?.phone ? `
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <span style="color: var(--text-primary);"><span class="sensitive-data">${customer?.phone || linkedContact?.phone}</span></span>
-                                    <a href="tel:${customer?.phone || linkedContact?.phone}" title="התקשר">
+                                    <a href="tel:${customer?.phone || linkedContact?.phone}" title="התקשר" data-customer-name="${(customer?.business_name || '').replace(/"/g, '&quot;')}" data-contact-name="${(linkedContact?.contact_name || customer?.contact_name || '').replace(/"/g, '&quot;')}">
                                         <img src="images/call.png" alt="Call" style="width: 16px; height: 16px; vertical-align: middle;">
                                     </a>
                                     ${isMobileNumber(customer?.phone || linkedContact?.phone) ? `
@@ -10640,7 +10641,7 @@ function loadNotificationSettings() {
 // Call Push Notifications (ntfy to iPhone / mobile)
 // ============================================
 
-async function sendCallNotification(phoneNumber, customerName) {
+async function sendCallNotification(phoneNumber, customerName, contactName) {
     const topic = (localStorage.getItem('crm_call_ntfy_topic') || 'anfi-crm-calls').trim();
     const enabled = localStorage.getItem('crm_call_notifications_enabled') !== 'false';
     
@@ -10649,8 +10650,24 @@ async function sendCallNotification(phoneNumber, customerName) {
     }
     
     const cleanNumber = phoneNumber.replace(/[^0-9+]/g, '');
-    const title = customerName ? `חיוג ללקוח: ${customerName}` : 'חיוג מה-CRM';
-    const message = `${phoneNumber} - לחץ כאן לחיוג מיידי`;
+    
+    // Clean and normalize names
+    const cleanCust = (customerName || '').replace(/[\r\n\t]+/g, ' ').trim();
+    const cleanCont = (contactName || '').replace(/[\r\n\t]+/g, ' ').trim();
+    
+    let title = 'חיוג מה-CRM';
+    let message = `📞 ${phoneNumber}\nלחץ כאן לחיוג מיידי מהאייפון`;
+    
+    if (cleanCust && cleanCont && cleanCust !== cleanCont && cleanCont !== 'ללא איש קשר' && cleanCont !== '-') {
+        title = `🏢 ${cleanCust} • 👤 ${cleanCont}`;
+        message = `לקוח: ${cleanCust}\nאיש קשר: ${cleanCont}\n📞 ${phoneNumber}\nלחץ כאן לחיוג מיידי`;
+    } else if (cleanCust) {
+        title = `🏢 לקוח: ${cleanCust}`;
+        message = `לקוח: ${cleanCust}\n📞 ${phoneNumber}\nלחץ כאן לחיוג מיידי`;
+    } else if (cleanCont && cleanCont !== 'ללא איש קשר' && cleanCont !== '-') {
+        title = `👤 איש קשר: ${cleanCont}`;
+        message = `איש קשר: ${cleanCont}\n📞 ${phoneNumber}\nלחץ כאן לחיוג מיידי`;
+    }
     
     try {
         const response = await fetch('https://ntfy.sh', {
@@ -10714,7 +10731,7 @@ function loadCallNotificationSettings() {
 
 async function testCallNotification() {
     const elTopic = document.getElementById('settings-call-ntfy-topic');
-    const topic = elTopic ? elTopic.value.trim() : (localStorage.getItem('crm_call_ntfy_topic') || '');
+    const topic = elTopic ? elTopic.value.trim() : (localStorage.getItem('crm_call_ntfy_topic') || 'anfi-crm-calls');
     
     if (!topic) {
         if (typeof showAlert === 'function') {
@@ -10729,7 +10746,7 @@ async function testCallNotification() {
         showAlert('📲 שולח התראת בדיקה לאייפון...', 'info');
     }
     
-    const success = await sendCallNotification('050-1234567', 'בדיקת חיוג מה-CRM');
+    const success = await sendCallNotification('050-1234567', 'אנפי אלומיניום (בדיקה)', 'שחר');
     if (success) {
         if (typeof showAlert === 'function') {
             showAlert('✅ התראת בדיקה נשלחה בהצלחה! בדוק את מסך האייפון שלך', 'success');
@@ -10746,7 +10763,7 @@ document.addEventListener('click', async (e) => {
     const telLink = e.target.closest('a[href^="tel:"]');
     if (!telLink) return;
     
-    const topic = (localStorage.getItem('crm_call_ntfy_topic') || '').trim();
+    const topic = (localStorage.getItem('crm_call_ntfy_topic') || 'anfi-crm-calls').trim();
     const enabled = localStorage.getItem('crm_call_notifications_enabled') !== 'false';
     
     if (enabled && topic) {
@@ -10754,31 +10771,53 @@ document.addEventListener('click', async (e) => {
         const rawPhone = href.replace(/^tel:/i, '').trim();
         if (!rawPhone) return;
         
+        // 1. First, check direct data attributes on the <a> link
         let customerName = telLink.getAttribute('data-customer-name') || '';
-        if (!customerName) {
-            const card = telLink.closest('.deal-card, tr, .customer-modal, .modal-body, .timeline-item, .quote-card');
-            if (card) {
-                const nameEl = card.querySelector('.deal-card-title, .customer-name, td:first-child, h3, h2, .contact-name, .customer-business-name');
-                if (nameEl) {
-                    customerName = nameEl.textContent.trim().split('\n')[0];
+        let contactName = telLink.getAttribute('data-contact-name') || '';
+        
+        // 2. If missing, smartly look in enclosing card or row
+        const card = telLink.closest('.deal-card, tr, .customer-modal, .modal-body, .timeline-item, .quote-card, .activity-item, .customer-section');
+        if (card) {
+            if (!customerName) {
+                const custEl = card.querySelector('.deal-card-title, .customer-business-name, .customer-name, [data-field="business_name"], h3');
+                if (custEl) {
+                    customerName = custEl.textContent.trim().split('\n')[0].replace(/👤|🏢/g, '').trim();
+                }
+            }
+            if (!contactName) {
+                const contEl = card.querySelector('.contact-name, .deal-card-date a, [onclick*="viewContactDetails"], td strong');
+                if (contEl) {
+                    contactName = contEl.textContent.trim().split('\n')[0].replace(/👤|🏢/g, '').trim();
                 }
             }
         }
+        
+        // Clean placeholders
+        if (contactName === 'ללא איש קשר' || contactName === '-' || contactName === 'לא נבחר') contactName = '';
+        if (customerName === 'ללא לקוח' || customerName === '-') customerName = '';
         
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         if (!isMobile) {
             e.preventDefault();
         }
         
-        const displayName = customerName ? `${customerName} (${rawPhone})` : rawPhone;
-        if (typeof showAlert === 'function') {
-            showAlert(`📲 שולח התראה לאייפון לחיוג אל ${displayName}...`, 'info');
+        let label = rawPhone;
+        if (customerName && contactName && customerName !== contactName) {
+            label = `${customerName} (${contactName} - ${rawPhone})`;
+        } else if (customerName) {
+            label = `${customerName} (${rawPhone})`;
+        } else if (contactName) {
+            label = `${contactName} (${rawPhone})`;
         }
         
-        const success = await sendCallNotification(rawPhone, customerName);
+        if (typeof showAlert === 'function') {
+            showAlert(`📲 שולח התראה לאייפון לחיוג אל ${label}...`, 'info');
+        }
+        
+        const success = await sendCallNotification(rawPhone, customerName, contactName);
         if (success) {
             if (typeof showAlert === 'function') {
-                showAlert(`✅ התראה נשלחה לאייפון לחיוג אל ${displayName}`, 'success');
+                showAlert(`✅ התראה נשלחה לאייפון לחיוג אל ${label}`, 'success');
             }
         } else {
             if (typeof showAlert === 'function') {
@@ -13076,7 +13115,7 @@ function renderGlobalSearchResults(results, query) {
                         <a href="https://wa.me/${cleanPhone}" target="_blank" title="שלח וואטסאפ" style="text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
                             <img src="images/whatsapp.png" alt="WhatsApp" style="width: 25px; height: 25px; vertical-align: middle;">
                         </a>` : ''}
-                        <a href="tel:${cleanNumber}" title="חייג" style="text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                        <a href="tel:${cleanNumber}" title="חייג" data-customer-name="${(businessName !== '-' ? businessName : '').replace(/"/g, '&quot;')}" data-contact-name="${(c.contact_name || '').replace(/"/g, '&quot;')}" style="text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
                             <img src="images/call.png" alt="Call" style="width: 20px; height: 20px; vertical-align: middle;">
                         </a>
                     </div>`;
