@@ -118,3 +118,19 @@ CREATE POLICY "Enable read access for all users" ON inventory_transactions FOR S
 CREATE POLICY "Enable insert access for all users" ON inventory_transactions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable update access for all users" ON inventory_transactions FOR UPDATE USING (true);
 CREATE POLICY "Enable delete access for all users" ON inventory_transactions FOR DELETE USING (true);
+
+-- NOTES
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Enable read access for all users" ON notes;
+DROP POLICY IF EXISTS "Enable insert access for all users" ON notes;
+DROP POLICY IF EXISTS "Enable update access for all users" ON notes;
+DROP POLICY IF EXISTS "Enable delete access for all users" ON notes;
+DROP POLICY IF EXISTS "Public Read Access" ON notes;
+DROP POLICY IF EXISTS "Public Insert Access" ON notes;
+DROP POLICY IF EXISTS "Public Update Access" ON notes;
+DROP POLICY IF EXISTS "Public Delete Access" ON notes;
+
+CREATE POLICY "Enable read access for all users" ON notes FOR SELECT USING (true);
+CREATE POLICY "Enable insert access for all users" ON notes FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable update access for all users" ON notes FOR UPDATE USING (true);
+CREATE POLICY "Enable delete access for all users" ON notes FOR DELETE USING (true);

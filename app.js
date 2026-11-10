@@ -6935,11 +6935,11 @@ async function populateNewActivityDeals(filterCustomerId = null) {
             .select(`
                 deal_id,
                 total_amount,
-                status,
+                deal_status,
                 customers (business_name)
             `)
-            .neq('status', 'Won')
-            .neq('status', 'Lost')
+            .neq('deal_status', 'זכייה')
+            .neq('deal_status', 'הפסד')
             .order('created_at', { ascending: false });
             
         if (filterCustomerId) {
@@ -6954,13 +6954,16 @@ async function populateNewActivityDeals(filterCustomerId = null) {
         
         select.innerHTML = '<option value="">-- ללא עסקה --</option>';
         
-        activeDeals.forEach(deal => {
-            const customerName = deal.customers?.business_name || 'לקוח לא ידוע';
-            const option = document.createElement('option');
-            option.value = deal.deal_id;
-            option.textContent = `${customerName} - ₪${deal.total_amount.toLocaleString()} (${deal.status})`;
-            select.appendChild(option);
-        });
+        if (activeDeals) {
+            activeDeals.forEach(deal => {
+                const customerName = deal.customers?.business_name || 'לקוח לא ידוע';
+                const amount = Number(deal.total_amount || 0).toLocaleString();
+                const option = document.createElement('option');
+                option.value = deal.deal_id;
+                option.textContent = `${customerName} - ₪${amount} (${deal.deal_status || 'עסקה'})`;
+                select.appendChild(option);
+            });
+        }
         
     } catch (error) {
         console.error('❌ Error populating deals:', error);
@@ -10629,7 +10632,161 @@ function loadNotificationSettings() {
         localStorage.setItem('crm_notification_myname', 'שחר');
         localStorage.setItem('crm_notification_script_url', 'https://script.google.com/macros/s/AKfycbxx8T4slSNPW5nIoRG-uwH94C3Dh_fo8iReuhfCPWVvi6geSx4CQNYF4nJI4T90klY02w/exec');
     }
+
+    loadCallNotificationSettings();
 }
+
+// ============================================
+// Call Push Notifications (ntfy to iPhone / mobile)
+// ============================================
+
+async function sendCallNotification(phoneNumber, customerName) {
+    const topic = (localStorage.getItem('crm_call_ntfy_topic') || 'anfi-crm-calls').trim();
+    const enabled = localStorage.getItem('crm_call_notifications_enabled') !== 'false';
+    
+    if (!enabled || !topic) {
+        return false;
+    }
+    
+    const cleanNumber = phoneNumber.replace(/[^0-9+]/g, '');
+    const title = customerName ? `חיוג ללקוח: ${customerName}` : 'חיוג מה-CRM';
+    const message = `${phoneNumber} - לחץ כאן לחיוג מיידי`;
+    
+    try {
+        const response = await fetch('https://ntfy.sh', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                topic: topic,
+                title: title,
+                message: message,
+                tags: ['telephone_receiver', 'iphone'],
+                click: `tel:${cleanNumber}`,
+                actions: [
+                    {
+                        action: 'view',
+                        label: 'חייג עכשיו 📞',
+                        url: `tel:${cleanNumber}`
+                    }
+                ]
+            })
+        });
+        
+        return response.ok;
+    } catch (err) {
+        console.error('Failed to send call notification via ntfy:', err);
+        return false;
+    }
+}
+
+function saveCallNotificationSettings() {
+    const elEnabled = document.getElementById('settings-call-notify-enabled');
+    const elTopic = document.getElementById('settings-call-ntfy-topic');
+    
+    const enabled = elEnabled ? elEnabled.checked : true;
+    const topic = elTopic ? (elTopic.value.trim() || 'anfi-crm-calls') : 'anfi-crm-calls';
+    
+    localStorage.setItem('crm_call_notifications_enabled', enabled ? 'true' : 'false');
+    localStorage.setItem('crm_call_ntfy_topic', topic);
+    
+    if (typeof showAlert === 'function') {
+        showAlert('הגדרות החיוג לנייד נשמרו בהצלחה', 'success');
+    }
+}
+
+function loadCallNotificationSettings() {
+    const enabled = localStorage.getItem('crm_call_notifications_enabled') !== 'false';
+    const topic = localStorage.getItem('crm_call_ntfy_topic') || 'anfi-crm-calls';
+    
+    if (!localStorage.getItem('crm_call_ntfy_topic')) {
+        localStorage.setItem('crm_call_ntfy_topic', 'anfi-crm-calls');
+        localStorage.setItem('crm_call_notifications_enabled', 'true');
+    }
+    
+    const elEnabled = document.getElementById('settings-call-notify-enabled');
+    const elTopic = document.getElementById('settings-call-ntfy-topic');
+    
+    if (elEnabled) elEnabled.checked = enabled;
+    if (elTopic) elTopic.value = topic;
+}
+
+async function testCallNotification() {
+    const elTopic = document.getElementById('settings-call-ntfy-topic');
+    const topic = elTopic ? elTopic.value.trim() : (localStorage.getItem('crm_call_ntfy_topic') || '');
+    
+    if (!topic) {
+        if (typeof showAlert === 'function') {
+            showAlert('נא להזין שם ערוץ ב-ntfy תחילה', 'warning');
+        }
+        return;
+    }
+    
+    saveCallNotificationSettings();
+    
+    if (typeof showAlert === 'function') {
+        showAlert('📲 שולח התראת בדיקה לאייפון...', 'info');
+    }
+    
+    const success = await sendCallNotification('050-1234567', 'בדיקת חיוג מה-CRM');
+    if (success) {
+        if (typeof showAlert === 'function') {
+            showAlert('✅ התראת בדיקה נשלחה בהצלחה! בדוק את מסך האייפון שלך', 'success');
+        }
+    } else {
+        if (typeof showAlert === 'function') {
+            showAlert('❌ שגיאה בשליחת בדיקה. ודא חיבור תקין לאינטרנט ושם ערוץ חוקי', 'error');
+        }
+    }
+}
+
+// Global click delegation for any tel: link in the system
+document.addEventListener('click', async (e) => {
+    const telLink = e.target.closest('a[href^="tel:"]');
+    if (!telLink) return;
+    
+    const topic = (localStorage.getItem('crm_call_ntfy_topic') || '').trim();
+    const enabled = localStorage.getItem('crm_call_notifications_enabled') !== 'false';
+    
+    if (enabled && topic) {
+        const href = telLink.getAttribute('href') || '';
+        const rawPhone = href.replace(/^tel:/i, '').trim();
+        if (!rawPhone) return;
+        
+        let customerName = telLink.getAttribute('data-customer-name') || '';
+        if (!customerName) {
+            const card = telLink.closest('.deal-card, tr, .customer-modal, .modal-body, .timeline-item, .quote-card');
+            if (card) {
+                const nameEl = card.querySelector('.deal-card-title, .customer-name, td:first-child, h3, h2, .contact-name, .customer-business-name');
+                if (nameEl) {
+                    customerName = nameEl.textContent.trim().split('\n')[0];
+                }
+            }
+        }
+        
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (!isMobile) {
+            e.preventDefault();
+        }
+        
+        const displayName = customerName ? `${customerName} (${rawPhone})` : rawPhone;
+        if (typeof showAlert === 'function') {
+            showAlert(`📲 שולח התראה לאייפון לחיוג אל ${displayName}...`, 'info');
+        }
+        
+        const success = await sendCallNotification(rawPhone, customerName);
+        if (success) {
+            if (typeof showAlert === 'function') {
+                showAlert(`✅ התראה נשלחה לאייפון לחיוג אל ${displayName}`, 'success');
+            }
+        } else {
+            if (typeof showAlert === 'function') {
+                showAlert('❌ שגיאה בשליחת ההתראה לנייד. בדוק את החיבור ואת שם הערוץ ב-ntfy', 'error');
+            }
+        }
+    }
+});
 
 // Import Functionality
 // Import Functionality
@@ -19360,6 +19517,7 @@ async function saveBatchRelease() {
 // ==========================================================================
 
 let currentSelectedNoteColor = '#fff9c4';
+let isSyncingNotes = false;
 
 async function loadNotes() {
     let dbNotes = [];
@@ -19389,16 +19547,17 @@ async function loadNotes() {
     }
     
     if (dbSuccess) {
-        // If DB succeeded, let's sync local-only notes to Supabase in the background
+        // Merge dbNotes with any local-only notes so user doesn't lose visibility
         const localOnlyNotes = localNotes.filter(n => String(n.note_id).startsWith('local-'));
-        if (localOnlyNotes.length > 0) {
-            syncLocalNotes().then(() => {
-                // Reload notes to show the newly synced database notes
-                displayNotes();
-            });
-        }
+        const dbIds = new Set(dbNotes.map(n => n.note_id));
+        const unsyncedNotes = localOnlyNotes.filter(n => !dbIds.has(n.note_id));
         
-        notes = dbNotes;
+        notes = [...dbNotes, ...unsyncedNotes];
+        
+        // Trigger background sync once without recursive reload loops
+        if (unsyncedNotes.length > 0 && !isSyncingNotes) {
+            syncLocalNotes();
+        }
     } else {
         // If DB failed, our notes are all local notes
         notes = localNotes;
@@ -19413,59 +19572,91 @@ async function loadNotes() {
 }
 
 async function syncLocalNotes() {
-    let localNotes = [];
+    if (isSyncingNotes) return;
+    isSyncingNotes = true;
+    
     try {
-        const localNotesData = localStorage.getItem('crm_notes');
-        localNotes = localNotesData ? JSON.parse(localNotesData) : [];
-    } catch (e) {
-        return;
-    }
-    
-    const localOnlyNotes = localNotes.filter(n => String(n.note_id).startsWith('local-'));
-    if (localOnlyNotes.length === 0) return;
-    
-    console.log(`🔄 Found ${localOnlyNotes.length} local-only notes. Attempting to sync to Supabase...`);
-    
-    let syncSuccessCount = 0;
-    for (const note of localOnlyNotes) {
-        const noteDataForDb = {
-            title: note.title,
-            content: note.content,
-            is_list: note.is_list,
-            items: note.items,
-            color: note.color,
-            is_pinned: note.is_pinned,
-            customer_id: note.customer_id,
-            deal_id: note.deal_id,
-            created_at: note.created_at || new Date().toISOString(),
-            updated_at: note.updated_at || new Date().toISOString()
-        };
-        
+        let localNotes = [];
         try {
-            const { error } = await supabaseClient
-                .from('notes')
-                .insert([noteDataForDb]);
-            
-            if (!error) {
-                syncSuccessCount++;
-                // Remove this note from local storage tracking
-                localNotes = localNotes.filter(n => n.note_id !== note.note_id);
-            } else {
-                console.error(`❌ Failed to sync note "${note.title}":`, error.message);
-            }
-        } catch (err) {
-            console.error(`❌ Failed to sync note "${note.title}":`, err);
-        }
-    }
-    
-    if (syncSuccessCount > 0) {
-        try {
-            localStorage.setItem('crm_notes', JSON.stringify(localNotes));
-            console.log(`✅ Successfully synced ${syncSuccessCount} notes to Supabase!`);
-            showAlert(`סונכרנו בהצלחה ${syncSuccessCount} פתקים מקומיים לענן!`, 'success');
+            const localNotesData = localStorage.getItem('crm_notes');
+            localNotes = localNotesData ? JSON.parse(localNotesData) : [];
         } catch (e) {
-            console.error('Failed to update localStorage after sync:', e);
+            return;
         }
+        
+        const localOnlyNotes = localNotes.filter(n => String(n.note_id).startsWith('local-'));
+        if (localOnlyNotes.length === 0) return;
+        
+        console.log(`🔄 Found ${localOnlyNotes.length} local-only notes. Attempting to sync to Supabase...`);
+        
+        let syncSuccessCount = 0;
+        let remainingLocalNotes = [...localNotes];
+        
+        for (const note of localOnlyNotes) {
+            const noteDataForDb = {
+                title: note.title,
+                content: note.content,
+                is_list: note.is_list,
+                items: note.items,
+                color: note.color,
+                is_pinned: note.is_pinned,
+                customer_id: note.customer_id,
+                deal_id: note.deal_id,
+                created_at: note.created_at || new Date().toISOString(),
+                updated_at: note.updated_at || new Date().toISOString()
+            };
+            
+            try {
+                const { error } = await supabaseClient
+                    .from('notes')
+                    .insert([noteDataForDb]);
+                
+                if (!error) {
+                    syncSuccessCount++;
+                    // Remove this note from local storage tracking
+                    remainingLocalNotes = remainingLocalNotes.filter(n => n.note_id !== note.note_id);
+                } else {
+                    console.error(`❌ Failed to sync note "${note.title}":`, error.message);
+                    // If error is RLS or unauthorized, don't keep hammering Supabase
+                    if (error.code === '42501' || error.message?.includes('row-level security') || error.code === 'PGRST301') {
+                        break;
+                    }
+                }
+            } catch (err) {
+                console.error(`❌ Failed to sync note "${note.title}":`, err);
+                break;
+            }
+        }
+        
+        if (syncSuccessCount > 0) {
+            try {
+                localStorage.setItem('crm_notes', JSON.stringify(remainingLocalNotes));
+                console.log(`✅ Successfully synced ${syncSuccessCount} notes to Supabase!`);
+                showAlert(`סונכרנו בהצלחה ${syncSuccessCount} פתקים מקומיים לענן!`, 'success');
+                
+                // Refresh list from DB and update UI directly without recursive displayNotes() loop
+                const { data: refreshedDbNotes } = await supabaseClient
+                    .from('notes')
+                    .select('*')
+                    .order('is_pinned', { ascending: false })
+                    .order('created_at', { ascending: false });
+                    
+                if (refreshedDbNotes) {
+                    const unsyncedNotes = remainingLocalNotes.filter(n => String(n.note_id).startsWith('local-'));
+                    notes = [...refreshedDbNotes, ...unsyncedNotes];
+                    notes.sort((a, b) => {
+                        if (a.is_pinned && !b.is_pinned) return -1;
+                        if (!a.is_pinned && b.is_pinned) return 1;
+                        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                    });
+                    filterNotes();
+                }
+            } catch (e) {
+                console.error('Failed to update localStorage after sync:', e);
+            }
+        }
+    } finally {
+        isSyncingNotes = false;
     }
 }
 

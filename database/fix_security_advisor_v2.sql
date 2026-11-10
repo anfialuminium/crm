@@ -28,7 +28,7 @@ DECLARE
         'activities', 'activity_notes', 'audit_log', 'contacts', 'customers', 
         'deal_items', 'deals', 'product_colors', 'products', 
         'supplier_order_items', 'supplier_orders', 'suppliers', 'system_settings',
-        'resource_links', 'product_stock', 'inventory_transactions'
+        'resource_links', 'product_stock', 'inventory_transactions', 'notes'
     ];
 BEGIN
     FOREACH t IN ARRAY tables LOOP
