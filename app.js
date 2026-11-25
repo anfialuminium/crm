@@ -35,7 +35,8 @@ const APP_ICONS = {
     SAVE: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>',
     REFRESH: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>',
     CHEVRON_LEFT: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>',
-    CHEVRON_RIGHT: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>'
+    CHEVRON_RIGHT: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>',
+    COPY: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'
 };
 
 // Supabase Configuration
@@ -1702,14 +1703,35 @@ function createItemRow(item, index, hasAnyColor = true) {
     
     // Actions
     const actionsCell = document.createElement('td');
+    const actionsWrapper = document.createElement('div');
+    actionsWrapper.style.display = 'flex';
+    actionsWrapper.style.gap = '0.4rem';
+    actionsWrapper.style.alignItems = 'center';
+    actionsWrapper.style.flexWrap = 'nowrap';
+
+    const duplicateBtn = document.createElement('button');
+    duplicateBtn.type = 'button';
+    duplicateBtn.className = 'btn btn-secondary btn-icon';
+    duplicateBtn.innerHTML = APP_ICONS.COPY;
+    duplicateBtn.title = 'שכפל פריט';
+    duplicateBtn.setAttribute('aria-label', 'שכפל פריט');
+    duplicateBtn.addEventListener('click', () => {
+        duplicateDealItem(index);
+    });
+
     const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
     deleteBtn.className = 'btn btn-danger btn-icon';
     deleteBtn.innerHTML = APP_ICONS.TRASH;
     deleteBtn.title = 'מחק פריט';
+    deleteBtn.setAttribute('aria-label', 'מחק פריט');
     deleteBtn.addEventListener('click', () => {
         removeDealItem(index);
     });
-    actionsCell.appendChild(deleteBtn);
+
+    actionsWrapper.appendChild(duplicateBtn);
+    actionsWrapper.appendChild(deleteBtn);
+    actionsCell.appendChild(actionsWrapper);
     
     tr.appendChild(productCell);
     tr.appendChild(quantityCell);
@@ -1723,6 +1745,25 @@ function createItemRow(item, index, hasAnyColor = true) {
     tr.appendChild(actionsCell);
     
     return tr;
+}
+
+function duplicateDealItem(index) {
+    const sourceItem = dealItems[index];
+    if (!sourceItem) return;
+
+    const notesEl = document.querySelector(`.item-notes-input[data-item-id="${sourceItem.id}"]`);
+    if (notesEl) {
+        sourceItem.notes = notesEl.value;
+    }
+
+    const duplicatedItem = {
+        ...sourceItem,
+        id: `item-${itemCounter++}`
+    };
+
+    dealItems.splice(index + 1, 0, duplicatedItem);
+    renderDealItems();
+    updateEmptyState();
 }
 
 function removeDealItem(index) {
